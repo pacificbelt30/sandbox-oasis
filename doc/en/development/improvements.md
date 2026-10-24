@@ -2,7 +2,7 @@
 
 [日本語](../../development/improvements.md) | **English**
 
-- Baseline: published v0.0.3. These are **unimplemented proposals or additional verification of existing features**.
+- Baseline: published v0.0.3. This page tracks proposals, additional verification and work completed on main.
 - P0 establishes guarantees; P1 improves daily use/security; P2 requires measured benefit. Adoption, effort and release dates are undecided.
 - No named-product evaluation or ranking is published here.
 - Preserve convenient local operation, the authentication proxy, isolation, revocation and cleanup.
@@ -11,12 +11,12 @@
 
 | Priority | Item | Current state and remaining work | Acceptance |
 |---|---|---|---|
-| P0 | Remaining dependency findings | [Existing check](dependency-security.md) reports 15 symbol findings, not 15 proven exploits | Review used paths, fixes, compatibility and mitigations; pass affected regressions |
+| P0 | Remaining dependency findings | **Dependency updates and applicability review completed (Unreleased main)**. [Findings](dependency-security.md) reduced from 15 to 2; both concern unused daemon features | Automated regressions pass. No finding exclusions; inapplicability rationale recorded. Real Kata acceptance excluded from this task |
 | P0 | Live-account authentication | Independent login, auth-only VM and encrypted storage implemented; live accounts/long refresh unverified | API/subscription, refresh conflicts, proxy restart, cancellation, active-stream revocation, no secrets in logs/files |
 | P0 | Network/revocation acceptance | Reuse [existing tests](../../testing.md) (Japanese); add missing cases only | DNS, IPv4/IPv6, private/metadata, redirects, CONNECT, SSE/WS, failed stop; never label unconfirmed stop as blocked |
 | P0 | WSL/outer VM/headless acceptance | Credential design differs from actual nested-VM execution requirements | Install→unlock→login→run→stop→upgrade→recover; diagnose missing KVM without silent weaker isolation |
 
-- Live-account acceptance requires defined accounts, provider terms and cost arrangements. This documentation task performs no live authentication/inference.
+- Live-account acceptance requires defined accounts, provider terms and cost arrangements. This dependency task performs no live authentication/inference or new runtime acceptance.
 - Existing evidence and gaps: [testing](../../testing.md) (Japanese).
 
 ## Strengthen existing capabilities

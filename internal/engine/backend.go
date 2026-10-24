@@ -960,6 +960,10 @@ func (b *Backend) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		reply(w, rows)
 		return
 	}
+	if !strings.HasPrefix(path, "/containers/") {
+		http.NotFound(w, r)
+		return
+	}
 	parts := strings.Split(strings.TrimPrefix(path, "/containers/"), "/")
 	if len(parts) == 0 || parts[0] == path {
 		http.NotFound(w, r)
