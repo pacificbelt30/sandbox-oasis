@@ -197,6 +197,7 @@ Under `[run]`:
 | `policy_preset` | Unset | `--policy-preset` |
 | `deny_read` / `deny_write` | Empty | `--deny-read` / `--deny-write` |
 | `max_lifetime` / `idle_timeout` / `retention` | `"0s"` | Matching hyphenated flags; `"30m"`, `"2h"`; requires `reap` |
+| `protect_main` | `false` | Unreleased main. `--protect-main`; protect the primary process from idle collection |
 | `environment_lock` | Unset | `--environment-lock` |
 | `image_id` | Unset | `--image-id` |
 | `start_hooks` | Empty | `--start-hook` |

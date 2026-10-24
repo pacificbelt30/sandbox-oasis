@@ -123,6 +123,7 @@ approval_mode = "suggest"
 # deny_write = ["/workspace/config"]
 # max_lifetime = "2h"  # requires oaiso reap --watch
 # idle_timeout = "30m" # management execution activity, not guest CPU
+# protect_main = true # keep a running primary process safe from idle reaping; max_lifetime still applies
 # retention = "24h"    # requires oaiso reap --watch; 0 never deletes
 # start_hooks = ["npm ci"] # guest shell commands in GLOBAL config
 # readiness = "test -d node_modules"

@@ -150,10 +150,19 @@ func (m *Manager) RunContext(parent context.Context, opts RunOptions) (container
 	}
 	ctx, cancel := context.WithTimeout(parent, 180*time.Second)
 	defer cancel()
-	if len(opts.Filesystem.DenyRead)+len(opts.Filesystem.DenyWrite) > 0 || opts.ReadOnlyRootFS || opts.Environment.ImageID != "" || opts.Lifecycle.IdleTimeout > 0 || len(storage) > 0 {
+	if len(opts.Filesystem.DenyRead)+len(opts.Filesystem.DenyWrite) > 0 || opts.ReadOnlyRootFS || opts.Environment.ImageID != "" || opts.Lifecycle.IdleTimeout > 0 || opts.Lifecycle.ProtectMain || len(storage) > 0 {
 		info, err := m.cli.Info(ctx)
 		if err != nil {
 			return "", err
+		}
+		if opts.Lifecycle.ProtectMain {
+			supported := false
+			for _, feature := range info.DriverStatus {
+				supported = supported || feature == [2]string{"cxd.main-activity", "1"}
+			}
+			if !supported {
+				return "", fmt.Errorf("main-process idle protection requires an updated Oaiso node")
+			}
 		}
 		supported := false
 		idleSafe := opts.Lifecycle.IdleTimeout == 0

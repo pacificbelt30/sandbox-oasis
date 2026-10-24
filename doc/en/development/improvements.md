@@ -24,7 +24,7 @@
 | Priority | Capability | Addition | Constraint |
 |---|---|---|---|
 | P1 | Per-run usage limits | Request/concurrency/usage ceilings alongside model allowlists | Separate estimated spending from exact cutoff. Revocation cannot undo already-billed upstream work |
-| P1 | Avoid reaping active main jobs | Main-process activity lease/heartbeat | Current idle uses management API activity; define lost-heartbeat behavior separately from maximum lifetime |
+| P1 | Avoid reaping active main jobs | **Completed (Unreleased main)**. `--protect-main` and CLI/Go activity renewals | [Contract](../sandbox-features.md#primary-process-protection-and-activity-leases). Leases expire within five minutes; maximum lifetime independent. Real Kata renewal/release/idle-stop checks pass |
 | P1 | Aggregate diagnostics/observability | Persist/export existing status, denials, launch timing and memory data | Exclude secrets, bound retention, require no external permanent service |
 | P1 | Credential-broker configuration | Fixed-origin/path/method templates, preflight and TUI support | Reuse existing broker; no secret display or unapproved-host injection |
 | P1 | Candidate updates | Connect existing static drift detection to pinned-CLI/runtime acceptance | No adoption from static diffs alone; preserve current pins and rollback on failure |

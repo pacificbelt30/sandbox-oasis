@@ -26,6 +26,7 @@ func (f Filesystem) Validate() error {
 }
 
 type Lifecycle struct {
+	ProtectMain bool          `json:"protect_main,omitempty"`
 	MaxLifetime time.Duration `json:"max_lifetime,omitempty"`
 	IdleTimeout time.Duration `json:"idle_timeout,omitempty"`
 	Retention   time.Duration `json:"retention,omitempty"`

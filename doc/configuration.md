@@ -208,6 +208,7 @@ forward_allow_ports = [80, 443]
 | `policy_preset` | 未指定 | `--policy-preset` |
 | `deny_read` / `deny_write` | 空配列 | `--deny-read` / `--deny-write` |
 | `max_lifetime` / `idle_timeout` / `retention` | `"0s"` | 同名ハイフン形式。例：`"30m"` / `"2h"`。`reap` が必要 |
+| `protect_main` | `false` | 未リリースmain。`--protect-main`。メイン処理をidle回収から保護 |
 | `environment_lock` | 未指定 | `--environment-lock` |
 | `image_id` | 未指定 | `--image-id` |
 | `start_hooks` | 空配列 | `--start-hook` |

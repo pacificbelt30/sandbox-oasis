@@ -308,3 +308,5 @@ go build -o /var/tmp/oaiso-embedding ./examples/embedding
 - See [quarantine](sandbox-features.md#stop-communication-and-quarantine) for completion, retries and retained worktree cleanup.
 - `Policy.Quarantined` means the prohibition was persisted; `QuarantinePending` means its stop is unconfirmed.
 - Never treat an error from `Quarantine` as success.
+
+- Unreleased main: `LaunchRequest.Lifecycle.ProtectMain` protects the primary process from idle reaping. `Heartbeat(ctx, workerID, ttl)` renews/releases a 0–5 minute activity lease without extending maximum lifetime. [Contract and examples](sandbox-features.md#primary-process-protection-and-activity-leases).

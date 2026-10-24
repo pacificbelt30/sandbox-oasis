@@ -29,6 +29,7 @@ type Config struct {
 		DenyWrite          []string   `toml:"deny_write"`
 		MaxLifetime        string     `toml:"max_lifetime"`
 		IdleTimeout        string     `toml:"idle_timeout"`
+		ProtectMain        bool       `toml:"protect_main"`
 		Retention          string     `toml:"retention"`
 		StartHooks         [][]string `toml:"start_hooks"`
 		Readiness          []string   `toml:"readiness"`
@@ -243,7 +244,7 @@ func DockerfileUsesBase(data []byte, image string) bool {
 
 func (c *Config) Policies() (workerpolicy.Filesystem, workerpolicy.Lifecycle, workerpolicy.Environment, error) {
 	f := workerpolicy.Filesystem{DenyRead: c.Run.DenyRead, DenyWrite: c.Run.DenyWrite}
-	l := workerpolicy.Lifecycle{}
+	l := workerpolicy.Lifecycle{ProtectMain: c.Run.ProtectMain}
 	e := workerpolicy.Environment{StartHooks: c.Run.StartHooks, Readiness: c.Run.Readiness}
 	for _, value := range []struct {
 		text   string

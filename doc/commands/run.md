@@ -133,6 +133,7 @@ oaiso run --profile-size small --agent codex
 | `--readiness` | 未指定 | 起動準備完了のguest shell probe |
 | `--readiness-timeout` | 0（実効60秒） | hook・probeの期限 |
 | `--max-lifetime` / `--idle-timeout` / `--retention` | `0` | 寿命・idle・終了後保持。`30m` / `2h` など。`reap` の実行が必要 |
+| `--protect-main` | `false` | 未リリースmain。メイン処理の実行中はidle回収しない。最大寿命は適用 |
 | `--proxy-admin-url` | `http://127.0.0.1:18081` | ホスト管理API |
 | `--proxy-container-url` | `http://codex-auth-proxy:18080` | ワーカー向け固定AI経路 |
 | `--http-proxy-url` | `http://codex-http-proxy:18082` | ワーカー向け一般egress |
@@ -140,7 +141,7 @@ oaiso run --profile-size small --agent codex
 | `--proxy-admin-secret-file` | 未指定 | 管理secretの所有者0600ファイル |
 
 - 詳細・制限：[追加のサンドボックス制御](../sandbox-features.md)。
-- idleはguest CPUや任意の長時間ジョブを監視する値ではない。`reap` は処理中のワーカーも停止し得る。
+- idleはguest CPUやファイル更新を監視しません。メイン処理には`--protect-main`、管理側の活動通知には`oaiso activity`を指定してください。
 
 ---
 

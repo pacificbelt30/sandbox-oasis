@@ -82,6 +82,7 @@ type record struct {
 	FinishedAt              string
 	StartedAt               time.Time
 	LastActivity            time.Time
+	ActivityUntil           time.Time
 	NetNSDevice, NetNSInode uint64
 	FailedCreate            bool
 	Quarantined             bool `json:",omitempty"`
@@ -549,7 +550,12 @@ func (b *Backend) inspect(ctx context.Context, value string) (container.InspectR
 	if !r.LastActivity.IsZero() {
 		r.Config.Labels["codex-dock.last-activity"] = r.LastActivity.Format(time.RFC3339Nano)
 	}
-	r.Config.Labels["codex-dock.active-executions"] = strconv.Itoa(b.activeExecutions(r.ID))
+	active, err := b.activeWork(r, state.Running || state.Paused, time.Now())
+	if err != nil {
+		return container.InspectResponse{}, err
+	}
+	r.Config.Labels["codex-dock.active-executions"] = strconv.Itoa(active)
+	r.Config.Labels["codex-dock.activity-until"] = r.ActivityUntil.Format(time.RFC3339Nano)
 	// This status belongs to the node's durable record, not launch labels.
 	r.Config.Labels[workerpolicy.QuarantinedLabel] = strconv.FormatBool(r.Quarantined)
 	// Docker's current API still requires NetworkSettingsBase for published ports.
@@ -650,6 +656,7 @@ func (b *Backend) start(ctx context.Context, r *record, c cd.Container) error {
 	r.FailedCreate = false
 	r.StartedAt = time.Now().UTC()
 	r.LastActivity = r.StartedAt
+	r.ActivityUntil = time.Time{}
 	r.FinishedAt = ""
 	r.ExitCode = 0
 	if err = b.save(r); err != nil {
@@ -825,7 +832,7 @@ func (b *Backend) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			failure(w, err)
 			return
 		}
-		features := [][2]string{{"cxd.worker-policy", "1"}, {"cxd.idle-safe", "1"}, {"cxd.exec-options", "1"}, {"cxd.jobs", "1"}, {"cxd.quarantine", "1"}}
+		features := [][2]string{{"cxd.worker-policy", "1"}, {"cxd.idle-safe", "1"}, {"cxd.main-activity", "1"}, {"cxd.exec-options", "1"}, {"cxd.jobs", "1"}, {"cxd.quarantine", "1"}}
 		if b.opts.TemporaryStorage {
 			features = append(features, [2]string{"cxd.temporary-storage", "1"})
 		}
@@ -1016,13 +1023,49 @@ func (b *Backend) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		// Serialize exec creation/start with the final idle decision and stop.
-		if !idleEligible(rec.LastActivity, before, b.activeExecutions(rec.ID)) {
+		state, stateErr := b.state(ctx, c, rec)
+		if stateErr != nil {
+			failure(w, stateErr)
+			return
+		}
+		active, activeErr := b.activeWork(rec, state.Running || state.Paused, time.Now())
+		if activeErr != nil {
+			failure(w, activeErr)
+			return
+		}
+		if !idleEligible(rec.LastActivity, before, active) {
 			reply(w, map[string]bool{"stopped": false})
 			return
 		}
 		err = b.stop(ctx, rec, c, 10)
 		if err == nil {
 			reply(w, map[string]bool{"stopped": true})
+			return
+		}
+	case "activity":
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		ttl, parseErr := strconv.Atoi(r.URL.Query().Get("ttl"))
+		if parseErr != nil || ttl < 0 || ttl > 300 || value != rec.ID || rec.Config.Labels["codex-dock.managed"] != "true" {
+			failure(w, fmt.Errorf("activity requires a managed worker ID and ttl between 0 and 300 seconds: %w", errdefs.ErrInvalidArgument))
+			return
+		}
+		if err = executionAllowed(rec); err == nil {
+			var state *container.State
+			state, err = b.state(ctx, c, rec)
+			if err == nil && !state.Running {
+				err = fmt.Errorf("activity requires a running worker: %w", errdefs.ErrConflict)
+			}
+		}
+		if err == nil {
+			rec.LastActivity = time.Now().UTC()
+			rec.ActivityUntil = rec.LastActivity.Add(time.Duration(ttl) * time.Second)
+			err = b.save(rec)
+		}
+		if err == nil {
+			reply(w, map[string]any{"worker": rec.ID, "active_until": rec.ActivityUntil})
 			return
 		}
 	case "stop":

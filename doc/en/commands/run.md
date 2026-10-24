@@ -132,6 +132,7 @@ oaiso run --profile-size small --agent codex
 | `--readiness` | Unset | Guest shell readiness probe |
 | `--readiness-timeout` | 0 (effective 60s) | Hook/probe deadline |
 | `--max-lifetime` / `--idle-timeout` / `--retention` | `0` | Lifetime, idle, exit retention; durations such as `30m` or `2h`; requires `reap` |
+| `--protect-main` | `false` | Unreleased main. Protect a live primary process from idle collection; maximum lifetime still applies |
 | `--proxy-admin-url` | `http://127.0.0.1:18081` | Host admin API |
 | `--proxy-container-url` | `http://codex-auth-proxy:18080` | Worker fixed AI routes |
 | `--http-proxy-url` | `http://codex-http-proxy:18082` | Worker general egress |
@@ -139,7 +140,7 @@ oaiso run --profile-size small --agent codex
 | `--proxy-admin-secret-file` | Unset | Owner-only 0600 admin-secret file |
 
 - Detailed contracts: [additional sandbox controls](../sandbox-features.md).
-- Idle tracking does not measure guest CPU or arbitrary long jobs; `reap` can stop a busy worker.
+- Idle does not measure guest CPU/filesystem activity. Use `--protect-main` for primary work or `oaiso activity` for caller-managed renewal.
 
 - When the host and Auth Proxy credential modes differ, `run` automatically recreates the Auth Proxy if no workers are running.
 - If workers are running it stops with an error so their in-memory tokens are not invalidated.

@@ -39,6 +39,7 @@ func TestKataPolicyFeatures(t *testing.T) {
 	}
 	defer func() { _ = m.Close() }()
 	opts := RunOptions{ProjectDir: project, Image: image, Runtime: RuntimeKata, Name: "cxd-policy-test-" + randomSuffix(), ContainerUser: strconv.Itoa(os.Getuid()) + ":" + strconv.Itoa(os.Getgid()), Detach: true, NoInternet: true, ExecCmd: "exec sleep infinity", ReadOnlyRootFS: true, Filesystem: workerpolicy.Filesystem{DenyRead: []string{"/workspace/secret"}, DenyWrite: []string{"/workspace/readonly"}}, Environment: workerpolicy.Environment{StartHooks: [][]string{{"sh", "-c", "printf hook-ready > /workspace/hook"}}, Readiness: []string{"test", "-f", "/workspace/hook"}, ReadinessTimeout: 30 * time.Second}}
+	opts.Lifecycle = workerpolicy.Lifecycle{ProtectMain: true, IdleTimeout: 200 * time.Millisecond, MaxLifetime: time.Hour}
 	id, err := m.RunContext(ctx, opts)
 	if err != nil {
 		t.Fatal(err)
@@ -174,5 +175,38 @@ func TestKataPolicyFeatures(t *testing.T) {
 	if jobs, err := m.ListJobs(ctx, id); err != nil || len(jobs) != 1 {
 		t.Fatalf("jobs %+v %v", jobs, err)
 	}
-	t.Log("PASS: OCI masks/readonly/rootfs, readiness, safe files, exec env/workdir/cancellation, PTY resize, detached jobs and retained logs in a real Kata VM")
+	time.Sleep(300 * time.Millisecond)
+	if actions, err := m.Reap(ctx, time.Now(), false); err != nil || len(actions) != 0 {
+		t.Fatalf("idle collection touched a live primary job: %+v %v", actions, err)
+	}
+	heartbeatOpts := opts
+	heartbeatOpts.Name += "-heartbeat"
+	heartbeatOpts.Lifecycle = workerpolicy.Lifecycle{IdleTimeout: 200 * time.Millisecond}
+	heartbeatID, err := m.RunContext(ctx, heartbeatOpts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := m.RemoveContext(context.Background(), heartbeatID, true); err != nil {
+			t.Error(err)
+		}
+	}()
+	if _, err := m.Heartbeat(ctx, heartbeatID, time.Minute); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(300 * time.Millisecond)
+	if actions, err := m.Reap(ctx, time.Now(), false); err != nil || len(actions) != 0 {
+		t.Fatalf("live lease was reaped: %+v %v", actions, err)
+	}
+	if _, err := m.Heartbeat(ctx, heartbeatID, 0); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(300 * time.Millisecond)
+	if actions, err := m.Reap(ctx, time.Now(), false); err != nil || len(actions) != 1 || actions[0].Worker != heartbeatID || actions[0].Reason != "idle_timeout" {
+		t.Fatalf("released lease did not return to idle policy: %+v %v", actions, err)
+	}
+	if actions, err := m.Reap(ctx, time.Now().Add(2*time.Hour), false); err != nil || len(actions) != 1 || actions[0].Worker != id || actions[0].Reason != "max_lifetime" {
+		t.Fatalf("main protection extended maximum lifetime: %+v %v", actions, err)
+	}
+	t.Log("PASS: OCI masks/readonly/rootfs, readiness, safe files, exec options/cancellation, PTY, jobs, primary idle protection, activity leases and independent maximum lifetime in real Kata")
 }

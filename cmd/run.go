@@ -122,6 +122,7 @@ func init() {
 	f.StringArrayVar(&runOpts.Filesystem.DenyWrite, "deny-write", nil, "Make a guest path below /workspace read-only (repeatable, opt-in)")
 	f.DurationVar(&runOpts.Lifecycle.MaxLifetime, "max-lifetime", 0, "Opt-in maximum lifetime enforced by oaiso reap")
 	f.DurationVar(&runOpts.Lifecycle.IdleTimeout, "idle-timeout", 0, "Opt-in idle timeout since last oaiso exec; enforced by oaiso reap")
+	f.BoolVar(&runOpts.Lifecycle.ProtectMain, "protect-main", false, "Prevent idle reaping while the primary process runs (maximum lifetime still applies)")
 	f.DurationVar(&runOpts.Lifecycle.Retention, "retention", 0, "Opt-in retention after exit; oaiso reap removes expired workers")
 	f.StringVar(&runEnvironmentLock, "environment-lock", "", "Validate a lock file and require its image digest")
 	f.StringArrayVar(&runStartHooks, "start-hook", nil, "Guest shell command before agent startup (repeatable)")

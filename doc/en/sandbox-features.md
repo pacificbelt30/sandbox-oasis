@@ -151,7 +151,7 @@ oaiso run --start-hook 'npm ci' --readiness 'test -f node_modules/.package-lock.
 - Lifecycle limits require `reap --watch` or periodic Go API `Reap` calls.
 - No host service is installed automatically; limits stop being applied while the supervisor is down.
 - Idle means time since management execution activity, not guest CPU/filesystem activity.
-- Updated nodes protect registered jobs and exec/PTY sessions; disable idle limits for main-agent work or activity outside the management API.
+- Updated nodes protect registered jobs and exec/PTY sessions. Use `--protect-main` or bounded `activity` renewals below for other known work; guest CPU/filesystem activity is not inferred.
 - Explicit maximum lifetime can still stop busy workers.
 - Stop revokes tokens; removal uses existing ownership checks and deletion journals.
 - Zero retention never deletes a worker.
@@ -257,7 +257,7 @@ The [verification record](../testing.md) distinguishes fixture tests, native Kat
 - Multi-case products should periodically call Reap through clients holding their own admin credentials and monitor failures.
 
 - Updated nodes protect pending execs, active exec/PTY sessions and detached jobs against idle collection, checking atomically with stopping so newly started work is protected too.
-- Main agent activity and work started outside the management API are not measured; disable idle limits for these workloads.
+- Use `--protect-main` for the primary process or bounded `activity` renewals for work known to the caller; neither infers guest CPU/filesystem activity.
 - Explicit maximum lifetime still applies to busy workers.
 
 - ResourceUsage returns a verified running VM's host cgroup current memory, optional peak and OOM-kill count separately from guest/host capacity budgets.
@@ -312,3 +312,49 @@ The [verification record](../testing.md) distinguishes fixture tests, native Kat
 
 - When resealing, use `runtime-lock --logger /absolute/current/codex-dock-io-logger` to select the matching logger explicitly.
 - An older helper selected through PATH may lack bounded-job logging options; pin the matching node-bundle helper.
+
+## Primary-process protection and activity leases
+
+- Available: **Unreleased (main)**; requires matching CLI/node support.
+- Existing idle defaults remain unchanged. Explicitly protect workers that need it.
+
+| Setting | Protected interval | On expiry/completion |
+|---|---|---|
+| `run --protect-main` | Primary process running or paused | Normal retention after exit; interactive waiting also counts as running |
+| `activity WORKER --ttl 2m` | Two minutes from the node-confirmed time | Missing renewals expire; last activity and idle policy govern collection |
+| `activity WORKER --ttl 0s` | Releases the renewable lease | Release time becomes the last activity |
+| `--max-lifetime` | Independent of both protections | May stop busy workers |
+
+- Renew from the operator CLI or host Go API; no management socket/upstream credentials enter VMs.
+- TTL is an integer 0–300 seconds. Renew sooner than expiry and monitor failures.
+- The node persists protection/expiry across node restarts. VM restart clears the previous renewable lease.
+- The final node-side idle decision is atomic. Unknown state, persistence failure or an inconsistent acknowledgement is not success.
+- Run `reap --watch` or periodic Go API `Reap` calls to enforce lifecycle limits.
+
+On a configured execution host, protect a one-hour primary command from idle collection:
+
+```bash
+oaiso run --name long-job --detach --keep --idle-timeout 5m --protect-main --max-lifetime 2h --exec 'sleep 3600'
+oaiso reap --dry-run
+```
+
+Replace `my-worker` with an existing worker name to renew an activity lease:
+
+```bash
+oaiso activity my-worker --ttl 2m
+```
+
+Example output (illustrative timestamp):
+
+```json
+{"worker":"my-worker","active_until":"2026-10-24T12:02:00Z"}
+```
+
+Release protection separately:
+
+```bash
+oaiso activity my-worker --ttl 0s
+```
+
+- Go API: `LaunchRequest.Lifecycle.ProtectMain = true`, `client.Heartbeat(ctx, workerID, 2*time.Minute)`.
+- Project/host configuration: `[run] protect_main = true`.

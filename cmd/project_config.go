@@ -28,6 +28,9 @@ func applyProjectRunConfig(cmd *cobra.Command, cfg *ProjectConfig) {
 		runPolicyPreset = cfg.Run.PolicyPreset
 	}
 	f, l, e, _ := cfg.Policies()
+	if !flags.Changed("protect-main") && l.ProtectMain {
+		runOpts.Lifecycle.ProtectMain = true
+	}
 	runOpts.Filesystem.DenyRead = append(runOpts.Filesystem.DenyRead, f.DenyRead...)
 	runOpts.Filesystem.DenyWrite = append(runOpts.Filesystem.DenyWrite, f.DenyWrite...)
 	if !flags.Changed("max-lifetime") && l.MaxLifetime > 0 && (runOpts.Lifecycle.MaxLifetime == 0 || l.MaxLifetime < runOpts.Lifecycle.MaxLifetime) {

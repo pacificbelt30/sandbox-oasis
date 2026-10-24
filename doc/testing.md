@@ -1,5 +1,15 @@
 # テストと動作確認
 
+## 既存機能P1の強化（2026-10-24）
+
+| 項目 | 結果・範囲 |
+|---|---|
+| メイン処理・活動通知 | 未リリースmain。全Go race・build・vet・lint、MkDocs strictが成功。実Kataの追加制御スイートが59.93秒で成功 |
+| 実Kataの確認内容 | node再起動後のメイン処理保護、活動通知でのidle回収防止、通知解除後のidle停止、最大寿命による実行中の停止。秘密・管理socketをVMへ追加共有しない |
+
+- 証跡：`.kata-verification/setup-e2e/29115c5f7a27/`、`.kata-verification/p1-existing-20261024/`。
+- [メイン処理と活動通知の使い方](sandbox-features.md#メイン処理と活動通知によるidle回収の防止)。公開配布物は更新していません。
+
 - 通信・失効の追加検査と再実行手順：[通信・失効の受け入れ検査](development/network-acceptance.md)。
 
 ## 通信・失効の追加受け入れ（2026-10-24）

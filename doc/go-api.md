@@ -314,3 +314,5 @@ go build -o /var/tmp/oaiso-embedding ./examples/embedding
 - 隔離の完了条件、再試行、保持したworktreeの回収は[停止と隔離](sandbox-features.md#通信の停止と隔離)を参照してください。
 - `Policy` の `Quarantined` は永続化済みの隔離要求、`QuarantinePending` は停止未確認を表します。
 - `Quarantine` のエラーを成功として扱わないでください。
+
+- 未リリースmain：`LaunchRequest.Lifecycle.ProtectMain`でメイン処理をidle回収から保護。`Heartbeat(ctx, workerID, ttl)`で0〜5分の活動通知を更新・解除できます。最大寿命は延長しません。[条件と実行例](sandbox-features.md#メイン処理と活動通知によるidle回収の防止)。

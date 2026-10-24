@@ -169,7 +169,7 @@ oaiso run --start-hook 'npm ci' --readiness 'test -f node_modules/.package-lock.
 - idleは最後の管理API実行の時刻で、guestのCPU使用やファイル更新を計測した値ではありません。
 - 対応ノードでは開始待ちexec・実行中exec/PTY・背景ジョブをidle回収から除外します。
 - 停止直前にノード内で再確認するため、新しいexecとの競合でも停止しません。
-- agentのメインプロセスや管理API外で起動した処理の活動は判定しないため、これらを使う場合はidle制限を無効にしてください。
+- メイン処理は下記の`--protect-main`、管理側が把握する処理は`activity`でidle回収から保護できます。CPUやファイル更新から自動判定はしません。
 - 最大寿命の明示制限は実行中でも適用されます。
 - 停止はtoken失効を伴い、削除は既存の所有権確認・削除journalを通します。
 - 保持期限ゼロは削除しません。
@@ -336,3 +336,49 @@ go test ./internal/networkpolicy -run '^$' -bench . -benchmem -count=3
 
 - 再固定時には `runtime-lock --logger /absolute/current/codex-dock-io-logger` で対応版のログ収集バイナリを明示できます。
 - PATHから古いhelperを選ぶとバックグラウンドジョブの出力上限オプションに対応しない場合があるため、node bundleの対応するhelperを固定してください。
+
+## メイン処理と活動通知によるidle回収の防止
+
+- 利用可能：**未リリース（main）**。対応するCLI・nodeが必要です。
+- 既定のidle判定は維持します。必要なワーカーで保護を明示してください。
+
+| 指定 | 保護する期間 | 通知停止・終了時 |
+|---|---|---|
+| `run --protect-main` | メインプロセスが実行中・一時停止中 | 終了後は通常の保持期限へ移行。対話待ちも実行中として保護 |
+| `activity WORKER --ttl 2m` | nodeが確認した時刻から2分 | 更新が止まれば期限切れ。最後の活動時刻とidle設定で回収 |
+| `activity WORKER --ttl 0s` | 活動通知の保護を解除 | 解除した時刻を最後の活動として記録 |
+| `--max-lifetime` | 上記の保護と独立 | 実行中でも最大寿命で停止 |
+
+- 活動通知は通常ユーザーのCLIまたはホストのGo APIから行います。管理socket・上流資格情報をVMへ渡しません。
+- TTLは0〜300秒の整数。通知側は期限より短い間隔で更新し、失敗を監視してください。
+- 保護・期限はnodeへ保存し、node再起動後も維持。VMの再起動では以前の活動通知を解除します。
+- 停止直前にもnode内で確認。状態不明・保存失敗・確認応答の不一致は成功としません。
+- 寿命・idle・保持期限を実際に適用するには`reap --watch`または定期的なGo API `Reap`が必要です。
+
+実行例：設定済みの実行ホストから、1時間のメイン処理をidle回収から守ります。
+
+```bash
+oaiso run --name long-job --detach --keep --idle-timeout 5m --protect-main --max-lifetime 2h --exec 'sleep 3600'
+oaiso reap --dry-run
+```
+
+活動通知の例：`my-worker`は既存ワーカーの名前へ置き換えます。
+
+```bash
+oaiso activity my-worker --ttl 2m
+```
+
+出力例（時刻は例示）：
+
+```json
+{"worker":"my-worker","active_until":"2026-10-24T12:02:00Z"}
+```
+
+保護の解除は別の操作です。
+
+```bash
+oaiso activity my-worker --ttl 0s
+```
+
+- Go API：`LaunchRequest.Lifecycle.ProtectMain = true`、`client.Heartbeat(ctx, workerID, 2*time.Minute)`。
+- `oaiso.toml`／ホスト設定：`[run] protect_main = true`。

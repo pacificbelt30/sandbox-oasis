@@ -9,6 +9,9 @@ import (
 
 func applyOptionalRunDefaults(cmd *cobra.Command) error {
 	flags := cmd.Flags()
+	if !flags.Changed("protect-main") {
+		runOpts.Lifecycle.ProtectMain = viper.GetBool("run.protect_main")
+	}
 	for _, setting := range []struct {
 		flag, key string
 		target    *time.Duration
