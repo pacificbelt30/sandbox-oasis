@@ -1,0 +1,8 @@
+# Test-only image: upstreams are synthetic. Never use as a production proxy.
+ARG BASE_IMAGE=codex-dock-proxy:policy-verification
+FROM ${BASE_IMAGE}
+ARG CODEX_DOCK_BUILD_VERSION=dev
+COPY --chmod=0755 fixture.test /codex-dock
+ENV CXD_KATA_FIXTURE_PROXY=1
+LABEL io.codex-dock.proxy-protocol="external-store-v1"
+LABEL io.codex-dock.proxy-build=$CODEX_DOCK_BUILD_VERSION

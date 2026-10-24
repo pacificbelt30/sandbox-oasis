@@ -188,6 +188,7 @@
 | 区分 | 範囲 |
 |---|---|
 | [実機・実AI試験](testing.md)の記録あり | 隔離・権限・資源・機能、既存auth.jsonによるWebSocket/HTTP SSE推論 |
+| [通信・失効の追加検査](development/network-acceptance.md)（未リリースmain） | DNS・停止失敗の自動検査、実Kataからの拒否、既存SSE/WSの失効、隔離停止による一般通信の切断。接続先はfixture |
 | 別途確認 | 長期間の実OAuth更新・対話キーボード操作・任意のカスタムイメージ |
 | Claudeのfixture試験 | APIキー／サブスクのplaceholder変数を分離。実access/refresh tokenをworkerへ保存しない |
 | Claudeで未検証 | 実Anthropic推論・サブスク利用枠 |

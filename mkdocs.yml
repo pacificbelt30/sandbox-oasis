@@ -101,6 +101,7 @@ nav:
           - ネットワーク: network.md
       - 上流仕様の変更検知: upstream-compatibility.md
       - テストと動作確認: testing.md
+      - 通信・失効の受け入れ検査: development/network-acceptance.md
       - 今後の対応: future-work.md
       - 機能と安全性の改善候補: development/improvements.md
       - ドキュメントの追加・修正: development/documentation.md
@@ -165,6 +166,7 @@ nav:
           - Development tools: en/development/toolchain.md
           - Local credential store specification: en/development/local-credential-store.md
           - Dependency findings: en/development/dependency-security.md
+          - Network and revocation acceptance: en/development/network-acceptance.md
           - Documentation editing: en/development/documentation.md
           - Removed features:
               - Firewall: en/firewall.md

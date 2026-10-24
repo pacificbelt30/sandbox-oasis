@@ -133,6 +133,7 @@ if [[ -x /acceptance.test ]]; then
  install -d -o root -g 1000 -m 0770 /run/setup-node-restart
  operator env CODEX_DOCK_KATA_E2E=1 CODEX_DOCK_KATA_POLICY_E2E=1 CODEX_DOCK_KATA_TEST_BINARY=/usr/local/bin/oaiso \
   CODEX_DOCK_KATA_TEST_IMAGE="$worker_fixture" CODEX_DOCK_KATA_PROXY_IMAGE="$proxy_fixture" \
+  CODEX_DOCK_KATA_NETWORK_PROXY_IMAGE="${CODEX_DOCK_KATA_NETWORK_PROXY_IMAGE:-}" \
   CODEX_DOCK_KATA_OWNER_FIXTURE=/home/kata-test/owner-fixture/project \
   CODEX_DOCK_NODE_RESTART_REQUEST_DIR=/run/setup-node-restart \
   /acceptance.test -test.run "${CODEX_DOCK_KATA_ACCEPTANCE_RUN:-^TestKata(Acceptance|AuthenticationSession|EncryptedProfile|KeyringProfile|WorkspaceSharing|PolicyFeatures|PrimaryTerminal|GoAPI)$}" -test.v -test.count=1 -test.timeout=25m > /evidence/acceptance.txt 2>&1 &

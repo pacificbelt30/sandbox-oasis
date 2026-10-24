@@ -70,7 +70,7 @@ See each ID in the [Go vulnerability database](https://pkg.go.dev/vuln/). Remova
 | Minimum Go version | CLI builds with Go 1.26.0 |
 | Added regressions | No daemon implementation linked; unsupported APIs rejected before RPC |
 | Cross-build | macOS arm64/amd64 and Linux arm64; not runtime acceptance on those systems |
-| Acceptance | Excluded from this task; no new real Kata/live-account/WSL acceptance |
+| Acceptance | Follow-up [network/revocation suite](network-acceptance.md) passes on real Kata. No full eight-suite rerun, live-account or WSL acceptance |
 
 See [existing verification scope](../../testing.md) (Japanese). Automated tests here do not establish new real-runtime acceptance.
 

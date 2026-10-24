@@ -12,6 +12,7 @@ import (
 	"os/signal"
 	"strconv"
 	"syscall"
+	"time"
 
 	"github.com/pacificbelt30/codex-dock/pkg/cxd/credentialstore"
 )
@@ -53,17 +54,37 @@ func runKataFixtureProxy() int {
 		cfg.Role, cfg.BlockPrivate = RoleEgress, block
 		return runKataEgressFixture(cfg)
 	}
-	store, err := credentialstore.NewUnixClient(socket)
+	if socket != "" {
+		store, err := credentialstore.NewUnixClient(socket)
+		if err != nil {
+			return 1
+		}
+		cfg.CredentialStore = store
+	}
+	connections, closeObserver, err := startKataConnectionObserver()
 	if err != nil {
 		return 1
 	}
-	cfg.CredentialStore = store
+	defer closeObserver()
 	p, err := NewProxy(cfg)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "fixture proxy initialization:", err)
 		return 1
 	}
 	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if isWebSocketRequest(r) {
+			conn, rw, err := w.(http.Hijacker).Hijack()
+			if err != nil {
+				return
+			}
+			defer conn.Close()
+			defer connections.track()()
+			_ = conn.SetDeadline(time.Now().Add(3 * time.Minute))
+			_, _ = rw.WriteString("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n")
+			_ = rw.Flush()
+			_, _ = io.Copy(conn, rw)
+			return
+		}
 		if r.URL.Path == "/oauth/token" {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `{"access_token":"fixture-access-rotated","refresh_token":"fixture-refresh-rotated"}`)
@@ -100,6 +121,7 @@ func runKataFixtureProxy() int {
 			return
 		}
 		if body.Stream {
+			defer connections.track()()
 			w.Header().Set("Content-Type", "text/event-stream")
 			_, _ = io.WriteString(w, "data: {\"fixture\":true}\n\n")
 			w.(http.Flusher).Flush()

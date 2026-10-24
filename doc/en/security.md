@@ -126,6 +126,7 @@
 | Status | Coverage |
 |---|---|
 | [Recorded real Kata / AI tests](../testing.md) (Japanese) | Real Kata acceptance and existing-auth.json WebSocket/HTTP SSE inference |
+| [Additional network/revocation checks](development/network-acceptance.md) (Unreleased main) | Automated DNS/failed-stop tests; real Kata denials, active SSE/WS revocation and general-traffic closure on quarantine; synthetic upstreams |
 | Requires separate verification | Long-running real OAuth refresh, interactive keyboard use, arbitrary custom images |
 | Claude fixture coverage | Distinct API/subscription placeholders; no real access/refresh tokens in workers |
 | Outside Claude fixture coverage | Live Anthropic inference and subscription usage accounting |

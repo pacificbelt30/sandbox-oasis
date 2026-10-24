@@ -11,12 +11,12 @@
 
 | Priority | Item | Current state and remaining work | Acceptance |
 |---|---|---|---|
-| P0 | Remaining dependency findings | **Dependency updates and applicability review completed (Unreleased main)**. [Findings](dependency-security.md) reduced from 15 to 2; both concern unused daemon features | Automated regressions pass. No finding exclusions; inapplicability rationale recorded. Real Kata acceptance excluded from this task |
+| P0 | Remaining dependency findings | **Dependency updates and applicability review completed (Unreleased main)**. [Findings](dependency-security.md) reduced from 15 to 2; both concern unused daemon features | Automated regressions pass. No finding exclusions; rationale recorded. Follow-up real Kata coverage uses the network/revocation suite |
 | P0 | Live-account authentication | Independent login, auth-only VM and encrypted storage implemented; live accounts/long refresh unverified | API/subscription, refresh conflicts, proxy restart, cancellation, active-stream revocation, no secrets in logs/files |
-| P0 | Network/revocation acceptance | Reuse [existing tests](../../testing.md) (Japanese); add missing cases only | DNS, IPv4/IPv6, private/metadata, redirects, CONNECT, SSE/WS, failed stop; never label unconfirmed stop as blocked |
+| P0 | Network/revocation acceptance | **Additional coverage completed (Unreleased main)**. [Scope and reproduction](network-acceptance.md) | Automated DNS/failed-stop checks; real Kata traffic, active SSE/WS revocation and quarantine pass. CLI text/JSON distinguish unconfirmed stops |
 | P0 | WSL/outer VM/headless acceptance | Credential design differs from actual nested-VM execution requirements | Install→unlock→login→run→stop→upgrade→recover; diagnose missing KVM without silent weaker isolation |
 
-- Live-account acceptance requires defined accounts, provider terms and cost arrangements. This dependency task performs no live authentication/inference or new runtime acceptance.
+- Live-account authentication/inference and real WSL acceptance remain unverified. Network/revocation uses real Kata with synthetic credentials.
 - Existing evidence and gaps: [testing](../../testing.md) (Japanese).
 
 ## Strengthen existing capabilities

@@ -1,11 +1,28 @@
 # テストと動作確認
 
+- 通信・失効の追加検査と再実行手順：[通信・失効の受け入れ検査](development/network-acceptance.md)。
+
+## 通信・失効の追加受け入れ（2026-10-24）
+
+| 対象 | 結果 |
+|---|---|
+| 版・環境 | 未リリースmain。試験用バンドル`fa35f89-network-a`／`-b`、使い捨てUbuntu 26.04、containerd 2.4.2、Kata 4.2.0／Dragonball |
+| 自動試験 | A/AAAA混在・metadata・DNS応答変更、3つのAI経路×5種類のSSE終了条件、停止失敗と未確認状態のCLI表示・JSONを検査 |
+| 実Kata | `TestKataNetworkRevocation`が20.98秒で成功。private・metadata・禁止ポート・redirect拒否、公開IPv4/IPv6 CONNECTの往復を確認 |
+| 通信中の失効 | VMを動かしたままAIトークンを失効。既存SSE/WSの接続先側が切断し、一般通信は継続 |
+| 隔離停止 | 一般HTTP・IPv4/IPv6 CONNECTの接続先側も切断。workspace保持・再起動拒否・CLIの停止完了表示が成功 |
+| 品質 | build、全Go race・vet・lint、Python 77試験、MkDocs strictが成功 |
+
+- 実行記録：`.kata-verification/setup-e2e/2a44c7d4aded/acceptance.txt`。自動試験・ビルド記録は`.kata-verification/network-acceptance-20261024/`。
+- 初回の試験用イメージはprotocol情報不足で拒否。修正後、プローブが起動処理用の削除済み環境変数を参照して失敗したため、通常のProxy用プレースホルダーと接続先を使うよう修正し再検証しました。製品の保護処理は維持しています。
+- 公開v0.0.3の配布物には未反映。実アカウント・外部IPv6回線・実WSL・全8スイートの再受入は対象外です。
+
 ## 依存更新とAPI境界の回帰検証（2026-10-24）
 
 - 対象：**未リリース（main）**。公開v0.0.3の配布物には未反映。
 - 全Go race・build・vet・lint・module検証、Go 1.26.0でのビルド、macOS arm64／amd64・Linux arm64のクロスビルドが成功。
 - 依存検査は15→2件。残る2件の適用条件と、追加した依存・API境界検査は[依存関係の検査と対応](development/dependency-security.md)を参照。
-- 実Kata・実アカウント・WSL等の受け入れは今回の対象外。以下の過去の実機結果を、今回の依存版の受け入れ結果とは扱いません。
+- 実Kataの追加確認は上の通信・失効スイートを参照。過去の全件受入を今回の依存版の全件成功とは扱いません。実アカウント・WSLは未実施です。
 
 ## インストールから初回利用までの通し検証（2026-10-24）
 

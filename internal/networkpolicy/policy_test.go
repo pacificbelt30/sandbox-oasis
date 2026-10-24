@@ -154,3 +154,48 @@ func TestDomainDenialPrecedesDNSAndRulesAreCopied(t *testing.T) {
 		t.Fatalf("extension weakened base: %v", err)
 	}
 }
+
+func TestMixedDNSFamiliesFailClosedAndPublicAddressesArePinned(t *testing.T) {
+	policy, err := Compile(Rules{DefaultDeny: true, AllowDomains: []string{"=fixture.invalid"}, BlockPrivate: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, blocked := range []string{"127.0.0.1", "169.254.169.254", "100.100.100.200", "::1", "fd00:ec2::254", "fe80::1", "::ffff:169.254.169.254"} {
+		for _, reverse := range []bool{false, true} {
+			t.Run(blocked+map[bool]string{false: "/last", true: "/first"}[reverse], func(t *testing.T) {
+				ips := []netip.Addr{netip.MustParseAddr("203.0.113.1"), netip.MustParseAddr("2606:4700:4700::1111"), netip.MustParseAddr(blocked)}
+				if reverse {
+					ips[0], ips[2] = ips[2], ips[0]
+				}
+				resolver := &fixedResolver{addresses: ips}
+				dials := 0
+				d := Dialer{Policy: policy, Resolver: resolver, Connect: func(context.Context, string, string) (net.Conn, error) {
+					dials++
+					return nil, errors.New("must not dial")
+				}}
+				if _, err := d.DialContext(context.Background(), "tcp", "fixture.invalid:443"); !errors.Is(err, ErrDenied) || dials != 0 || resolver.calls != 1 {
+					t.Fatalf("mixed DNS escaped: dials=%d lookups=%d err=%v", dials, resolver.calls, err)
+				}
+			})
+		}
+	}
+	resolver := &fixedResolver{addresses: []netip.Addr{netip.MustParseAddr("203.0.113.1"), netip.MustParseAddr("2606:4700:4700::1111")}}
+	var dials []string
+	d := Dialer{Policy: policy, Resolver: resolver, Connect: func(_ context.Context, _, addr string) (net.Conn, error) {
+		dials = append(dials, addr)
+		return nil, errors.New("fixture unreachable")
+	}}
+	_, _ = d.DialContext(context.Background(), "tcp", "fixture.invalid:443")
+	if strings.Join(dials, ",") != "203.0.113.1:443,[2606:4700:4700::1111]:443" || resolver.calls != 1 {
+		t.Fatalf("unverified fallback or re-resolution: dials=%v lookups=%d", dials, resolver.calls)
+	}
+	// A later connection must revalidate the new DNS answer, not reuse a prior grant.
+	resolver.addresses = []netip.Addr{netip.MustParseAddr("169.254.169.254")}
+	if _, err := d.DialContext(context.Background(), "tcp", "fixture.invalid:443"); !errors.Is(err, ErrDenied) || len(dials) != 2 || resolver.calls != 2 {
+		t.Fatalf("rebinding escaped revalidation: dials=%v lookups=%d err=%v", dials, resolver.calls, err)
+	}
+	resolver.addresses = nil
+	if _, err := d.DialContext(context.Background(), "tcp", "fixture.invalid:443"); err == nil || len(dials) != 2 {
+		t.Fatal("empty DNS answer allowed a connection")
+	}
+}
