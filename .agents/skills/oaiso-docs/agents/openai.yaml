@@ -1,0 +1,4 @@
+interface:
+  display_name: "ドキュメント編集"
+  short_description: "簡潔な日本語、構造化した手順、導入版と実行例をそろえて編集する"
+  default_prompt: "$oaiso-docs を使って、依頼された作業を確認し、必要な操作と検証を進めてください。"

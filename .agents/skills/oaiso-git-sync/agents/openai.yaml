@@ -1,0 +1,4 @@
+interface:
+  display_name: "Git同期・競合解消"
+  short_description: "利用者の変更を保ち、競合の意味と必要なテストを確認して同期する"
+  default_prompt: "$oaiso-git-sync を使って、依頼された作業を確認し、必要な操作と検証を進めてください。"

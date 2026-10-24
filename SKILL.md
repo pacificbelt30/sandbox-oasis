@@ -26,6 +26,34 @@ README・利用ガイド・リファレンス・リリース情報の編集で�
 - 日本語と英語で、操作・条件・導入版・確認範囲をそろえる。
 - 詳しい書き方と確認手順：[ドキュメント編集ガイド](doc/development/documentation.md)。
 
+### 説明の正確さも確認する
+
+| 観点 | 確認すること |
+|---|---|
+| 読む順番 | 読者の目的から始め、前提→設定→実行→確認→後片付けの順にする。初回利用と更新を混ぜない |
+| 実装との一致 | CLIのhelp・設定例・実装を照合する。存在しないフラグ・環境変数・自動処理を書かない |
+| 必須と任意 | 既定値、必要な設定、任意の設定を分ける。利用者に全選択肢を実行させない |
+| 実行の影響 | ホストとVM、実行ユーザーと権限、共有ファイルの変更、外部通信、停止・削除の範囲を明記する |
+| 成功の意味 | 終了コードと次の確認を示す。準備・保存・接続・推論・タスク成功、例示・実測・未確認を区別する |
+| 失敗時の操作 | どの条件に失敗したか、直す場所、再確認するコマンドを示す |
+| 説明の置き場所 | 詳細は一か所で管理し、要約からリンクする。パス・見出し・目次・日英・設定例も更新する |
+| 秘密と証跡 | 架空の値を使い、実資格情報や秘密を含むログを載せない。文書ビルドの成功を実動作の確認と取り違えない |
+
+## 作業別のスキル
+
+- `.agents/skills/`に置く。作業に合うものだけを読み、詳細はリンク先の既存手順を参照する。
+- スキルを使うだけで操作の許可は増えない。利用者の依頼と既存の許可の範囲で進める。
+
+| 作業 | スキル |
+|---|---|
+| 文書・README・コマンド例の編集 | [oaiso-docs](.agents/skills/oaiso-docs/SKILL.md) |
+| 変更後のGo・Python・CLI検証 | [oaiso-test](.agents/skills/oaiso-test/SKILL.md) |
+| 実Kata・初回導入・更新・復旧 | [oaiso-kata-test](.agents/skills/oaiso-kata-test/SKILL.md) |
+| ボトルネック調査・性能比較 | [oaiso-performance](.agents/skills/oaiso-performance/SKILL.md) |
+| Codex／Claude Code・API契約の差分確認 | [oaiso-upstream-check](.agents/skills/oaiso-upstream-check/SKILL.md) |
+| 配布物作成・リリース・公開物の確認 | [oaiso-release](.agents/skills/oaiso-release/SKILL.md) |
+| Git同期・競合解消・commit／push | [oaiso-git-sync](.agents/skills/oaiso-git-sync/SKILL.md) |
+
 ## Add a command or setting
 
 1. Put Cobra wiring in `cmd/` and business logic in `internal/`.

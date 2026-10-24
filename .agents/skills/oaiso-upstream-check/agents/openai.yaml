@@ -1,0 +1,4 @@
+interface:
+  display_name: "上流互換性の確認"
+  short_description: "上流CLIとAPI契約の差分を確認し、採用した変更だけ基準へ反映する"
+  default_prompt: "$oaiso-upstream-check を使って、依頼された作業を確認し、必要な操作と検証を進めてください。"

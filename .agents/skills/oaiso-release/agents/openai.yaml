@@ -1,0 +1,4 @@
+interface:
+  display_name: "リリース作成・確認"
+  short_description: "指定版のバンドルと公開物を検証し、許可されたリリースを実施する"
+  default_prompt: "$oaiso-release を使って、依頼された作業を確認し、必要な操作と検証を進めてください。"

@@ -4,6 +4,8 @@ codex-dock runs Codex CLI and Claude Code in Kata VM-isolated workers.
 Read [the documentation index](doc/index.md) for usage and [architecture](doc/architecture.md) for component boundaries.
 This file describes development conventions; [SKILL.md](SKILL.md) has reusable implementation patterns.
 
+For recurring work, select the matching [repository skill](SKILL.md#作業別のスキル) under `.agents/skills/`: documentation, change verification, real Kata, performance, upstream compatibility, release, or Git synchronization. Read only the relevant workflows; using a skill does not expand the user's authorization.
+
 ## Execution model
 
 - Linux x86_64 + KVM + cgroup v2.

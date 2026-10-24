@@ -1,0 +1,4 @@
+interface:
+  display_name: "性能計測・高速化"
+  short_description: "同じ条件の測定でボトルネックと改善率を確認し、隔離条件を維持する"
+  default_prompt: "$oaiso-performance を使って、依頼された作業を確認し、必要な操作と検証を進めてください。"

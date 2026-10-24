@@ -22,6 +22,21 @@
 - Verify introduction versions against tags and history. Do not confuse the documentation update version with the feature's first release.
 - Label unpublished features `Unreleased (main)` and replace this label with their first release after publication.
 
+## Check the explanation
+
+| Topic | Check |
+|---|---|
+| Reader and sequence | Distinguish first use, upgrades and development; cover prerequisites through cleanup |
+| Implementation | Compare help, configuration examples and code; distinguish released behavior from main |
+| Choices | Identify defaults, required and optional settings; show one working path first |
+| Privileges and effects | Distinguish host/VM, user/admin, shared files, external traffic and deletion scope |
+| Success and errors | Explain exit status and the next check; give recovery steps and a recheck command |
+| Evidence | Distinguish starting, storage, connection, inference and artifacts; fixtures, skips and unexecuted tests do not establish live success |
+| Duplication | Keep details in one place and align navigation, links, translations and configuration examples |
+| Secrets | Use fake credentials, exclude authentication files and secret logs, and do not add live inference just to check documentation |
+
+- Use [oaiso-docs](https://github.com/pacificbelt30/sandbox-oasis/blob/main/.agents/skills/oaiso-docs/SKILL.md) for documentation, or choose another workflow from the [skill index](https://github.com/pacificbelt30/sandbox-oasis/blob/main/SKILL.md#作業別のスキル).
+
 ## Chapters
 
 | Chapter | Reader's question | Contents |

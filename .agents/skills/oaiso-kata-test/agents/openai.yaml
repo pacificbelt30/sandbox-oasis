@@ -1,0 +1,4 @@
+interface:
+  display_name: "実Kata・導入検証"
+  short_description: "使い捨てKata環境でVM動作、認証、導入・更新・復旧を検証する"
+  default_prompt: "$oaiso-kata-test を使って、依頼された作業を確認し、必要な操作と検証を進めてください。"

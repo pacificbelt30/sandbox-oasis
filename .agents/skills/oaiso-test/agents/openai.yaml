@@ -1,0 +1,4 @@
+interface:
+  display_name: "変更後のテスト"
+  short_description: "変更箇所に合うGo・Python・CLIの検証を選び、結果を確認する"
+  default_prompt: "$oaiso-test を使って、依頼された作業を確認し、必要な操作と検証を進めてください。"
