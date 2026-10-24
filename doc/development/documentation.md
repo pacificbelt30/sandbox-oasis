@@ -13,6 +13,7 @@
 | 製品の概要・導入・基本操作 | README。変更履歴や新バージョンの告知は載せない |
 | リリースごとの変更点 | `doc/release-notes.md`・GitHub Releases |
 | 機能の使い方・制限 | 各機能の説明ページ。初収録版も記載する |
+| 改善計画 | 本製品の要件・制限・完了条件で記載。他製品の名指し評価・順位・コード量比較は公開文書へ載せない |
 | 比較・設定項目 | 表 |
 | 実行する順番 | 番号付き箇条書き |
 | 条件・注意・補足 | 短い箇条書き。1項目に1つの内容を書く |
@@ -99,18 +100,6 @@ oaiso codex --version
 oaiso init --agent claude
 oaiso claude --version
 ```
-
-## 参考にした公式ドキュメント
-
-確認日：2026-10-22。機能・対応環境を転載せず、情報の分類を参考にしています。
-
-| 製品 | 参考にした構成 |
-|---|---|
-| [E2B](https://docs.e2b.dev/) | 初回手順・利用例・SDKリファレンスを分離 |
-| [Docker Sandboxes](https://docs.docker.com/ai/sandboxes/) | 導入・エージェント・ワークフロー・設定・セキュリティ・CLIを分類 |
-| [Daytona](https://www.daytona.io/docs/) | 導入・概念・設定・ツール・セキュリティ・API／CLIを分類 |
-| [Anthropic Sandbox Runtime](https://github.com/anthropics/sandbox-runtime) | インストール → 基本操作 → 概要 → 仕組みの順に案内 |
-| [Claude CodeのSandbox](https://code.claude.com/docs/en/sandboxing) | 導入・設定・仕組み・トラブルシューティング・制限を分離 |
 
 ## 公開前に確認する
 

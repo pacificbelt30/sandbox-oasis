@@ -53,6 +53,7 @@
 | Understand the design | [Architecture](architecture.md), [security](security.md) |
 | Check test coverage | [Testing](../testing.md) (Japanese) |
 | See planned coding agent integrations | [Future work](future-work.md) |
+| Review feature and security proposals | [Improvement candidates](development/improvements.md) |
 | Prepare tools for source builds | [Development tools and official installation instructions](development/toolchain.md) |
 | Contribute documentation | [Structure and editing](development/documentation.md) |
 

@@ -102,6 +102,7 @@ nav:
       - 上流仕様の変更検知: upstream-compatibility.md
       - テストと動作確認: testing.md
       - 今後の対応: future-work.md
+      - 機能と安全性の改善候補: development/improvements.md
       - ドキュメントの追加・修正: development/documentation.md
       - リリースの作成: development/releases.md
       - 廃止機能:
@@ -160,6 +161,7 @@ nav:
               - Networking: en/network.md
           - Upstream compatibility: en/upstream-compatibility.md
           - Future work: en/future-work.md
+          - Feature and security improvements: en/development/improvements.md
           - Development tools: en/development/toolchain.md
           - Local credential store specification: en/development/local-credential-store.md
           - Dependency findings: en/development/dependency-security.md

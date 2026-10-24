@@ -1,5 +1,7 @@
 # Future work
 
+- Priorities, feature additions and security measures: [improvement candidates](development/improvements.md). Implemented controls and proposed additions remain distinct.
+
 ## Simple setup, authentication and operation
 
 - Implement the following six items, validating, documenting and committing each feature.

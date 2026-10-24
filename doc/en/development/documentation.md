@@ -13,6 +13,7 @@
 | Product overview, installation and basic use | README; exclude release changes and new-version announcements |
 | Release-specific changes | `doc/release-notes.md` and GitHub Releases |
 | Feature usage and limitations | Feature documentation, including its first release |
+| Improvement plans | Describe this product's requirements, limits and acceptance criteria; omit named third-party evaluations, rankings and source-size comparisons from public documentation |
 | Comparisons and settings | Tables |
 | Ordered actions | Numbered lists |
 | Conditions and supporting notes | Short bullets, one point per item |
@@ -98,18 +99,6 @@ oaiso codex --version
 oaiso init --agent claude
 oaiso claude --version
 ```
-
-## Official documentation used as references
-
-Reviewed: 2026-10-22. These references inform information organization, not Oaiso's feature or platform support.
-
-| Product | Organization used as a reference |
-|---|---|
-| [E2B](https://docs.e2b.dev/) | Separate initial tutorials, examples and SDK reference |
-| [Docker Sandboxes](https://docs.docker.com/ai/sandboxes/) | Group getting started, agents, workflows, configuration, security and CLI |
-| [Daytona](https://www.daytona.io/docs/) | Group introduction, concepts, configuration, tools, security and API/CLI reference |
-| [Anthropic Sandbox Runtime](https://github.com/anthropics/sandbox-runtime) | Installation, basic usage, overview and how it works |
-| [Claude Code sandbox](https://code.claude.com/docs/en/sandboxing) | Separate setup, configuration, mechanism, troubleshooting and limitations |
 
 ## Validate
 
