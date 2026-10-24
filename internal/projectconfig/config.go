@@ -58,6 +58,7 @@ var projectKeys = map[string]map[string]bool{
 	"run": {
 		"image": true, "template": true, "agent": true, "model": true, "profile_size": true,
 		"approval_mode": true, "watch_polling": true,
+		"protect_main": true,
 		"policy_preset": true, "deny_read": true, "deny_write": true, "max_lifetime": true, "idle_timeout": true, "retention": true, "start_hooks": true, "readiness": true, "readiness_timeout": true,
 		"read_only": true, "read_only_rootfs": true, "no_git_metadata": true, "no_internet": true, "egress_allow_domains": true,
 	},

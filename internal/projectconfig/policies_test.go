@@ -14,6 +14,7 @@ policy_preset = "offline"
 deny_read = ["/workspace/.env"]
 max_lifetime = "2h"
 idle_timeout = "30m"
+protect_main = true
 retention = "24h"
 start_hooks = [["sh", "-c", "printf ready"]]
 readiness = ["test", "-f", "ready"]
@@ -27,7 +28,7 @@ readiness_timeout = "1m"
 		t.Fatal(err)
 	}
 	f, l, e, err := cfg.Policies()
-	if err != nil || len(f.DenyRead) != 1 || l.MaxLifetime != 2*time.Hour || l.IdleTimeout != 30*time.Minute || l.Retention != 24*time.Hour || e.StartHooks[0][0] != "sh" || e.Readiness[0] != "test" || e.ReadinessTimeout != time.Minute {
+	if err != nil || len(f.DenyRead) != 1 || !l.ProtectMain || l.MaxLifetime != 2*time.Hour || l.IdleTimeout != 30*time.Minute || l.Retention != 24*time.Hour || e.StartHooks[0][0] != "sh" || e.Readiness[0] != "test" || e.ReadinessTimeout != time.Minute {
 		t.Fatalf("%+v %+v %+v %v", f, l, e, err)
 	}
 }
