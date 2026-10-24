@@ -12,7 +12,7 @@
 
 [日本語ドキュメント](doc/index.md) · [English documentation](doc/en/index.md)
 
-- **v0.0.3：キーリング＋age保存・`oaiso login`を含むビルド済み版。** [インストールから初回起動まで](doc/guides/first-run.md)。
+- [インストールから初回起動まで](doc/guides/first-run.md)。
 
 ## Installation — インストール
 
@@ -192,7 +192,7 @@ make vet
 | 確認すること | 動作・注意点 |
 |---|---|
 | APIキー・ログイントークン | 認証Proxyで保持。作業VMには短命トークンだけを渡す |
-| 認証情報の保存 | v0.0.3の新規loginは[キーリング＋age](doc/guides/keyring.md)が既定。既存方式は維持 |
+| 認証情報の保存 | 新規loginは[キーリング＋age](doc/guides/keyring.md)が既定。既存方式は維持 |
 | プロジェクトの共有 | 既定では読み書き可能。エージェントの変更・削除はホストの共有ファイルにも反映される |
 | 外部通信 | AI用の接続先とは別に、Git・パッケージ取得先などを許可する。一般通信は既定で拒否 |
 | 管理グループ `codex-dock` | メンバーはホストのroot相当の操作が可能。信頼する利用者だけを登録 |

@@ -79,6 +79,8 @@ Cross-build success does not establish non-Linux runtime support.
 
 For documentation changes:
 
+Follow the [documentation rules in SKILL.md](SKILL.md#ドキュメント編集) and the [editing guide](doc/development/documentation.md), including README scope, feature introduction versions and separate command blocks for alternatives.
+
 ```bash
 mkdocs build --strict
 ```

@@ -1,7 +1,30 @@
-# codex-dock development patterns
+---
+name: oaiso-development
+description: Oaisoリポジトリの実装・ドキュメントを変更するときに使う開発ルール。隔離・認証の条件と、README・機能ガイド・コマンド例の編集方針を確認する。
+---
+
+# Oaiso development patterns
 
 Read [CLAUDE.md](CLAUDE.md) for conventions and [architecture](doc/architecture.md) for the current containerd/Kata/Dragonball design.
 These patterns describe this repository. They do not replace the host setup or security checks.
+
+## ドキュメント編集
+
+README・利用ガイド・リファレンス・リリース情報の編集では、次の6点を守ります。
+
+| 項目 | 必須ルール |
+|---|---|
+| 日本語 | 簡潔な日本語で書く。難解な言い回しや不要な横文字を使わない |
+| 構造 | 比較・設定は表、手順は番号付き箇条書き、補足は短い箇条書きにする。長い文章で説明を重ねない |
+| README | 概要・導入・基本操作・詳細ページへの案内を書く。リリースの変更点や新バージョンの告知は書かず、`doc/release-notes.md`・GitHub Releasesへ分ける |
+| 機能の導入版 | 各機能の説明に初収録版を書く（例：`利用可能：v0.0.3以降`）。タグ・履歴で確認し、未公開なら`未リリース（main）`と明記する |
+| 実行例 | 具体的なコマンドを`bash`ブロックで示す。必要に応じて出力例を別の`text`・`json`ブロックに載せ、成功の目印を書く |
+| まとめて実行 | 同じコードブロックは、上からまとめてコピーして実行できるようにする。条件別・エージェント別・代替手順は見出しとコードブロックを分ける。コメントアウトした代替コマンドを同居させない |
+
+- 実行ユーザー・作業ディレクトリ・前提条件・置換が必要な値を、コマンドの前に示す。
+- 対話入力・シェル切り替え・再ログインを挟む場合は、その前後でコードブロックを分ける。
+- 日本語と英語で、操作・条件・導入版・確認範囲をそろえる。
+- 詳しい書き方と確認手順：[ドキュメント編集ガイド](doc/development/documentation.md)。
 
 ## Add a command or setting
 

@@ -4,6 +4,23 @@
 
 - For contributors editing documentation.
 - To use Oaiso, start with [Installation](../installation.md) or the [quick start](../getting-started.md).
+- Follow the [shared rules in SKILL.md](https://github.com/pacificbelt30/sandbox-oasis/blob/main/SKILL.md#ドキュメント編集).
+
+## Choose the content and format
+
+| Content | Location or format |
+|---|---|
+| Product overview, installation and basic use | README; exclude release changes and new-version announcements |
+| Release-specific changes | `doc/release-notes.md` and GitHub Releases |
+| Feature usage and limitations | Feature documentation, including its first release |
+| Comparisons and settings | Tables |
+| Ordered actions | Numbered lists |
+| Conditions and supporting notes | Short bullets, one point per item |
+
+- Write Japanese documentation in simple, concise Japanese; avoid difficult phrasing.
+- Mark each feature's first release, for example `Available since v0.0.3`. Label features separately when their introduction versions differ.
+- Verify introduction versions against tags and history. Do not confuse the documentation update version with the feature's first release.
+- Label unpublished features `Unreleased (main)` and replace this label with their first release after publication.
 
 ## Chapters
 
@@ -40,10 +57,32 @@
 | Silent success | State that success produces no output and add a verification command |
 | Errors | Show the failing check, recovery clue and recheck |
 | Authentication and startup | Distinguish storage success, preparation, execution and task success |
+| Multiple commands | Make the whole block runnable from top to bottom; state the user, directory and required substitutions first |
+| Conditional or alternative paths | Give each path its own heading and code block; do not include commented-out alternatives in the same block |
+| Interactive input, shell changes or re-login | Split blocks at the boundary and explain where to continue |
 
 - Check local output with the real CLI, an isolated HOME and fake credentials.
 - Check host-dependent output against implementation and existing evidence; adding an example does not establish live host validation.
 - For long build logs, show only useful sections and label omitted content.
+
+### Separate conditional command blocks
+
+- Prerequisites: the host and selected agent's credentials are ready. Run as a normal user from the project directory.
+- Choose exactly one block. Run its commands together, from top to bottom.
+
+**For Codex**
+
+```bash
+oaiso init --agent codex
+oaiso codex --version
+```
+
+**For Claude Code**
+
+```bash
+oaiso init --agent claude
+oaiso claude --version
+```
 
 ## Official documentation used as references
 
@@ -69,6 +108,8 @@ uv run --no-project --no-config --managed-python --python 3.12 --with-requiremen
 
 - Check navigation coverage, page links and heading links.
 - Compare commands with the implementation; distinguish syntax checks from live host validation.
+- Check that README has no release changes or announcements and that feature documentation records the correct introduction versions.
+- Check command order, variables and working directories; keep alternative paths and interactive boundaries in separate blocks.
 - Compare command/flag tables with normal subcommand `--help`; native `codex`/`claude` help is forwarded to the agent.
 - Compare allowed keys, types, scope and precedence in both languages, including different global/project hook formats.
 - Walk authentication and update procedures from prerequisites through settings, preparation and verification; link checks alone do not establish runtime correctness.
