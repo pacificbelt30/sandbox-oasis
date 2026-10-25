@@ -46,7 +46,7 @@
 
 | Priority | Measure | Evidence and intent | Verification and residual limits |
 |---|---|---|---|
-| P1 | Encrypt VM–proxy traffic and bind authorization to execution origin | [Current boundary](../security.md) uses HTTP on a dedicated network and bearer tokens; consider short-lived authenticated execution channels | Copied bearer alone must fail from another origin. A fully compromised VM can still perform its authorized operations |
+| P1 | Encrypt VM–proxy traffic and bind authorization to execution origin | **Implemented (Unreleased main)**. [TLS 1.3 and execution-bound auth-proxy certificates](../guides/worker-tls.md). General egress is outside this feature | Copied bearer alone must fail from another origin. A fully compromised VM can still perform its authorized operations |
 | P1 | Signed distributions, provenance and dependency inventory | [Current manifest](../security.md) is a checksum record, not an independent publisher signature | Verify trusted signatures before placement; reject mismatches, unknown keys and unauthorized rollback. Signing-key compromise needs separate controls |
 | P1 | Retained audit records | **Implemented (Unreleased main)**. [Durable operation audit](../guides/audit.md): creation/auth changes/policy issue/revocation/deletion outcomes | Store IDs/reasons/results, never values; bounded retention, gap detection and leak tests. Local storage alone cannot promise root-resistant integrity |
 | P1 | Malformed-input, race and failure testing | Authorization, URL/path, JSON, Store updates, stop and cleanup are critical boundaries | Extend existing tests with missing fuzz/race/fault cases; fail closed on connection floods, long streams, crashes and disk-full |
@@ -54,7 +54,7 @@
 | P2 | Finer network authority | [General CONNECT](../../proxy-policy.md) (Japanese) does not inspect TLS SNI/URL | First use fixed-origin broker path/method limits where sufficient. SNI matching alone cannot enforce encrypted HTTP Host/path |
 
 - Real upstream API keys and OAuth access/refresh/ID tokens remain in the authentication proxy.
-- Proposed work-VM credentials are short-lived, execution-scoped and proxy-only, unusable for upstream authentication. Host issuing keys never enter work VMs.
+- Work-VM execution credentials are short-lived, execution-scoped and proxy-only, unusable for upstream authentication. Host issuing keys never enter work VMs.
 - Encryption does not replace authorization or cleanup. Record coverage/gaps in [security](../security.md).
 
 ## Larger contract changes need separate decisions
@@ -63,7 +63,6 @@
 |---|---|---|
 | Live network policy | Current immutable policy plus whole-VM quarantine | Generations, apply acknowledgement, existing-connection termination, partial failure/restart recovery |
 | Generic TLS decryption/L7 restrictions | Guest CA trust and supported protocols | Pinning, HTTP/2/gRPC/WS, signed requests, secret echo/logs and overhead |
-| VM–proxy mutual authentication | Add execution-origin authentication to bearer authorization | Issuance/renewal/revocation, restart, clock skew, migration and connection-reuse latency |
 | Memory snapshots/VM fork | Preserve/clone processes, RAM, connections, identity and deadlines | Reissue tokens, prevent secret residue, CPU compatibility, avoid duplicate external effects |
 | Other OS/multiple hosts/tenants | Trusted single-host operator assumption | Authentication, authority, quota, placement, mutual authentication, audit and recovery |
 | Dedicated credential UID | Profile/keyring/service ownership | Existing-profile migration, headless/WSL unlock, lock/cleanup and root trust |

@@ -121,9 +121,9 @@ func EnsureCaseProxy(ctx context.Context, opts CaseProxyOptions) (CaseProxy, err
 	}
 	sum := sha256.Sum256([]byte(opts.CaseID))
 	caseHash := hex.EncodeToString(sum[:])
-	result := CaseProxy{Name: opts.Name, AdminURL: "http://127.0.0.1:" + strconv.Itoa(opts.AdminPort), ContainerURL: (&url.URL{Scheme: "http", Host: net.JoinHostPort(opts.Name, "18080")}).String()}
+	result := CaseProxy{Name: opts.Name, AdminURL: "http://127.0.0.1:" + strconv.Itoa(opts.AdminPort), ContainerURL: (&url.URL{Scheme: "https", Host: net.JoinHostPort(opts.Name, "18080")}).String()}
 	if existing, err := cli.ContainerInspect(ctx, opts.Name); err == nil {
-		if existing.Config == nil || existing.State == nil || existing.Config.Image != opts.Image || existing.Config.Labels["io.codex-dock.proxy-layout"] != "split-v3-oauth-state" || existing.Config.Labels["io.codex-dock.credential-case"] != caseHash {
+		if existing.Config == nil || existing.State == nil || existing.Config.Image != opts.Image || existing.Config.Labels["io.codex-dock.proxy-layout"] != "split-v4-worker-mtls" || existing.Config.Labels["io.codex-dock.credential-case"] != caseHash {
 			return CaseProxy{}, fmt.Errorf("case proxy name already belongs to another image, layout or case")
 		}
 		mounted := false
@@ -170,8 +170,8 @@ func EnsureCaseProxy(ctx context.Context, opts CaseProxyOptions) (CaseProxy, err
 	}
 	cfg := &container.Config{
 		Image: opts.Image, User: fmt.Sprintf("%d:%d", os.Geteuid(), os.Getegid()),
-		Cmd:    []string{"proxy", "serve", "--listen", "0.0.0.0:18080", "--role", "auth", "--admin-listen", "egress:" + strconv.Itoa(opts.AdminPort), "--admin-secret", opts.AdminSecret, "--block-private", "--credential-store-socket", "/run/cxd-credential-store.sock", "--case-id", opts.CaseID},
-		Labels: map[string]string{"io.codex-dock.proxy-layout": "split-v3-oauth-state", "io.codex-dock.credential-case": caseHash},
+		Cmd:    []string{"proxy", "serve", "--worker-mtls", "--listen", "0.0.0.0:18080", "--role", "auth", "--admin-listen", "egress:" + strconv.Itoa(opts.AdminPort), "--admin-secret", opts.AdminSecret, "--block-private", "--credential-store-socket", "/run/cxd-credential-store.sock", "--case-id", opts.CaseID},
+		Labels: map[string]string{"io.codex-dock.proxy-layout": "split-v4-worker-mtls", "io.codex-dock.credential-case": caseHash},
 	}
 	for _, model := range opts.AllowedModels {
 		cfg.Cmd = append(cfg.Cmd, "--allow-model", model)
@@ -228,7 +228,7 @@ func RemoveCaseProxy(ctx context.Context, nodeSocket, name, caseID string) error
 		return err
 	}
 	sum := sha256.Sum256([]byte(caseID))
-	if v.Config == nil || v.Config.Labels["io.codex-dock.proxy-layout"] != "split-v3-oauth-state" || v.Config.Labels["io.codex-dock.credential-case"] != hex.EncodeToString(sum[:]) {
+	if v.Config == nil || v.Config.Labels["io.codex-dock.proxy-layout"] != "split-v4-worker-mtls" || v.Config.Labels["io.codex-dock.credential-case"] != hex.EncodeToString(sum[:]) {
 		return fmt.Errorf("proxy %q does not belong to this credential case", name)
 	}
 	workers, err := cli.ContainerList(ctx, container.ListOptions{All: true, Filters: filters.NewArgs(filters.Arg("label", "codex-dock.managed=true"))})

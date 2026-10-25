@@ -42,7 +42,7 @@ func workerPlaceholder(v container.InspectResponse) string {
 	return ""
 }
 
-func (m *Manager) restoreWorkerToken(v container.InspectResponse) error {
+func (m *Manager) authorizeWorkerToken(v container.InspectResponse) error {
 	token := workerPlaceholder(v)
 	if token == "" {
 		return nil

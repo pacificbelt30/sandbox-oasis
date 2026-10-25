@@ -320,3 +320,8 @@ go build -o /var/tmp/oaiso-embedding ./examples/embedding
 ## Disk checkpoints
 
 - Unreleased main: `Checkpoint`, `Checkpoints`, `InspectCheckpoint`, `RestoreCheckpoint`, `RemoveCheckpoint`. See [saved state, capacity and restore conditions](guides/disk-checkpoint.md).
+
+## Worker TLS
+
+- Available: Unreleased (main). `EnsureCaseProxy` enables TLS; query `ProxyCapabilities().WorkerMTLS`.
+- [Expiry, restart and legacy worker recreation](guides/worker-tls.md).

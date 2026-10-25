@@ -23,7 +23,15 @@ func main() {
 	}
 	switch os.Args[1] {
 	case "capabilities":
-		if err := json.NewEncoder(os.Stdout).Encode([]string{"temporary-storage-probe-v1"}); err != nil {
+		if err := json.NewEncoder(os.Stdout).Encode([]string{"temporary-storage-probe-v1", "worker-mtls-v1"}); err != nil {
+			die(err)
+		}
+	case "transport-install":
+		if err := installTransport(); err != nil {
+			die(err)
+		}
+	case "transport":
+		if err := runTransport(); err != nil {
 			die(err)
 		}
 	case "wait":
@@ -60,6 +68,11 @@ func main() {
 		_ = conn.Close()
 		_ = listener.Close()
 		_ = os.Remove(socket)
+		if os.Getenv("CODEX_DOCK_WORKER_MTLS") == "1" {
+			if err = startTransport(); err != nil {
+				die(err)
+			}
+		}
 		command, err := exec.LookPath(os.Args[3])
 		if err != nil {
 			die(err)

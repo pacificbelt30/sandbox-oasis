@@ -141,12 +141,15 @@ func (m *Manager) prepareKataBootstrap(ctx context.Context, c *container.Config,
 }
 
 func (m *Manager) execTrusted(ctx context.Context, id string, args []string) ([]byte, error) {
+	return m.execTrustedInput(ctx, id, args, nil)
+}
+func (m *Manager) execTrustedInput(ctx context.Context, id string, args []string, input io.Reader) ([]byte, error) {
 	if m.execProbe != nil {
 		return m.execProbe(ctx, id, args)
 	}
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	r, err := m.cli.ContainerExecCreate(ctx, id, container.ExecOptions{Cmd: args, AttachStdout: true, AttachStderr: true})
+	r, err := m.cli.ContainerExecCreate(ctx, id, container.ExecOptions{Cmd: args, AttachStdin: input != nil, AttachStdout: true, AttachStderr: true})
 	if err != nil {
 		return nil, err
 	}
@@ -157,6 +160,14 @@ func (m *Manager) execTrusted(ctx context.Context, id string, args []string) ([]
 	defer stream.Close()
 	stop := context.AfterFunc(ctx, stream.Close)
 	defer stop()
+	if input != nil {
+		if _, err = io.Copy(stream.Conn, input); err != nil {
+			return nil, fmt.Errorf("installing worker transport failed")
+		}
+		if err = stream.CloseWrite(); err != nil {
+			return nil, err
+		}
+	}
 	var out, stderr bytes.Buffer
 	if _, err = stdcopy.StdCopy(&out, &stderr, io.LimitReader(stream.Reader, 65537)); err != nil {
 		return nil, err

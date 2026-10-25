@@ -35,7 +35,7 @@ func (p *Proxy) workerRequest(r *http.Request, allowAPIKey bool) (*http.Request,
 			token = keys[0]
 		}
 	}
-	if token == "" {
+	if token == "" || !p.transportBound(r, token) {
 		return nil, nil, false
 	}
 	p.mu.RLock()

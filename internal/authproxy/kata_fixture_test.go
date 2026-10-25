@@ -27,6 +27,7 @@ func runKataFixtureProxy() int {
 	}
 	f := flag.NewFlagSet("fixture-proxy", flag.ContinueOnError)
 	var cfg Config
+	f.BoolVar(&cfg.WorkerMTLS, "worker-mtls", false, "")
 	cfg.EventWriter = os.Stdout
 	var socket, role string
 	var block bool

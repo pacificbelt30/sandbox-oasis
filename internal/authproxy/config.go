@@ -21,6 +21,8 @@ const (
 
 // Config configures the Auth Proxy.
 type Config struct {
+	// WorkerMTLS encrypts the worker data listener and binds every token to its client certificate.
+	WorkerMTLS bool
 	// AuditDirectory stores bounded operation evidence. Managed proxies default to UsageStateDir/audit.
 	AuditDirectory string
 	// UsageStateDir is an exclusive owner-private durable execution ledger.

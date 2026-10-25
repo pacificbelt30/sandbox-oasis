@@ -18,6 +18,7 @@ import (
 
 // RemoteProxy talks to an externally running auth proxy service.
 type RemoteProxy struct {
+	workerMTLS         bool
 	adminURL           string
 	containerURL       string
 	adminSecret        string
@@ -57,6 +58,15 @@ func NewRemoteProxyContext(ctx context.Context, adminURL, containerURL, adminSec
 	}
 	if !mode["worker_token_auth"] {
 		return nil, fmt.Errorf("auth proxy does not enforce worker API tokens; rebuild the proxy image and recreate the proxy before running workers")
+	}
+	r.workerMTLS = mode["worker_mtls"]
+	if r.workerMTLS {
+		u, err := url.Parse(r.containerURL)
+		if err != nil || u.Hostname() == "" {
+			return nil, fmt.Errorf("invalid worker TLS endpoint")
+		}
+		u.Scheme = "https"
+		r.containerURL = u.String()
 	}
 	r.oauthMode = mode["oauth_mode"]
 	r.openaiMode = mode["openai_available"]

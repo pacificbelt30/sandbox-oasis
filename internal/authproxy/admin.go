@@ -121,6 +121,7 @@ func (p *Proxy) handleAdminMode(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = json.NewEncoder(w).Encode(map[string]bool{
 		"worker_token_auth":    true,
+		"worker_mtls":          p.WorkerTransportEnabled(),
 		"token_usage_policy":   p.usageLedger != nil,
 		"model_authorization":  true,
 		"model_policy_active":  len(p.cfg.AllowedModels) != 0,

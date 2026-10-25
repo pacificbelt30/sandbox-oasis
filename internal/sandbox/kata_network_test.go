@@ -34,7 +34,9 @@ var networkRevocationFixture string
 
 // Real production handlers/dialer over Kata networking, with synthetic upstreams.
 // The observer proves peer-side closure, rather than inferring it from an API ACK.
-func TestKataNetworkRevocation(t *testing.T) {
+func TestKataNetworkRevocation(t *testing.T) { testKataNetworkRevocation(t, false) }
+func TestKataWorkerMTLS(t *testing.T)        { testKataNetworkRevocation(t, true) }
+func testKataNetworkRevocation(t *testing.T, secure bool) {
 	if os.Getenv("CODEX_DOCK_KATA_E2E") != "1" {
 		t.Skip("set CODEX_DOCK_KATA_E2E=1 on an isolated matching node")
 	}
@@ -84,6 +86,9 @@ func TestKataNetworkRevocation(t *testing.T) {
 		if auth {
 			ports[adminPort] = struct{}{}
 			bindings[adminPort] = []nat.PortBinding{{HostIP: "127.0.0.1"}}
+			if secure {
+				args = append(args, "--worker-mtls")
+			}
 			args = append(args, "--usage-state-dir", "/run/cxd-usage")
 			args = append(args, "--credential-routes", "/run/cxd-broker.json")
 			env = append(env, "OPENAI_API_KEY=sk-network-fixture-invalid", "ANTHROPIC_API_KEY=fixture-anthropic-key")
@@ -130,11 +135,11 @@ func TestKataNetworkRevocation(t *testing.T) {
 		return endpoint(observerPort), admin
 	}
 	authName, httpName := prefix+"-auth", prefix+"-egress"
-	authObserver, adminURL := start(authName, []string{"proxy", "serve", "--role", "auth", "--listen", "0.0.0.0:18080", "--admin-listen", "egress:18081", "--admin-secret", "network-acceptance-admin"}, true)
+	authObserver, adminURL := start(authName, []string{"proxy", "serve", "--role", "auth", "--listen", "0.0.0.0:18080", "--admin-listen", "egress:18081", "--admin-secret", "network-acceptance-admin-fixture-32-bytes"}, true)
 	egressObserver, _ := start(httpName, []string{"proxy", "serve", "--role", "egress", "--listen", "0.0.0.0:18082", "--block-private", "--forward-default-deny", "--forward-allow-cidr", "0.0.0.0/0", "--forward-allow-cidr", "::/0", "--forward-allow-port", "80", "--forward-allow-port", "443"}, false)
 	var proxy *authproxy.RemoteProxy
 	for attempt := 0; attempt < 100; attempt++ {
-		proxy, err = authproxy.NewRemoteProxy(adminURL, "http://"+authName+":18080", "network-acceptance-admin")
+		proxy, err = authproxy.NewRemoteProxy(adminURL, "http://"+authName+":18080", "network-acceptance-admin-fixture-32-bytes")
 		if err == nil {
 			break
 		}
@@ -142,6 +147,9 @@ func TestKataNetworkRevocation(t *testing.T) {
 	}
 	if err != nil {
 		t.Fatal(err)
+	}
+	if secure && !proxy.WorkerTransportEnabled() {
+		t.Fatal("worker TLS not advertised")
 	}
 	project, state := t.TempDir(), t.TempDir()
 	if err := os.Chmod(state, 0700); err != nil {
@@ -214,7 +222,7 @@ func TestKataNetworkRevocation(t *testing.T) {
 		// Status may report missing independent credentials in this synthetic test;
 		// the verified worker memory and retained denial export must still succeed.
 		config := filepath.Join(t.TempDir(), "config.toml")
-		content := fmt.Sprintf("[proxy]\nadmin_url = %q\ncontainer_url = %q\nadmin_secret = %q\n", adminURL, "http://"+authName+":18080", "network-acceptance-admin")
+		content := fmt.Sprintf("[proxy]\nadmin_url = %q\ncontainer_url = %q\nadmin_secret = %q\n", adminURL, "http://"+authName+":18080", "network-acceptance-admin-fixture-32-bytes")
 		if err := os.WriteFile(config, []byte(content), 0600); err != nil {
 			t.Fatal(err)
 		}
@@ -242,7 +250,7 @@ func TestKataNetworkRevocation(t *testing.T) {
 				t.Fatal("missing diagnostic kind", kind, string(output))
 			}
 		}
-		if bytes.Contains(output, []byte("network-acceptance-admin")) || bytes.Contains(output, []byte("Bearer ")) || bytes.Contains(output, []byte(project)) {
+		if bytes.Contains(output, []byte("network-acceptance-admin-fixture-32-bytes")) || bytes.Contains(output, []byte("Bearer ")) || bytes.Contains(output, []byte(project)) {
 			t.Fatal("sensitive diagnostic data exported")
 		}
 		t.Log("PASS: real Kata status, proxy denials, host memory and launch phases saved/exported without credential or workspace values")
@@ -379,7 +387,7 @@ print('usage limits PASS')`
 			t.Fatal(err)
 		}
 		for attempt := 0; attempt < 100; attempt++ {
-			_, err = authproxy.NewRemoteProxy(adminURL, "http://"+authName+":18080", "network-acceptance-admin")
+			_, err = authproxy.NewRemoteProxy(adminURL, "http://"+authName+":18080", "network-acceptance-admin-fixture-32-bytes")
 			if err == nil {
 				break
 			}

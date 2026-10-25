@@ -53,6 +53,7 @@ nav:
       - ファイル共有とworktree: workspace.md
       - 実行ごとの利用上限: guides/usage-limits.md
       - 診断の保存: guides/observability.md
+      - VMと認証Proxyの暗号化: guides/worker-tls.md
       - 操作の監査記録: guides/audit.md
       - disk checkpoint: guides/disk-checkpoint.md
       - 認証brokerの設定: guides/credential-broker.md
@@ -129,6 +130,7 @@ nav:
               - Claude Code: en/claude-code.md
           - Per-execution usage limits: en/guides/usage-limits.md
           - Save diagnostics: en/guides/observability.md
+          - Worker TLS: en/guides/worker-tls.md
           - Operation audit: en/guides/audit.md
           - Disk checkpoints: en/guides/disk-checkpoint.md
           - Credential broker: en/guides/credential-broker.md

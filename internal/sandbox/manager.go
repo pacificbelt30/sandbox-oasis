@@ -32,6 +32,7 @@ import (
 	"github.com/pacificbelt30/codex-dock/internal/launchtiming"
 	"github.com/pacificbelt30/codex-dock/internal/network"
 	"github.com/pacificbelt30/codex-dock/internal/workerpolicy"
+	"github.com/pacificbelt30/codex-dock/internal/workertransport"
 	"golang.org/x/term"
 )
 
@@ -1196,6 +1197,16 @@ func (m *Manager) buildEnv(name string, opts RunOptions, installScript string) (
 			return nil, err
 		}
 
+		if secure, ok := m.proxy.(authproxy.WorkerTransportService); ok && secure.WorkerTransportEnabled() {
+			if opts.pendingPlaceholder == "" {
+				return nil, fmt.Errorf("worker TLS requires a Kata worker")
+			}
+			if opts.TokenTTL > workertransport.MaxTTL {
+				return nil, fmt.Errorf("worker TLS token TTL must be at most 3600 seconds")
+			}
+			containerProxyURL = workertransport.LocalURL
+			env = append(env, "CODEX_DOCK_WORKER_MTLS=1")
+		}
 		wantCodex := (opts.Agent == AgentCodex || opts.Agent == AgentNone) && (opts.TokenIdentity.Provider == "" || opts.TokenIdentity.Provider == "openai")
 		wantClaude := (opts.Agent == AgentClaude || opts.Agent == AgentNone) && (opts.TokenIdentity.Provider == "" || opts.TokenIdentity.Provider == "anthropic")
 

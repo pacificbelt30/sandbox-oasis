@@ -14,16 +14,17 @@ import (
 
 // tokenRecord holds a single issued token and its metadata.
 type tokenRecord struct {
-	Token         string
-	ContainerName string
-	ExpiresAt     time.Time
-	IssuedAt      time.Time
-	Identity      identity.Identity
-	ModelPolicy   *identity.ModelPolicy
-	UsagePolicy   *identity.UsagePolicy
-	usageKey      string
-	context       context.Context
-	cancel        context.CancelFunc
+	Token            string
+	ContainerName    string
+	ExpiresAt        time.Time
+	IssuedAt         time.Time
+	Identity         identity.Identity
+	ModelPolicy      *identity.ModelPolicy
+	UsagePolicy      *identity.UsagePolicy
+	transportKeyHash string
+	usageKey         string
+	context          context.Context
+	cancel           context.CancelFunc
 }
 
 func newTokenRecord(name, token string, ttl int) *tokenRecord {
@@ -136,7 +137,7 @@ func (p *Proxy) handleToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	token := r.Header.Get("X-Codex-Token")
-	if token == "" {
+	if token == "" || !p.transportBound(r, token) {
 		http.Error(w, "missing X-Codex-Token header", http.StatusUnauthorized)
 		return
 	}

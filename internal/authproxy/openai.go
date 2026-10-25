@@ -35,7 +35,7 @@ func (p *Proxy) handleOAuthTokenRefresh(w http.ResponseWriter, r *http.Request) 
 	// Codex CLI does not add custom headers when calling the refresh endpoint,
 	// so the token is passed as a query param when setting CODEX_REFRESH_TOKEN_URL_OVERRIDE.
 	cdxToken := r.URL.Query().Get("cdx")
-	if cdxToken == "" {
+	if cdxToken == "" || !p.transportBound(r, cdxToken) {
 		http.Error(w, "missing cdx param", http.StatusUnauthorized)
 		return
 	}

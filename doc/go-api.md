@@ -326,3 +326,8 @@ go build -o /var/tmp/oaiso-embedding ./examples/embedding
 ## disk checkpoint
 
 - 未リリースmain：`Checkpoint`・`Checkpoints`・`InspectCheckpoint`・`RestoreCheckpoint`・`RemoveCheckpoint`。[保存範囲・容量・復元条件](guides/disk-checkpoint.md)を確認してください。
+
+## VM―認証ProxyのTLS
+
+- 利用可能：未リリース（main）。`EnsureCaseProxy`はTLSを有効にします。`ProxyCapabilities().WorkerMTLS`で確認できます。
+- [有効期限・再起動・旧ワーカーの再作成](guides/worker-tls.md)。

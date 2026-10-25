@@ -76,3 +76,24 @@ func TestRunAdminSecretFileConfigPrecedence(t *testing.T) {
 		t.Fatal("explicit raw flag did not override config")
 	}
 }
+
+func TestManagedSecretDoesNotEscapeDefaultLocalAdmin(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	secret, path, err := prepareManagedProxyAdminSecret()
+	if err != nil || len(secret) < 32 {
+		t.Fatal(err)
+	}
+	if got, err := automaticProxyAdminSecret("http://127.0.0.1:18081", "", ""); err != nil || got != secret {
+		t.Fatal("local secret unavailable", err)
+	}
+	for _, endpoint := range []string{"http://remote.example:18081", "https://remote.example", "http://127.0.0.1:18099"} {
+		got, err := automaticProxyAdminSecret(endpoint, "", "")
+		if err != nil || got != "" {
+			t.Fatal("implicit secret sent outside default admin", err)
+		}
+	}
+	info, err := os.Stat(path)
+	if err != nil || info.Mode().Perm() != 0600 {
+		t.Fatal("unsafe generated secret", err)
+	}
+}

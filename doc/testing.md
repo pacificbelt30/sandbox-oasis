@@ -1,5 +1,13 @@
 # テストと動作確認
 
+## VM―認証ProxyのTLS（2026-10-25）
+
+- 対象：未リリース（main）。[方式・期限・更新手順・一般egressとの区別](guides/worker-tls.md)。
+- 単体：コピーtoken＋別の鍵、再開前の旧鍵、client証明書なし、平文接続を拒否。tokenが有効でも短命証明書の期限でstreamを終了。暗黙の管理secretを外部URLへ送らないことも確認。
+- 実Kata：`4d24f1854b94`の`TestKataWorkerMTLS`が成功（164.24秒）。固定Codex 0.163.0／Claude Code 2.1.306のSSE・ツール実行、SSE/WS失効、broker、Proxy＋VM再起動後の利用上限維持を確認。
+- 全Go raceテスト・Vet・Lint成功。架空の認証情報・ローカル上流fixtureを使用。実アカウントでの認証・課金を伴う推論は未実施。
+- 初回の失敗を保持：管理secret未設定経路（`afa5cf8a529b`）を0600自動生成で修正。保存済みProxy名をIP対応表と誤認した経路（`8f7a38c81de7`）を検証済みExtraHostsの利用で修正。対応表なしの起動も拒否する回帰試験を追加。
+
 ## 保存できる監査記録（2026-10-25）
 
 - 対象：未リリース（main）。[保存項目・容量・障害時の扱い](guides/audit.md)。

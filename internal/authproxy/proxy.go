@@ -16,12 +16,14 @@ import (
 	"github.com/pacificbelt30/codex-dock/internal/networkpolicy"
 	"github.com/pacificbelt30/codex-dock/internal/policyevents"
 	"github.com/pacificbelt30/codex-dock/internal/usage"
+	"github.com/pacificbelt30/codex-dock/internal/workertransport"
 	"github.com/pacificbelt30/codex-dock/pkg/cxd/credentialstore"
 	"github.com/pacificbelt30/codex-dock/pkg/cxd/identity"
 )
 
 // Proxy is the Auth Proxy server that issues short-lived tokens to containers.
 type Proxy struct {
+	transportCA           *workertransport.Authority
 	usageLedger           *usage.Ledger
 	usageBindings         map[string]string
 	rootCAs               *x509.CertPool
@@ -89,6 +91,9 @@ func (p *Proxy) ProfileConnectionVersion() string { return p.caseConnectionVersi
 // In OAuth mode (detected via IsOAuthAuth), credentials are loaded from
 // ~/.codex/auth.json. In API key mode, the API key is loaded as usual.
 func NewProxy(cfg Config) (result *Proxy, initErr error) {
+	if cfg.WorkerMTLS && (cfg.isEgress() || len(cfg.AdminSecret) < 32 || cfg.AdminListenAddr == "") {
+		return nil, fmt.Errorf("worker TLS requires an auth proxy and separate protected admin listener")
+	}
 	if cfg.isEgress() && cfg.UsageStateDir != "" {
 		return nil, fmt.Errorf("execution usage limits belong on the auth proxy")
 	}
@@ -152,6 +157,13 @@ func NewProxy(cfg Config) (result *Proxy, initErr error) {
 		anthropicOAuthClientID: "9d1c250a-e61b-44d9-88ed-5944d1962f5e",
 	}
 
+	if cfg.WorkerMTLS {
+		var err error
+		p.transportCA, err = workertransport.NewAuthority()
+		if err != nil {
+			return nil, err
+		}
+	}
 	if err := p.configureUpstream(); err != nil {
 		return nil, err
 	}
@@ -312,6 +324,9 @@ func (p *Proxy) Start() error {
 	if err != nil {
 		return fmt.Errorf("starting auth proxy: %w", err)
 	}
+	if p.transportCA != nil {
+		ln = tls.NewListener(ln, p.transportCA.TLSConfig())
+	}
 	p.listener = ln
 	p.addr = ln.Addr().String()
 
@@ -321,7 +336,7 @@ func (p *Proxy) Start() error {
 	// The egress (forward-only) instance serves no reverse routes, no token
 	// endpoints, and no admin: just /health plus the forward proxy below.
 	if p.cfg.isEgress() {
-		p.server = &http.Server{Handler: p.workerFacingHandler(mux)}
+		p.server = &http.Server{Handler: p.workerFacingHandler(mux), ReadHeaderTimeout: 10 * time.Second, MaxHeaderBytes: 64 << 10}
 		go func() {
 			if err := p.server.Serve(ln); err != nil && err != http.ErrServerClosed {
 				log.Printf("egress proxy error: %v", err)
@@ -337,7 +352,9 @@ func (p *Proxy) Start() error {
 	// Data-plane mux (RoleAuth): routes the worker is allowed to use. The /admin/*
 	// routes are registered here only when no separate admin listener is configured.
 	mux.HandleFunc("/token", p.handleToken)
-	mux.HandleFunc("/revoke", p.handleRevoke)
+	if p.cfg.AdminListenAddr == "" {
+		mux.HandleFunc("/revoke", p.handleRevoke)
+	}
 	// OAuth token refresh: Codex CLI calls this via CODEX_REFRESH_TOKEN_URL_OVERRIDE.
 	// The proxy substitutes the host's real refresh_token so it never reaches containers.
 	mux.HandleFunc("/oauth/token", p.handleOAuthTokenRefresh)
@@ -354,6 +371,7 @@ func (p *Proxy) Start() error {
 	}
 
 	adminMux := http.NewServeMux()
+	adminMux.HandleFunc("/admin/transport", p.handleAdminTransport)
 	adminMux.HandleFunc("/admin/issue", p.handleAdminIssue)
 	adminMux.HandleFunc("/admin/restore", p.handleAdminRestore)
 	adminMux.HandleFunc("/admin/revoke", p.handleAdminRevoke)
@@ -398,7 +416,7 @@ func (p *Proxy) Start() error {
 
 	// Worker-facing handler: CONNECT/absolute-form requests are handled by the
 	// forward proxy (router); everything else falls through to the data-plane mux.
-	p.server = &http.Server{Handler: p.workerFacingHandler(mux)}
+	p.server = &http.Server{Handler: p.workerFacingHandler(mux), ReadHeaderTimeout: 10 * time.Second, MaxHeaderBytes: 64 << 10}
 	go func() {
 		if err := p.server.Serve(ln); err != nil && err != http.ErrServerClosed {
 			log.Printf("auth proxy error: %v", err)
@@ -501,7 +519,11 @@ func (p *Proxy) Port() string {
 // Endpoint returns the proxy URL for host-side access (e.g. health checks, tests).
 // Always uses 127.0.0.1 regardless of bind address.
 func (p *Proxy) Endpoint() string {
-	return "http://127.0.0.1:" + p.Port()
+	scheme := "http"
+	if p.WorkerTransportEnabled() {
+		scheme = "https"
+	}
+	return scheme + "://127.0.0.1:" + p.Port()
 }
 
 // ContainerEndpoint returns the proxy URL that worker containers should use.
@@ -510,5 +532,9 @@ func (p *Proxy) Endpoint() string {
 // Requires Docker Engine >= 20.10 and --add-host=host.docker.internal:host-gateway
 // to be set on the worker container (manager.go handles this automatically).
 func (p *Proxy) ContainerEndpoint() string {
-	return "http://host.docker.internal:" + p.Port()
+	scheme := "http"
+	if p.WorkerTransportEnabled() {
+		scheme = "https"
+	}
+	return scheme + "://host.docker.internal:" + p.Port()
 }

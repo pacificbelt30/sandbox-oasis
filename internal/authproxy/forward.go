@@ -1,6 +1,7 @@
 package authproxy
 
 import (
+	"context"
 	"io"
 	"log"
 	"net/http"
@@ -19,6 +20,11 @@ import (
 //     reverse-proxy / token mux.
 func (p *Proxy) workerFacingHandler(mux http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if p.WorkerTransportEnabled() && r.TLS != nil && len(r.TLS.VerifiedChains) > 0 && len(r.TLS.VerifiedChains[0]) > 0 {
+			ctx, cancel := context.WithDeadline(r.Context(), r.TLS.VerifiedChains[0][0].NotAfter)
+			defer cancel()
+			r = r.WithContext(ctx)
+		}
 		isForward := r.Method == http.MethodConnect || (r.URL.IsAbs() && r.URL.Host != "")
 		if isForward {
 			if !p.cfg.isEgress() {

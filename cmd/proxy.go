@@ -30,7 +30,7 @@ const (
 	defaultAuthAdminPort          = 18081
 	defaultHTTPProxyPort          = 18082
 	proxyLayoutLabel              = "io.codex-dock.proxy-layout"
-	proxyLayoutVersion            = "split-v3-oauth-state"
+	proxyLayoutVersion            = "split-v4-worker-mtls"
 	proxyImageProtocolLabel       = "io.codex-dock.proxy-protocol"
 	proxyImageProtocolVersion     = "external-store-v1"
 	proxyImageBuildLabel          = "io.codex-dock.proxy-build"
@@ -48,6 +48,7 @@ var (
 	proxyOAuthStateDir    string
 	proxyUsageStateDir    string
 	proxyAuditDirectory   string
+	proxyWorkerMTLS       bool
 	proxyCredentialSocket string
 	proxyCaseID           string
 	proxyAllowedModels    []string
@@ -171,6 +172,7 @@ var proxyServeCmd = &cobra.Command{
 			OAuthStateDir:        proxyOAuthStateDir,
 			UsageStateDir:        proxyUsageStateDir,
 			AuditDirectory:       proxyAuditDirectory,
+			WorkerMTLS:           proxyWorkerMTLS,
 		})
 		if err != nil {
 			return err
@@ -237,6 +239,15 @@ func startProxyContainer(ctx context.Context) error {
 	adminSecret, adminSecretFile, err := proxyServerSecret()
 	if err != nil {
 		return err
+	}
+	if adminSecret == "" && adminSecretFile == "" {
+		adminSecret, adminSecretFile, err = prepareManagedProxyAdminSecret()
+		if err != nil {
+			return err
+		}
+	}
+	if len(adminSecret) < 32 {
+		return fmt.Errorf("managed worker TLS requires an admin secret of at least 32 bytes; configure --admin-secret-file")
 	}
 	if err := authproxy.ValidateAllowedModels(proxyAllowedModels); err != nil {
 		return err
@@ -582,6 +593,7 @@ func init() {
 	proxyServeCmd.Flags().StringVar(&proxyBrokerFile, "credential-routes", "", "Private JSON file of fixed credential routes")
 	proxyServeCmd.Flags().BoolVar(&proxyBlockPrivate, "block-private", false, "Refuse outbound connections to private/LAN/link-local addresses (RFC1918, 127/8, 169.254/16, ULA, CGNAT)")
 	proxyServeCmd.Flags().StringVar(&proxyOAuthStateDir, "oauth-state-dir", "", "Writable private directory for rotated OAuth credentials")
+	proxyServeCmd.Flags().BoolVar(&proxyWorkerMTLS, "worker-mtls", false, "Require token-bound TLS 1.3 client certificates on worker data connections")
 	proxyServeCmd.Flags().StringVar(&proxyAuditDirectory, "audit-dir", "", "Private durable audit directory (default: usage-state-dir/audit)")
 	proxyServeCmd.Flags().StringVar(&proxyUsageStateDir, "usage-state-dir", "", "Exclusive owner-private directory for durable execution usage limits")
 	proxyServeCmd.Flags().StringVar(&proxyCredentialSocket, "credential-store-socket", "", "Private Unix socket for a host-managed credential store")
@@ -757,6 +769,9 @@ func buildProxyRunArgs(a proxyRunArgs) []string {
 	}
 	if a.role != "" {
 		args = append(args, "--role", a.role)
+	}
+	if a.role == authproxy.RoleAuth {
+		args = append(args, "--worker-mtls")
 	}
 	if a.adminListenAddr != "" {
 		args = append(args, "--admin-listen", a.adminListenAddr)

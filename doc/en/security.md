@@ -99,8 +99,8 @@
 
 | Item | Limit or default |
 |---|---|
-| Worker-to-proxy traffic | Plain HTTP on dedicated networks; no TLS |
-| Bearer tokens | No source container-ID attestation |
+| Worker-to-auth-proxy traffic | Unreleased main managed proxies use TLS 1.3 and execution-bound client certificates; [usage/migration](guides/worker-tls.md). General egress retains HTTP proxy transport |
+| Worker token binding | Managed TLS routes verify token and current execution public key. A copied token alone is insufficient. A compromised guest retains its own allowed authority. Custom legacy HTTP proxies remain unchanged |
 | General egress | Default deny unless the host explicitly disables it |
 | Empty destination grants | Disconnect general egress |
 | Worker-specific allowlists | Select policy-specific proxies; identical policies can share |
