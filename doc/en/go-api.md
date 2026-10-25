@@ -325,3 +325,5 @@ go build -o /var/tmp/oaiso-embedding ./examples/embedding
 
 - Available: Unreleased (main). `EnsureCaseProxy` enables TLS; query `ProxyCapabilities().WorkerMTLS`.
 - [Expiry, restart and legacy worker recreation](guides/worker-tls.md).
+
+- TLS worker connection URLs refer to that guest’s loopback relay. Do not reuse them on the host/another VM or use URLs as execution IDs; use worker/run IDs.

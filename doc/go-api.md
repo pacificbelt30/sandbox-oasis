@@ -331,3 +331,5 @@ go build -o /var/tmp/oaiso-embedding ./examples/embedding
 
 - 利用可能：未リリース（main）。`EnsureCaseProxy`はTLSを有効にします。`ProxyCapabilities().WorkerMTLS`で確認できます。
 - [有効期限・再起動・旧ワーカーの再作成](guides/worker-tls.md)。
+
+- TLSワーカーの接続URLは、そのVM内だけの`127.0.0.1`を指します。ホスト・別VMで再利用したり、URLを実行IDの代わりにしたりしないでください。実行の識別にはworker／run IDを使います。

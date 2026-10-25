@@ -259,7 +259,7 @@ func TestKataGoAPI(t *testing.T) {
 	// Inspect both guests after both cases exist, so either case's secrets are forbidden.
 	for i, f := range cases {
 		other := cases[1-i]
-		input, _ := json.Marshal(map[string]any{"secrets": secrets, "url": f.endpoint, "other": other.endpoint, "token": f.token})
+		input, _ := json.Marshal(map[string]any{"secrets": secrets, "url": f.endpoint, "other_token": other.token, "token": f.token})
 		script := `import json,os,pathlib,urllib.request,urllib.error
 v=json.load(__import__('sys').stdin)
 data=str(dict(os.environ))
@@ -270,13 +270,13 @@ for root in ['/home','/root','/workspace','/run']:
   except (OSError,UnicodeError): pass
 assert not any(s in data for s in v['secrets']), 'real fixture credential leaked to VM'
 assert not pathlib.Path('/run/cxd-credential-store.sock').exists()
-def status(url):
- r=urllib.request.Request(url+'/token',headers={'X-Codex-Token':v['token']})
+def status(url, token):
+ r=urllib.request.Request(url+'/token',headers={'X-Codex-Token':token})
  try:
   with urllib.request.urlopen(r,timeout=10) as response: return response.status
  except urllib.error.HTTPError as e: return e.code
-assert status(v['url'])==200, 'own token rejected'
-try: result=status(v['other'])
+assert status(v['url'],v['token'])==200, 'own token rejected'
+try: result=status(v['url'],v['other_token'])
 except (OSError,urllib.error.URLError): result=0
 assert result in (0,401,403), 'cross-case token accepted'
 print('guest credential and case isolation PASS')`
