@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/pacificbelt30/codex-dock/internal/egresscontrol"
+
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -23,6 +25,22 @@ import (
 // Production proxy handlers and credential-store calls remain unchanged; only
 // fixed upstream endpoints are redirected to synthetic loopback HTTP servers.
 func runKataFixtureProxy() int {
+	if len(os.Args) >= 3 && os.Args[1] == "proxy" && os.Args[2] == "policy-control" {
+		var update *egresscontrol.Update
+		if len(os.Args) > 3 && os.Args[3] == "--apply" {
+			value, err := egresscontrol.ReadUpdate(os.Stdin)
+			if err != nil {
+				return 2
+			}
+			update = &value
+		}
+		state, err := egresscontrol.Call(context.Background(), egresscontrol.Directory, update)
+		_ = json.NewEncoder(os.Stdout).Encode(state)
+		if err != nil {
+			return 1
+		}
+		return 0
+	}
 	if len(os.Args) < 3 || os.Args[1] != "proxy" || os.Args[2] != "serve" {
 		return 2
 	}
@@ -35,6 +53,7 @@ func runKataFixtureProxy() int {
 	cfg.EventWriter = os.Stdout
 	var socket, role string
 	var block bool
+	f.StringVar(&cfg.PolicyControlDir, "policy-control-dir", "", "")
 	f.StringVar(&cfg.ListenAddr, "listen", "", "")
 	f.StringVar(&cfg.AdminListenAddr, "admin-listen", "", "")
 	f.StringVar(&cfg.AdminSecret, "admin-secret", "", "")

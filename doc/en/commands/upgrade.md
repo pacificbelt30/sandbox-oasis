@@ -2,19 +2,26 @@
 
 [日本語](../../commands/upgrade.md) | **English**
 
-- **Available in v0.0.3 or later; unavailable in v0.0.2.** On v0.0.2, rerun the [release installer](../../setup.md#更新する).
+- **Available in v0.0.3 or later.**
 - No Go installation required. The command reuses the distribution installer and explains host/image update order.
 
 ## Review a plan
 
+**Query the latest stable release**
+
 ```bash
 oaiso upgrade
+```
+
+**Plan a pinned release**
+
+```bash
 oaiso upgrade --version v0.0.3
 ```
 
-- Choose one. Omit the version to query GitHub's latest stable release.
-- Download that release's `install.sh` and `SHA256SUMS` over HTTPS; run the plan only after their hashes match.
-- Checksums detect corruption or mismatched assets; they are not independent publisher signatures.
+- [Prepare GitHub CLI](../installation.md#2-prepare-tools) first. GitHub login is not required.
+- Fetch `install.sh`, `SHA256SUMS` and `provenance.json`; verify the installer signature, source identity, tag and checksum before running the plan.
+- The installer downloads and verifies the remaining assets. See [verification scope](../guides/signed-releases.md).
 - Planning does not replace product binaries/services. It can prepare uv/Python in user storage and download release assets.
 
 ```text
@@ -30,7 +37,7 @@ Plan only. Apply the same release with: oaiso upgrade --version v0.0.3 --apply
 ```
 
 - Example output; versions and plans depend on your host.
-- Applying v0.0.2 or earlier is refused when the selected profile root contains encrypted records. Specify another root explicitly with `--auth-profile-dir`; those older releases cannot read encrypted profiles.
+- Profile encryption compatibility is checked before applying a distribution; incompatible distributions are refused. Use `--auth-profile-dir` to select another profile root.
 
 ## Apply
 

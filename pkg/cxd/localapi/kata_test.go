@@ -124,4 +124,5 @@ func TestKataLocalSDK(t *testing.T) {
 			t.Log(strings.TrimSpace(string(out)))
 		})
 	}
+	t.Run("usability", func(t *testing.T) { testKataUsability(t, ctx, root, options) })
 }

@@ -19,6 +19,7 @@
 - 対象：**Ubuntu 26.04・x86_64・systemd・KVM・cgroup v2**。
 - 実行者：`sudo` が使える通常ユーザー。管理操作はスクリプトが昇格。
 - 配布：GitHub Releasesのビルド済み版。Go・Make・ソース取得は不要。
+- 事前準備：[curl・CA証明書・GitHub CLIを導入](doc/installation.md#2-ツールを準備する)。GitHub CLIは配布物の署名検証に使用。GitHubへのログインは不要。
 - ホストPython：[uv公式手順](https://docs.astral.sh/uv/getting-started/installation/)でuvを準備し、[uv管理のPython 3.12](https://docs.astral.sh/uv/guides/install-python/)を使用。未導入なら自動準備。
 - ほかのLinux：[手動配置](doc/kata.md)。WSL／VM：上記要件とnested virtualizationが必要。
 
@@ -29,7 +30,7 @@ curl -fsSL https://github.com/pacificbelt30/sandbox-oasis/releases/latest/downlo
 curl -fsSL https://github.com/pacificbelt30/sandbox-oasis/releases/latest/download/install.sh | bash -s -- --apply
 ```
 
-- `curl` がない場合は `sudo apt-get update && sudo apt-get install -y curl ca-certificates`。
+- スクリプト自体も実行前に検証する場合：[署名を確認して導入](doc/guides/signed-releases.md#スクリプトも実行前に確認する)。
 
 **2. ログアウト・再ログイン後、確認**
 

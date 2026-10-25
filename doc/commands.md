@@ -79,3 +79,14 @@
 ホスト管理者用の `node serve` と `runtime-lock` は[Kataの配置](kata.md)を参照してください。
 
 - 廃止済みの `firewall`：[移行先](commands/firewall.md)。現行の実行可能コマンドには含みません。
+
+## 作業を支援する追加コマンド
+
+利用可能：**未リリース（main）**。
+
+| コマンド | 使い方 |
+|---|---|
+| `artifact plan/bundle` | [選んだ成果物の確認・回収](guides/artifacts.md) |
+| `preview WORKER PORT` | [認証付きlocalhostプレビュー](guides/preview.md) |
+| `policy propose/plan/apply` | [通信許可の申請・Proxy単位の即時変更](guides/live-policy.md) |
+| `checkpoint pin/prune` | [保存期限・容量の確認と保護](guides/disk-checkpoint.md#保存期限容量を確認して回収する) |

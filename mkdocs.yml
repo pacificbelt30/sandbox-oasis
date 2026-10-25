@@ -58,6 +58,9 @@ nav:
       - VMと認証Proxyの暗号化: guides/worker-tls.md
       - 操作の監査記録: guides/audit.md
       - disk checkpoint: guides/disk-checkpoint.md
+      - 成果物をまとめて回収: guides/artifacts.md
+      - Webアプリのプレビュー: guides/preview.md
+      - 通信許可の申請・即時変更: guides/live-policy.md
       - 認証brokerの設定: guides/credential-broker.md
       - 認証:
           - 認証方式とプロファイル: guides/authentication.md
@@ -139,6 +142,9 @@ nav:
           - Worker TLS: en/guides/worker-tls.md
           - Operation audit: en/guides/audit.md
           - Disk checkpoints: en/guides/disk-checkpoint.md
+          - Artifact bundles: en/guides/artifacts.md
+          - Web app previews: en/guides/preview.md
+          - Live egress changes: en/guides/live-policy.md
           - Credential broker: en/guides/credential-broker.md
           - Authentication:
               - Authentication and profiles: en/guides/authentication.md

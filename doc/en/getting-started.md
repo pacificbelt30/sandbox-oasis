@@ -8,7 +8,7 @@
 | Host is ready | Steps 1–4 start the first worker; steps 5–6 are optional |
 | Updating an existing installation | [Operations](../operations.md) (Japanese) |
 
-- This page covers v0.0.3 or later. A [complete installation-to-first-run guide](guides/first-run.md) is also available. On v0.0.2, use [manual authentication setup](guides/authentication.md).
+- This page covers v0.0.3 or later. A [complete installation-to-first-run guide](guides/first-run.md) is also available.
 
 ## 1. Check the host
 

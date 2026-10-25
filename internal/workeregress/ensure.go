@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"time"
 
 	"github.com/containerd/errdefs"
 	"github.com/docker/docker/api/types/container"
 	dn "github.com/docker/docker/api/types/network"
 	"github.com/pacificbelt30/codex-dock/internal/buildinfo"
+	"github.com/pacificbelt30/codex-dock/internal/egresscontrol"
 	"github.com/pacificbelt30/codex-dock/internal/engine"
 	"github.com/pacificbelt30/codex-dock/internal/netquota"
 	"github.com/pacificbelt30/codex-dock/internal/network"
@@ -84,7 +86,7 @@ func EnsureWithLimits(ctx context.Context, socket, image string, rules networkpo
 			}
 		}
 	} else if errdefs.IsNotFound(err) {
-		args := []string{"proxy", "serve", "--listen", "0.0.0.0:" + strconv.Itoa(proxyPort), "--role", "egress", "--block-private"}
+		args := []string{"proxy", "serve", "--listen", "0.0.0.0:" + strconv.Itoa(proxyPort), "--role", "egress", "--block-private", "--policy-control-dir", "/var/lib/oaiso-egress"}
 		if rules.DefaultDeny {
 			args = append(args, "--forward-default-deny")
 		} else {
@@ -121,6 +123,31 @@ func EnsureWithLimits(ctx context.Context, socket, image string, rules networkpo
 		}
 	} else {
 		return "", fmt.Errorf("inspecting egress proxy: %w", err)
+	}
+	inspected, err := cli.ContainerInspect(ctx, name)
+	if err != nil {
+		return "", err
+	}
+	if inspected.Config != nil && HasLiveControl(inspected.Config.Cmd) {
+		var state egresscontrol.State
+		deadline := time.Now().Add(3 * time.Second)
+		for {
+			state, err = Control(ctx, socket, inspected.ID, nil)
+			if err == nil {
+				break
+			}
+			if time.Now().After(deadline) {
+				return "", err
+			}
+			select {
+			case <-ctx.Done():
+				return "", ctx.Err()
+			case <-time.After(50 * time.Millisecond):
+			}
+		}
+		if !state.Ready || state.PolicyID != ID(rules) {
+			return "", fmt.Errorf("live proxy policy differs from requested policy; select a new policy proxy")
+		}
 	}
 	return (&url.URL{Scheme: "http", Host: name + ":" + strconv.Itoa(proxyPort)}).String(), nil
 }

@@ -32,10 +32,14 @@ oaiso proxy run
 | Caller | Default endpoint |
 |---|---|
 | Host CLI / admin | `http://127.0.0.1:18081` |
-| Worker / AI data | `http://codex-auth-proxy:18080` |
+| Agent → guest relay | `http://127.0.0.1:18083`, inside the VM only |
+| Guest relay → auth proxy | Verified proxy IP on port 18080, HTTPS with TLS 1.3 and mTLS |
 | Worker / general egress | `http://codex-http-proxy:18082` |
 
-- Worker proxy names are pinned in static hosts entries on private networks.
+- This mTLS behavior is **unreleased (main)** and enabled by standard `proxy run` and Go `EnsureCaseProxy`.
+- A loopback HTTP URL in agent configuration does not mean plaintext auth traffic leaves the VM.
+- Review [entrypoint coverage, certificates and migration](guides/worker-tls.md).
+- Worker-to-proxy endpoints use verified private-network IP mappings rather than guest hosts-file rewriting.
 - The separate admin listener is not exposed to workers.
 
 ## Credential sources
@@ -65,10 +69,10 @@ Without profile selection, each provider uses the first available legacy source 
 
 ## Request flow
 
-1. The host issues a short-lived token for a worker.
-2. The entrypoint retrieves placeholder credentials and client metadata from `/token`.
-3. The agent calls an AI route with the placeholder.
-4. The proxy validates the token before connecting upstream.
+1. The host verifies the VM and activates its short-lived token.
+2. It transfers the disposable execution key/certificate over stdin to guest tmpfs and starts the loopback relay.
+3. The entrypoint retrieves placeholders and client metadata from `/token` through that relay.
+4. The relay forwards agent requests over HTTPS; the proxy verifies the client certificate's binding to the live token.
 5. It replaces worker authentication with the real provider credentials.
 
 - Real API keys and OAuth access/refresh/ID tokens never reach workers.

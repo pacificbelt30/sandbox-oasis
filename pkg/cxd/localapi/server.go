@@ -186,6 +186,9 @@ func (s *server) dispatch(ctx context.Context, r Request) (any, error) {
 	if b == nil {
 		return nil, errNotOpen
 	}
+	if result, handled, err := workspaceDispatch(ctx, b, r); handled {
+		return result, err
+	}
 	switch r.Method {
 	case "capabilities", "proxy_capabilities", "profiles", "resource_policies", "list":
 		if decode(r.Params, &struct{}{}) != nil {
@@ -283,7 +286,7 @@ func (s *server) dispatch(ctx context.Context, r Request) (any, error) {
 	return nil, errInvalid
 }
 func capabilities(b Backend) Capabilities {
-	return Capabilities{ProtocolVersion: ProtocolVersion, Node: b.Capabilities(), Methods: methodNames(), MaxRequestBytes: MaxRequestBytes, MaxResponseBytes: MaxResponseBytes, MaxOutputBytes: MaxOutputBytes, MaxConcurrentCalls: MaxConcurrentCalls}
+	return Capabilities{MaxFileTransferBytes: MaxFileTransferBytes, ProtocolVersion: ProtocolVersion, Node: b.Capabilities(), Methods: methodNames(), MaxRequestBytes: MaxRequestBytes, MaxResponseBytes: MaxResponseBytes, MaxOutputBytes: MaxOutputBytes, MaxConcurrentCalls: MaxConcurrentCalls}
 }
 func methodNames() []string {
 	names := make([]string, 0, len(methods()))

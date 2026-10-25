@@ -85,7 +85,7 @@ func providerRouteAllowed(provider, path string) bool {
 type workerConnectionKey struct{}
 
 func (p *Proxy) workerConnectionContext(ctx context.Context, conn net.Conn) context.Context {
-	if p.cfg.NetworkResources.BytesPerSecond == 0 {
+	if p.cfg.NetworkResources.BytesPerSecond == 0 && !p.cfg.isEgress() {
 		return ctx
 	}
 	if secure, ok := conn.(*tls.Conn); ok {

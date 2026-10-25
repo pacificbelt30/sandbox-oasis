@@ -102,3 +102,56 @@ oaiso checkpoint rm "$checkpoint_id"
 
 - Unsupported old nodes fail explicitly.
 - Capture response loss means unknown outcome; reconcile source ID/creation time through the catalog before retrying.
+
+## Retention planning and pins
+
+- Available: **unreleased (main)**.
+- The existing hard catalog capacity remains 16 GiB. `--keep-bytes` is a cleanup target, not a lower admission quota for future captures.
+- Counts logical tar bytes, not total host/containerd content or expanded snapshot usage.
+
+Get an ID from `oaiso checkpoint list`:
+
+```bash
+read -r -p 'Checkpoint ID to protect: ' checkpoint_id
+```
+
+```bash
+oaiso checkpoint pin "$checkpoint_id"
+oaiso checkpoint inspect "$checkpoint_id"
+```
+
+- `pinned: true` protects against retention cleanup.
+- Remove protection with `oaiso checkpoint pin "$checkpoint_id" --unpin`.
+- Explicit `checkpoint rm ID` remains available; pins protect automatic selection only.
+
+Plan removal of checkpoints older than seven days and/or above an 8 GiB target:
+
+```bash
+oaiso checkpoint prune --max-age 168h --keep-bytes 8589934592
+```
+
+| Field | Meaning |
+|---|---|
+| `delete` | IDs selected oldest first |
+| `protected` | Pinned or referenced by retained workers using the same image digest |
+| `remaining_bytes` | Projected logical capacity after deletion |
+| `target_met` | Whether the byte target can be met without deleting protected items |
+| `id` | Reviewed retention-plan ID |
+
+Enter the reviewed ID:
+
+```bash
+read -r -p 'Checkpoint retention plan ID: ' retention_plan_id
+```
+
+```bash
+oaiso checkpoint prune --max-age 168h --keep-bytes 8589934592 \
+  --apply --plan-id "$retention_plan_id"
+oaiso checkpoint list
+```
+
+- No deletion without `--apply`. Periodic use requires an explicitly configured external scheduler.
+- Recompute the plan before deletion. New captures, pins, references or age-boundary changes invalidate a stale plan.
+- Partial failure may follow some deletions. Inspect the catalog and review a fresh plan before retrying.
+- Inspection failure aborts cleanup instead of treating resources as unused. Shared content is not broadly pruned.
+- Go: `RetainCheckpoints(ctx, cxd.CheckpointRetentionOptions{...})`, `PinCheckpoint(ctx, id, true)`; apply using `Apply: true` and `ExpectedPlan`.

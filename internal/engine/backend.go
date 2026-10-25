@@ -893,7 +893,7 @@ func (b *Backend) serveHTTP(w http.ResponseWriter, r *http.Request) {
 			failure(w, err)
 			return
 		}
-		features := [][2]string{{"cxd.disk-checkpoint", "1"}, {"cxd.worker-policy", "1"}, {"cxd.idle-safe", "1"}, {"cxd.main-activity", "1"}, {"cxd.exec-options", "1"}, {"cxd.jobs", "1"}, {"cxd.quarantine", "1"}}
+		features := [][2]string{{"cxd.disk-checkpoint", "1"}, {"cxd.checkpoint-retention", "1"}, {"cxd.worker-policy", "1"}, {"cxd.idle-safe", "1"}, {"cxd.main-activity", "1"}, {"cxd.exec-options", "1"}, {"cxd.jobs", "1"}, {"cxd.quarantine", "1"}}
 		if b.opts.TemporaryStorage {
 			features = append(features, [2]string{"cxd.temporary-storage", "1"})
 		}

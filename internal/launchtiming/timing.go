@@ -1,4 +1,4 @@
-// Package launchtiming records a single launch's sequential host-side phases.
+// Package launchtiming records one operation's sequential host-side phases.
 // It is opt-in, local to the caller, and never stores request or credential data.
 package launchtiming
 
@@ -14,8 +14,8 @@ type Phase struct {
 	Duration time.Duration
 }
 
-// Recorder belongs to one synchronous launch. Do not share its context between
-// concurrent launches. Background cleanup is included by the launch owner.
+// Recorder belongs to one synchronous operation. Do not share its context between
+// concurrent operations. Background cleanup is included by the operation owner.
 type Recorder struct {
 	started time.Time
 	last    time.Time
@@ -29,7 +29,7 @@ func Begin(ctx context.Context) (context.Context, *Recorder) {
 	return context.WithValue(ctx, key{}, r), r
 }
 
-// Next is a no-op unless the caller explicitly requested launch timings.
+// Next is a no-op unless the caller explicitly requested operation timings.
 func Next(ctx context.Context, name string) {
 	if r, ok := ctx.Value(key{}).(*Recorder); ok {
 		r.next(name, time.Now())

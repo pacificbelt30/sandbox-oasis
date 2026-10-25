@@ -93,7 +93,7 @@ oaiso policy show --worker WORKER --json
 - A persisted request whose stop is unconfirmed reports `quarantine_pending`, and destination explanation cannot claim completed denial.
 
 - Resume with a new worker and RequestID under the new policy.
-- Unquarantine, policy hot reload and keeping execution alive while selectively cutting general egress are not provided.
+- Unquarantine is not provided. Unreleased main supports [explicit live egress changes](guides/live-policy.md) while worker execution continues.
 - VM termination stops further communication from the guest.
 - It cannot undo operations already accepted by a remote service and does not wait for every upstream socket in the shared egress proxy to close.
 - Preserve artifacts before reclaiming the retained worker with ordinary `rm` / `RemoveRequest`; removing a managed worktree also deletes that worktree.
@@ -178,6 +178,7 @@ oaiso run --start-hook 'npm ci' --readiness 'test -f node_modules/.package-lock.
 [{"Name":"service","Upstream":"https://api.example.com","Paths":["/v1"],"Methods":["GET","POST"],"Header":"X-Service-Key","Prefix":"","Provider":"openai","Secret":"HOST_SECRET"}]
 ```
 
+- `ExactPaths` adds exact matching (unreleased main). Existing `Paths` include descendants; both allowlists are combined. See [examples](guides/credential-broker.md).
 - Guests send live placeholder Bearer tokens to `http://AUTH_PROXY/broker/service/v1/...`.
 - Fixed HTTPS origin, path boundaries, method and provider are checked before injecting credentials.
 - Encoded paths, WebSockets and following upstream redirects are disallowed.

@@ -25,6 +25,7 @@ type Options struct {
 	Exclude  []string `json:"exclude,omitempty"`
 }
 type Info struct {
+	Pinned           bool      `json:"pinned"`
 	Format           string    `json:"format"`
 	ID               string    `json:"id"`
 	Image            string    `json:"image"`

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/pacificbelt30/codex-dock/internal/sandbox"
 	"github.com/spf13/cobra"
@@ -80,6 +81,59 @@ func init() {
 		return m.Commit(cmd.Context(), args[0], message)
 	}}
 	commit.Flags().StringVarP(&message, "message", "m", "", "Commit staged guest changes")
-	a.AddCommand(diff, commit)
+	var bundleOptions sandbox.ArtifactOptions
+	plan := &cobra.Command{Use: "plan NAME", Args: cobra.ExactArgs(1), Short: "Review explicitly selected artifact files and their hashes", RunE: func(cmd *cobra.Command, args []string) error {
+		m, err := sandbox.NewManager(managementConfig())
+		if err != nil {
+			return err
+		}
+		defer func() { _ = m.Close() }()
+		p, err := m.PlanArtifacts(cmd.Context(), args[0], bundleOptions)
+		if err != nil {
+			return err
+		}
+		return json.NewEncoder(cmd.OutOrStdout()).Encode(p)
+	}}
+	var bundleOutput string
+	bundle := &cobra.Command{Use: "bundle NAME", Args: cobra.ExactArgs(1), Short: "Export a reviewed plan as a private tar archive", RunE: func(cmd *cobra.Command, args []string) error {
+		if bundleOutput == "" {
+			return fmt.Errorf("--output is required")
+		}
+		m, err := sandbox.NewManager(managementConfig())
+		if err != nil {
+			return err
+		}
+		defer func() { _ = m.Close() }()
+		f, err := os.OpenFile(bundleOutput, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
+		if err != nil {
+			return err
+		}
+		complete := false
+		defer func() {
+			_ = f.Close()
+			if !complete {
+				_ = os.Remove(bundleOutput)
+			}
+		}()
+		if err = m.ExportArtifacts(cmd.Context(), args[0], bundleOptions, f); err != nil {
+			return err
+		}
+		if err = f.Sync(); err != nil {
+			return err
+		}
+		if err = f.Close(); err != nil {
+			return err
+		}
+		complete = true
+		return nil
+	}}
+	for _, c := range []*cobra.Command{plan, bundle} {
+		c.Flags().StringArrayVar(&bundleOptions.Paths, "include", nil, "Explicit regular workspace file (repeatable; credential paths refused)")
+		c.Flags().StringArrayVar(&bundleOptions.JobIDs, "job", nil, "Include status and exit code of a selected job (repeatable; no logs or argv)")
+		c.Flags().Int64Var(&bundleOptions.MaxBytes, "max-bytes", 32<<20, "Maximum combined file and patch bytes (up to 32 MiB)")
+	}
+	bundle.Flags().StringVar(&bundleOptions.ExpectedPlan, "plan-id", "", "Reviewed plan ID; changed contents are refused")
+	bundle.Flags().StringVar(&bundleOutput, "output", "", "New local tar file (0600)")
+	a.AddCommand(diff, commit, plan, bundle)
 	rootCmd.AddCommand(a)
 }

@@ -27,16 +27,16 @@ curl -fsSL https://github.com/pacificbelt30/sandbox-oasis/releases/download/v0.0
 - 配置後はログアウト・再ログインし、`oaiso runtime-check`を実行。
 - 続きは[キーリング解錠・login・初回起動](https://pacificbelt30.github.io/sandbox-oasis/guides/first-run/)。
 
-## v0.0.2から更新する
+## 更新手順
 
 1. 作業を保存し、保持中のワーカーとProxyを停止・削除。
-2. 上のv0.0.3インストーラーで計画を確認して適用。v0.0.2には`oaiso upgrade`はありません。
+2. 上のv0.0.3インストーラーで計画を確認して適用。
 3. 再ログイン後、`oaiso --version`・`oaiso runtime-check`で確認。
 4. ワーカーイメージを`oaiso build --template plain --tag codex-dock:latest`で更新し、利用する側の`oaiso init --agent codex`または`--agent claude`を実行。
 
 - 既存の平文プロファイル・ホスト認証連携は維持。自動で暗号化・再登録しません。
 - 新規loginはキーリングが使えない場合に停止し、平文へ自動変更しません。
-- 暗号化を選ぶ場合、v0.0.2以前ではそのプロファイルを読めません。移行方法は[暗号化保存](https://pacificbelt30.github.io/sandbox-oasis/guides/encrypted-credentials/)。
+- 暗号化の設定方法は[暗号化保存](https://pacificbelt30.github.io/sandbox-oasis/guides/encrypted-credentials/)を参照してください。
 
 ## 配布ファイル
 

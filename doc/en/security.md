@@ -106,7 +106,7 @@
 | General egress | Default deny unless the host explicitly disables it |
 | Empty destination grants | Disconnect general egress |
 | Worker-specific allowlists | Select policy-specific proxies; identical policies can share |
-| Rule updates | Immutable per proxy; no hot reload |
+| Rule updates | Unreleased main: [explicit proxy-wide live changes](guides/live-policy.md), with generation checks, termination confirmation and fail-closed persistence; no automatic config reload |
 | Model authorization | Opt-in at the host auth proxy; a CLI model flag alone does not enforce authorization |
 | Shared files / Git metadata | Remain writable where explicitly shared read-write |
 

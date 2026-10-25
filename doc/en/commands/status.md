@@ -2,7 +2,7 @@
 
 [日本語](../../commands/status.md) | **English**
 
-- **Available in v0.0.3 or later; unavailable in v0.0.2.**
+- **Available in v0.0.3 or later.**
 - Distinguish saved credentials, checked connections and tested inference without displaying secrets.
 
 ```bash

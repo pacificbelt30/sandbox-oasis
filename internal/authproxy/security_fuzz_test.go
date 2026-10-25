@@ -75,23 +75,29 @@ func FuzzBrokerURLScope(f *testing.F) {
 		if err != nil {
 			return
 		}
-		p := newTestProxy(t)
-		p.cfg.CredentialRoutes = []CredentialRoute{{Name: "service", Upstream: "https://trusted.invalid", Paths: []string{"/allowed"}, Methods: []string{"GET"}, Header: "Authorization", Prefix: "Bearer ", Secret: func(context.Context) (string, error) { return "fixture-broker-secret", nil }}}
-		p.httpClient = &http.Client{Transport: privacyTransport(func(r *http.Request) (*http.Response, error) {
-			if r.Method != "GET" || r.URL.Scheme != "https" || r.URL.Host != "trusted.invalid" || r.URL.User != nil || (r.URL.Path != "/allowed" && !strings.HasPrefix(r.URL.Path, "/allowed/")) || path.Clean(r.URL.Path) != r.URL.Path {
-				t.Fatal("credential scope widened")
+		for _, exact := range []bool{false, true} {
+			p := newTestProxy(t)
+			p.cfg.CredentialRoutes = []CredentialRoute{{Name: "service", Upstream: "https://trusted.invalid", Paths: []string{"/allowed"}, Methods: []string{"GET"}, Header: "Authorization", Prefix: "Bearer ", Secret: func(context.Context) (string, error) { return "fixture-broker-secret", nil }}}
+			if exact {
+				p.cfg.CredentialRoutes[0].Paths = nil
+				p.cfg.CredentialRoutes[0].ExactPaths = []string{"/allowed/item"}
 			}
-			return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(strings.NewReader("ok"))}, nil
-		})}
-		token, err := p.IssueToken("fixture", 60)
-		if err != nil {
-			t.Fatal(err)
+			p.httpClient = &http.Client{Transport: privacyTransport(func(r *http.Request) (*http.Response, error) {
+				if exact && r.URL.Path != "/allowed/item" || r.Method != "GET" || r.URL.Scheme != "https" || r.URL.Host != "trusted.invalid" || r.URL.User != nil || (r.URL.Path != "/allowed" && !strings.HasPrefix(r.URL.Path, "/allowed/")) || path.Clean(r.URL.Path) != r.URL.Path {
+					t.Fatal("credential scope widened")
+				}
+				return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(strings.NewReader("ok"))}, nil
+			})}
+			token, err := p.IssueToken("fixture", 60)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer p.RevokeToken("fixture")
+			r := httptest.NewRequest("GET", "/", nil)
+			r.URL = parsed
+			r.Method = method
+			r.Header.Set("Authorization", "Bearer "+token)
+			p.handleBroker(httptest.NewRecorder(), r)
 		}
-		defer p.RevokeToken("fixture")
-		r := httptest.NewRequest("GET", "/", nil)
-		r.URL = parsed
-		r.Method = method
-		r.Header.Set("Authorization", "Bearer "+token)
-		p.handleBroker(httptest.NewRecorder(), r)
 	})
 }

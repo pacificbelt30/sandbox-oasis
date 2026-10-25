@@ -24,6 +24,7 @@ const fixtureSecret = "fixture-private-secret-must-never-be-serialized"
 type fakeBackend struct {
 	Backend
 	mu       sync.Mutex
+	files    map[string][]byte
 	launches map[string]cxd.LaunchRequest
 	workers  map[string]cxd.Worker
 }
@@ -467,5 +468,29 @@ func TestUnreadRepliesRemainInsideTheInflightBound(t *testing.T) {
 	b.mu.Unlock()
 	if count > MaxConcurrentCalls {
 		t.Fatalf("unread output admitted %d completed mutations; want <=%d", count, MaxConcurrentCalls)
+	}
+}
+
+func TestCheckpointSchemaDoesNotReuseClientOptions(t *testing.T) {
+	data, err := Schema()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var root struct {
+		Defs map[string]struct {
+			Properties map[string]json.RawMessage `json:"properties"`
+		} `json:"$defs"`
+	}
+	if err = json.Unmarshal(data, &root); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := root.Defs["CheckpointOptions"].Properties["max_bytes"]; !ok {
+		t.Fatal("checkpoint options missing archive bound")
+	}
+	if _, ok := root.Defs["CheckpointOptions"].Properties["NodeSocket"]; ok {
+		t.Fatal("checkpoint options accidentally expose client settings")
+	}
+	if !bytes.Contains(root.Defs["APICheckpointParams"].Properties["options"], []byte("#/$defs/CheckpointOptions")) {
+		t.Fatal("checkpoint parameter schema points to another Go Options type")
 	}
 }

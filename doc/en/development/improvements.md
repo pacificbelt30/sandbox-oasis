@@ -28,7 +28,7 @@
 | P1 | Aggregate diagnostics/observability | **Completed (Unreleased main)**. [Local diagnostics/JSONL export](../guides/observability.md), CLI/Go launch timing retention | Exclude secrets, bound retention, require no external permanent service |
 | P1 | Credential-broker configuration | **Completed (Unreleased main)**. [Templates, preflight and existing TUI](../guides/credential-broker.md), hidden saved secrets and stale-write detection | Reuse existing broker; no secret display or unapproved-host injection |
 | P1 | Candidate updates | **Completed (Unreleased main)**. [Plan, isolated CLI and real-Kata qualification](candidate-qualification.md), retained results/artifact hashes | No adoption from static diffs alone; preserve current pins and rollback on failure |
-| P2 | Startup/Exec/concurrency | Measure phase timings, waits, CPU, memory and I/O; optimize dominant costs | Comparable before/after measurements, credible ≥20% opportunity, no skipped isolation checks |
+| P2 | Startup/Exec/concurrency | **First stage complete (unreleased main)**. [Measurements](../performance.md#measurements-on-2026-10-25): Exec 53.1%, two-worker Exec 43.3% faster by consolidating duplicate checks within an operation | Full asset/host/guest checks retained. Startup 8.2% faster; increased admission capacity and further startup improvements remain unimplemented |
 
 ## Additional features
 
@@ -51,7 +51,7 @@
 | P1 | Retained audit records | **Implemented (Unreleased main)**. [Durable operation audit](../guides/audit.md): creation/auth changes/policy issue/revocation/deletion outcomes | Store IDs/reasons/results, never values; bounded retention, gap detection and leak tests. Local storage alone cannot promise root-resistant integrity |
 | P1 | Malformed-input, race and failure testing | **Implemented (Unreleased main)**. [Fuzz/load/race/persistence-fault tests](security-tests.md), reusing existing CAS/cleanup coverage | Extend existing tests with missing fuzz/race/fault cases; fail closed on connection floods, long streams, crashes and disk-full |
 | P2 | Protect credential-handling processes | [At-rest encryption](local-credential-store.md) excludes same UID, running memory and swap | Evaluate dedicated UID, dump restrictions, unlock expiry and key lifetime; do not promise elimination of all Go memory copies or host-root access |
-| P2 | Finer network authority | [General CONNECT](../../proxy-policy.md) (Japanese) does not inspect TLS SNI/URL | First use fixed-origin broker path/method limits where sufficient. SNI matching alone cannot enforce encrypted HTTP Host/path |
+| P2 | Finer network authority | **Implemented (unreleased main)**. [Fixed-origin broker](../guides/credential-broker.md): exact paths, CLI methods, TUI, Go API and private file | Preserve subtree scopes; reject before reading secrets. General CONNECT TLS inspection and query/body restrictions remain outside scope |
 
 - Real upstream API keys and OAuth access/refresh/ID tokens remain in the authentication proxy.
 - Work-VM execution credentials are short-lived, execution-scoped and proxy-only, unusable for upstream authentication. Host issuing keys never enter work VMs.
@@ -61,7 +61,7 @@
 
 | Proposal | Contract change | Establish first |
 |---|---|---|
-| Live network policy | Current immutable policy plus whole-VM quarantine | Generations, apply acknowledgement, existing-connection termination, partial failure/restart recovery |
+| Live network policy | Unreleased main: explicit proxy-wide live policy changes; whole-VM quarantine remains separate | Generations, apply acknowledgement, existing-connection termination, partial failure/restart recovery |
 | Generic TLS decryption/L7 restrictions | Guest CA trust and supported protocols | Pinning, HTTP/2/gRPC/WS, signed requests, secret echo/logs and overhead |
 | Memory snapshots/VM fork | Preserve/clone processes, RAM, connections, identity and deadlines | Reissue tokens, prevent secret residue, CPU compatibility, avoid duplicate external effects |
 | Other OS/multiple hosts/tenants | Trusted single-host operator assumption | Authentication, authority, quota, placement, mutual authentication, audit and recovery |
@@ -76,3 +76,28 @@
 
 - Already implemented: default-deny egress, token-scoped model restrictions, PID profiles, broker, Create→Start, PTY/files/jobs, independent login and encrypted storage. Do not propose these again as missing features.
 - Additional controls/Go API first shipped in v0.0.2; independent login, keyring/encryption and consolidated status/distribution updates in v0.0.3. Existing feature pages retain detailed conditions.
+
+## Workflow and SDK additions
+
+Target: **unreleased (main)**. Implementation adds SDK file/job/checkpoint operations, [reviewed artifact bundles](../guides/artifacts.md), [loopback previews](../guides/preview.md), [policy proposals and explicit live changes](../guides/live-policy.md), and [checkpoint retention/pins](../guides/disk-checkpoint.md#retention-planning-and-pins). Feature-specific automated tests and disposable Kata acceptance verify these paths.
+
+- Live updates are proxy-wide, generation-checked and close existing general HTTP/CONNECT connections before reporting completion.
+- File SDK transfers have a separate 512 KiB bound. Mutating calls are never automatically retried.
+- Retention preserves the existing 16 GiB hard capacity; its byte target is a cleanup target.
+
+### Verification of the additions
+
+| Check | Result |
+|---|---|
+| Go | Build, vet, lint and uncached repository-wide race tests passed |
+| SDK contracts | Nine Python and ten TypeScript tests passed against source and installed wheel/npm packages |
+| Real Kata SDKs | Binary files, jobs/logs and checkpoint listing, plus lifecycle/replay/conflict/cancellation/lost-response/cleanup |
+| Real Kata workflow | Reviewed artifacts with job status, authenticated HTTP/WebSocket preview, Origin/cookie/expiry/stop checks, CLI/Go plan parity and live HTTP/CONNECT termination, Python checkpoint capture, TypeScript restore/exec, pin/reference protection and reviewed deletion |
+| Failure boundaries | Untrusted host-output bounds, isolated Python imports, stale/concurrent generations, persistence failure and incomplete-barrier retries passed |
+| Setup/update/recovery | Final bundles passed fresh setup, upgrade, implicit-downgrade refusal, failed-activation recovery and explicit rollback; no owned VMs/tasks/containers/netns/firewall tables remained; shared service PIDs/start times unchanged |
+| Existing checks | Five fuzz targets, 65 Python tests, CLI naming and offline upstream contracts passed; pins/baseline unchanged |
+
+- Full SDK suite: 268.93 seconds. Final workflow subset after job-result/output-bound additions: 168.37 seconds.
+- Synthetic credentials/local upstreams only; no real account authentication or AI inference.
+- Candidate builds: `v0.0.0-p1-usability-a/b`; CLI, test binary and SDK hashes retained privately.
+- Detailed scope and evidence: [testing report (Japanese)](../../testing.md#p1の作業支援通信規則の即時変更2026-10-25).

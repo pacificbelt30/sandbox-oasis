@@ -57,3 +57,40 @@ func TestBrokerHostConfigurationHonorsExplicitFlag(t *testing.T) {
 		t.Fatal("explicit flag overridden")
 	}
 }
+
+func TestBrokerCLIExactPathAndExplicitMethodRoundTrip(t *testing.T) {
+	dir := t.TempDir()
+	_ = os.Chmod(dir, 0700)
+	file := filepath.Join(dir, "routes.json")
+	run := func(input string, args ...string) (string, error) {
+		cmd := newBrokerCommand()
+		var out bytes.Buffer
+		cmd.SetOut(&out)
+		cmd.SetErr(&out)
+		cmd.SetIn(strings.NewReader(input))
+		cmd.SetArgs(append([]string{"--file", file}, args...))
+		err := cmd.Execute()
+		return out.String(), err
+	}
+	out, err := run("fixture-secret\n", "set", "write", "--origin", "https://api.example.com", "--exact-path", "/v1/write", "--method", "POST", "--secret-stdin")
+	if err != nil || strings.Contains(out, "fixture-secret") {
+		t.Fatal("exact path configuration failed", err)
+	}
+	out, err = run("", "check")
+	if err != nil || !strings.Contains(out, `"exact_paths":["/v1/write"]`) || !strings.Contains(out, `"methods":["POST"]`) || strings.Contains(out, "fixture-secret") {
+		t.Fatalf("wrong scopes: %s %v", out, err)
+	}
+	// Updating the scope does not require re-entering or displaying the secret.
+	if _, err = run("", "set", "write", "--origin", "https://api.example.com", "--exact-path", "/v2/write", "--method", "POST"); err != nil {
+		t.Fatal(err)
+	}
+	for _, args := range [][]string{
+		{"set", "bad", "--origin", "https://api.example.com", "--exact-path", "/v1/write", "--method", "CONNECT"},
+		{"set", "bad", "--origin", "https://api.example.com", "--exact-path", "/v1/write", "--method", ""},
+		{"set", "bad", "--origin", "https://api.example.com"},
+	} {
+		if _, err = run("", args...); err == nil {
+			t.Fatalf("invalid scope accepted: %v", args)
+		}
+	}
+}

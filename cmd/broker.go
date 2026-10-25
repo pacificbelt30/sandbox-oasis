@@ -17,6 +17,7 @@ func init() { rootCmd.AddCommand(newBrokerCommand()) }
 func newBrokerCommand() *cobra.Command {
 	var file, template, origin, scope string
 	var secretStdin bool
+	var exactPaths, methods []string
 	root := &cobra.Command{Use: "broker", Short: "Configure fixed-origin credential routes without displaying secrets"}
 	root.PersistentFlags().StringVar(&file, "file", "", "Private broker JSON file (default ~/.config/codex-dock/broker/routes.json)")
 	resolve := func() (string, error) {
@@ -43,13 +44,28 @@ func newBrokerCommand() *cobra.Command {
 		}
 		return json.NewEncoder(cmd.OutOrStdout()).Encode(routes)
 	}})
-	set := &cobra.Command{Use: "set NAME", Short: "Create/update a scoped read-only route; read a secret only from stdin", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+	set := &cobra.Command{Use: "set NAME", Short: "Create/update a scoped route (GET/HEAD by default); read secrets only from stdin", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		path, err := resolve()
 		if err != nil {
 			return err
 		}
-		d, err := brokersettings.Template(template, args[0], origin, scope)
+		seed := scope
+		if seed == "" && len(exactPaths) > 0 {
+			seed = exactPaths[0]
+		}
+		d, err := brokersettings.Template(template, args[0], origin, seed)
 		if err != nil {
+			return err
+		}
+		d.Paths = nil
+		if scope != "" {
+			d.Paths = []string{scope}
+		}
+		d.ExactPaths = append([]string(nil), exactPaths...)
+		if cmd.Flags().Changed("method") {
+			d.Methods = append([]string(nil), methods...)
+		}
+		if err := brokersettings.Validate(d); err != nil {
 			return err
 		}
 		_, revision, err := brokersettings.Load(path)
@@ -76,7 +92,9 @@ func newBrokerCommand() *cobra.Command {
 	}}
 	set.Flags().StringVar(&template, "template", "bearer-readonly", "bearer-readonly or api-key-readonly")
 	set.Flags().StringVar(&origin, "origin", "", "Fixed HTTPS origin (required)")
-	set.Flags().StringVar(&scope, "path", "", "Allowed path and descendants (required)")
+	set.Flags().StringVar(&scope, "path", "", "Allowed path and descendants (requires --path or --exact-path)")
+	set.Flags().StringArrayVar(&exactPaths, "exact-path", nil, "Allowed exact path only (repeatable; descendants denied)")
+	set.Flags().StringSliceVar(&methods, "method", nil, "Allowed HTTP method (repeatable or comma-separated; default GET,HEAD)")
 	set.Flags().BoolVar(&secretStdin, "secret-stdin", false, "Read a new/replacement secret from stdin; omission preserves existing secret")
 	root.AddCommand(set, &cobra.Command{Use: "configure", Short: "Edit broker routes in the TUI (node not required)", Args: cobra.NoArgs, RunE: func(_ *cobra.Command, _ []string) error {
 		path, err := resolve()

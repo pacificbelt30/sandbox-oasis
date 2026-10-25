@@ -7,10 +7,25 @@
 
 ## 高速化の仕組み
 
+### Execの重複検証をまとめる
+
+- 利用可能：**未リリース（main）**。
+- 1回のExecで重複していた資産検証を、runtime・ホスト検証と同じ要求にまとめます。
+- 要求ごとに全資産を読み直し、SHA-256・所有者・パス・権限・設定を確認します。更新時刻を使ったキャッシュはありません。
+- ワーカー設定、ホストのプロセス・cgroup、guestのUID・権限・資源制限も確認してからコマンドを実行します。
+- `verify-runtime-v1` に未対応のnodeでは、従来の検証手順を使います。対応nodeの検証失敗を旧手順で再試行しません。
+- ロック待ちの後で資産を検証し、同じ要求内の監督プロセス確認へ引き継ぎます。所有権・PID・資源上限は引き続き照合します。
+- 停止・削除から単独で呼ぶ監督プロセス確認は、その都度独立して資産を検証します。
+- 起動時も同じ要求内の重複だけを解消します。VM開始前と開始後の資産検証はそれぞれ行います。
+- 資源予約・起動時のbootstrap・認証の有効化順序は従来どおりです。
+
+### 資産検証とProxy認証
+
 - 資産検証は、ファイルごとの所有者・パス・実行権限・SHA-256の確認を、1回の検証につき最大 `min(4, GOMAXPROCS)` 並列で行います。
 - 毎回すべての資産を読み、設定との結び付けも確認します。
 - [セキュリティ境界](security.md)の検査を維持したまま、空いているCPUを利用します。
-- 総ハッシュ量は変わらないため、CPU飽和時のthroughputや、ディスク読み出しが支配的な環境での改善率は別途計測が必要です。
+- 資産検証の並列化だけでは総ハッシュ量は変わりません。Execの重複解消では、同じ要求内での読直しを減らします。
+- CPU飽和時のthroughputや、ディスク読み出しが支配的な環境での改善率は別途計測します。
 
 - 認証プロキシは、トークン値から発行記録を直接検索します。
 - ワーカー数に比例する全件走査を避け、発行・復元・失効と同じロック内で索引を更新します。
@@ -19,6 +34,61 @@
 - これらの高速化は実装側で有効になります。
 - 専用の有効化フラグはありません。
 - 導入は[CLI・管理サービス・プロキシの更新手順](operations.md#cliプロキシを更新する)に従い、Go APIを使う製品もnodeと同じソース版へ更新します。
+
+## 2026-10-25の実測
+
+- 対象：**未リリース（main）**。同じ要求内の全資産検証を、Execでは3回から1回へまとめました。
+- 変更前のnode CPU profileは、CPU時間の94.0%がSHA-256計算でした。
+
+| 条件 | 内容 |
+|---|---|
+| ホスト | Linux amd64、Core i5-8500、4 vCPU、KVM |
+| ビルド | Go 1.27.3、client・nodeともGOMAXPROCS=4、同じ測定用BuildVersion |
+| 実行基盤 | Kata 4.2.0／Dragonball、containerd 2.4.2、BuildKit 0.34.0 |
+| 資源 | compact：guest 512 MiB／host予約768 MiB／CPU 1／PID 512。収容上限2台 |
+| 比較 | 同じnode・固定資産・workerイメージで、変更前→変更後→変更後→変更前 |
+| 標本数 | 各版：単独起動6回、2台同時起動6組、Exec14回、2台同時Exec10組 |
+| 実行条件 | warm page cache、準備済みイメージ、一般egress・Git共有・エージェントなし。架空の資格情報のみ |
+| 計測外 | clientのOpen、Proxy作成、イメージ作成・import、削除、AI推論 |
+
+- 変更前は `d9c0419e` を土台に直前のP1作業を含むソースの保存版です。公開版同士の比較ではありません。
+- 旧新版とも同じCPU profile採取処理を有効にし、別のビルド・試験を並行実行していません。
+
+| 対象 | 変更前の中央値 | 変更後の中央値 | 時間短縮 |
+|---|---:|---:|---:|
+| 単独起動 | 7.740秒 | 7.103秒 | 8.2% |
+| 2台同時起動：2台完了まで | 13.721秒 | 12.744秒 | 7.1% |
+| 公開Go APIのExec：`/bin/true` | 2.475秒 | 1.161秒 | **53.1%** |
+| 2台同時Exec：両方の完了まで | 3.329秒 | 1.888秒 | **43.3%** |
+
+- Execの範囲：変更前2.362〜3.229秒、変更後1.094〜1.361秒。
+- 2台同時Execの範囲：変更前3.197〜3.456秒、変更後1.830〜2.407秒。
+- 単独起動の範囲：変更前7.638〜8.080秒、変更後6.904〜7.238秒。
+- 工程別の中央値：Execの全資産・ホスト確認0.706秒、guest確認0.203秒。単独起動のVM開始APIは3.670→3.667秒でした。
+- VM開始APIにはnode側の待ちも含みます。起動の追加改善と収容台数の増加は、引き続き検討対象です。
+
+### CPU・メモリ・I/Oの費用
+
+| 観測対象 | 変更前 | 変更後 |
+|---|---:|---:|
+| node CPU時間／Exec | 3.062 CPU秒 | 1.064 CPU秒（65.3%減） |
+| nodeの論理読取量／Exec | 1.197 GiB | 0.400 GiB（66.6%減） |
+| node＋2VMのCPU時間／Exec | 3.256 CPU秒 | 1.336 CPU秒（59.0%減） |
+| 2VMだけのCPU時間／Exec | 0.194 CPU秒 | 0.272 CPU秒 |
+| nodeのCPU待ち：Exec14回合計 | 0.883秒 | 0.808秒 |
+| Exec区間終了時のnode RSS | 36.79 MiB | 38.84 MiB |
+| 2VMの観測メモリ合計 | 313.31 MiB | 312.80 MiB |
+| VMのOOM kill | 0 | 0 |
+
+- CPU・読取量はExec区間の合計を回数で割った値、RSS・観測メモリは2区間の終了時の平均です。
+- CPU待ちはOSがCPUへ割り当てるまでの待ち時間です。`schedstat`で各区間の開始・終了に存在したスレッドを集計しました。
+- VM側のCPU時間とnode RSSは増えました。計測対象のCPU合計は減り、VMの資源予約は変えていません。
+- VM単体の観測メモリは155.09〜157.45 MiB、観測peakの最大は157.83 MiBでした。起動瞬間のpeakを全VMで測った値ではありません。
+- Exec中のnodeの物理ディスク読取は両版とも0 byteでした。論理読取量の減少は、cold時のディスク高速化率を示しません。
+- 起動区間のnode CPU／I/O記録には、標本間の削除も含みます。起動だけの値としては比較していません。
+- node CPUと当該VM以外のホスト処理は、CPU合計に含めていません。
+- 実AIの応答、cold起動、他CPU・資源プロファイル、3台以上は未計測です。
+- [実Kataでの回帰確認](testing.md#2026-10-25の高速化と回帰確認)も参照してください。
 
 ## 計測対象を選ぶ
 
@@ -58,6 +128,40 @@ for _, phase := range timing.Phases {
 - 保存や送信は呼出側が選択します。
 - 工程名は診断用であり、版ごとに追加・変更され得ます。
 - 起動完了・認証の判定には従来どおりAPIの結果を使ってください。
+
+## Execのどこに時間がかかるか調べる
+
+- 利用可能：**未リリース（main）**。
+- `ExecWithTimings(ctx, workerID, request)` は、終了コード・`ExecTimings`・errorを返します。
+- stdout／stderr、stdin、終了コード、取消、失敗の意味は通常の `Exec` と同じです。
+- 工程名と時間だけを記録し、引数・パス・出力・資格情報・エラー本文は記録しません。
+- 並列実行では呼出しごとに別の計測記録を作ります。
+
+```go
+code, timing, err := client.ExecWithTimings(ctx, worker.ID, cxd.ExecRequest{
+    Argv: []string{"/bin/true"},
+})
+fmt.Printf("exit=%d ok=%t\n", code, err == nil)
+for _, phase := range timing.Phases {
+    fmt.Printf("%s: %s\n", phase.Name, phase.Duration)
+}
+```
+
+| 工程 | 含むもの |
+|---|---|
+| `request_validation` | 引数・作業ディレクトリ・環境変数の検証 |
+| `exec_lookup` | 対象の照会、稼働・管理対象・隔離状態の確認 |
+| `exec_runtime` | runtime登録・資源プロファイル・cgroup版の確認 |
+| `exec_configuration` | 設定・mount・ネットワーク・資源上限の照合 |
+| `exec_host` | 全資産とホストの検証、ノード情報の照合 |
+| `exec_guest` | guest probeと制限の照合 |
+| `exec_create`・`exec_attach` | コマンド作成とstreamへの接続 |
+| `exec_io`・`exec_result` | 実行中の入出力・待ちと終了結果の照会 |
+
+- `exec_verification` は検証入口の短い処理です。
+- 各工程は重複せず、合計は `timing.Duration` になります。失敗時はそこまでの時間を返します。
+- `exec_io` はコマンドの実行時間を含みます。AIの応答待ちもここへ入り得ます。
+- CPU時間・メモリ・I/O量はこのAPIに含みません。ノード側のprofileやcgroupと合わせて調べます。
 
 ## 再計測する
 
@@ -128,6 +232,29 @@ GOMAXPROCS=4 \
 - Go benchmarkは本計測の前に1回の校正起動も行います。
 - 既定の `compact` 以外も `CODEX_DOCK_BENCH_PROFILE` で選べます。
 - 準備済みイメージ・温まったpage cacheの結果を、初回イメージ展開や実タスクの開始時間と混同しないでください。
+
+### 起動・Exec・2台同時実行をまとめて測る
+
+- 利用可能：**未リリース（main）**。
+- 2台以上の空き容量がある専用nodeで実行します。共有サービスは使わないでください。
+- 前節と同じ固定worker／Proxyイメージを事前に用意します。実資格情報・AI推論は使いません。
+- 順次起動3回、2台同時起動3組、Exec7回、2台同時Exec5組を測ります。
+- 試験自身が作成したワーカー・Proxyを回収します。
+
+```bash
+OAISO_KATA_PERFORMANCE=1 GOMAXPROCS=4 \
+CODEX_DOCK_KATA_NODE_SOCKET=/run/codex-dock-node.sock \
+CODEX_DOCK_KATA_TEST_IMAGE=codex-dock:latest \
+CODEX_DOCK_KATA_PROXY_IMAGE=codex-dock-proxy:latest \
+  go test -ldflags '-X github.com/pacificbelt30/codex-dock/internal/buildinfo.Version=dev' \
+    ./pkg/cxd -run '^TestKataPerformance$' -count=1 -timeout=20m -v
+```
+
+- `dev` はnodeのBuildVersionに合わせます。clientの `GOMAXPROCS` はnode側の設定を変えません。
+- `perf_sample` が工程別時間、`perf_resources` が予約値・観測メモリ・OOM回数です。
+- wall timeにイメージ作成・import、Proxy作成、削除は含めません。
+- 温まったpage cacheでの準備済みイメージ起動です。初回導入・cold起動・AI推論の計測とは分けます。
+- CPU・ディスクI/O・schedulerの待ちは、別途ノード運用者が採取します。この試験だけでは収集しません。
 
 ## 変更前後を比較する
 

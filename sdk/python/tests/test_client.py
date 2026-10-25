@@ -19,6 +19,30 @@ class ClientContract(unittest.TestCase):
         self.addCleanup(client.close)
         return client
 
+    def test_workspace_jobs_checkpoints_and_unknown_start(self):
+        c = self.client()
+        data = bytes([0, 255, 3])
+        c.write_file("worker", "binary", data)
+        self.assertEqual(c.read_file("worker", "binary"), data)
+        self.assertEqual(c.list_files("worker"), ["binary"])
+        job = c.start_job("worker", ["run"])
+        self.assertEqual(c.list_jobs("worker")[0]["id"], job["id"])
+        self.assertEqual(c.job_logs("worker", job["id"], 15)["next"], 22)
+        self.assertEqual(c.wait_job("worker", job["id"])["exit_code"], 7)
+        c.kill_job("worker", job["id"])
+        with self.assertRaises(APIError) as caught:
+            c.start_job("worker", ["lost-job"])
+        self.assertTrue(caught.exception.requires_reconciliation)
+        self.assertEqual(caught.exception.partial_result["id"], "job-1")
+        saved = c.checkpoint("worker")
+        self.assertEqual(c.inspect_checkpoint(saved["id"])["id"], saved["id"])
+        c.checkpoints()
+        w = c.restore_checkpoint(saved["id"], {"RequestID": "restore", "ProjectDir": "/workspace"})
+        self.assertEqual(w["Image"], "checkpoint")
+        c.remove_checkpoint(saved["id"])
+        with self.assertRaises(APIError):
+            c.write_file("worker", "binary", bytes(512 * 1024 + 1))
+
     def test_lifecycle_replay_conflict_and_cleanup(self):
         c = self.client()
         self.assertEqual(c.capabilities["protocol_version"], 1)

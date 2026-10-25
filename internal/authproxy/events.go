@@ -15,6 +15,9 @@ func (p *Proxy) recordDenial(w http.ResponseWriter, r *http.Request, err error) 
 	code := networkpolicy.Reason(err)
 	w.Header().Set("X-Cxd-Policy-Reason", code)
 	event := policyevents.Event{PolicyID: p.cfg.PolicyID, Source: r.RemoteAddr, Code: code}
+	if epoch, ok := r.Context().Value(egressPolicyKey{}).(*egressEpoch); ok {
+		event.PolicyID = epoch.state.PolicyID
+	}
 	var denied *networkpolicy.Denial
 	if errors.As(err, &denied) {
 		event.Destination = denied.Destination.String()

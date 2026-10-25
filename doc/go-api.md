@@ -26,7 +26,9 @@
     - `Open` は node の接続・検証と Go クライアント用プロトコルの確認を行い、不一致を `ErrVersionMismatch` で返す。
     - CLI と node を更新するときは、製品に組み込んだ Go パッケージも同じソース版へ更新する。
 
-- プロキシの既定接続先は、ホスト側管理 API が `http://127.0.0.1:18081`、ワーカー側認証 API が `http://codex-auth-proxy:18080`、一般通信プロキシが `http://codex-http-proxy:18082` です。
+- ホスト側の管理APIは `http://127.0.0.1:18081`、一般通信Proxyは `http://codex-http-proxy:18082` が既定です。
+- 標準の `proxy run`／`EnsureCaseProxy`は、VM内中継から認証ProxyまでTLS 1.3＋mTLSを使います。エージェントの接続先はVM内だけの `http://127.0.0.1:18083` です。[適用範囲・独自Proxyの注意点](guides/worker-tls.md)。
+- `Options.ProxyContainerURL`の初期値 `http://codex-auth-proxy:18080` は接続設定です。実際の通信方式はProxyのcapabilityを確認して選びます。
 - 配置が異なる場合は `Options.ProxyAdminURL`、`ProxyContainerURL`、`HTTPProxyURL` を指定します。
 - 管理 API にシークレットを設定している場合は `Options.ProxyAdminSecret` にホスト側だけで渡してください。
 - CLIの `auth_profile` / `admin_secret_file` は自動で読み込まない。組み込み側で管理ファイルを読み、`Options` へ渡すか、[ケース別ProxyとStore](credential-store.md)を構成。
@@ -192,6 +194,7 @@ func main() {
 - `Launch` の作成と初回起動が一体である従来の動作は維持します。
 
 - 起動の工程別時間が必要な場合は `LaunchWithTimings(ctx, req)` を使います。
+- Execは `ExecWithTimings(ctx, workerID, request)` で終了コード・`ExecTimings`・errorを返します（未リリースmain）。
 - `Launch` と同じ契約で `Worker`、`LaunchTimings`、`error` を返します。
 - [計測の範囲と再現手順](performance.md#起動のどこに時間がかかるか調べる)を参照してください。
 

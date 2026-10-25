@@ -16,19 +16,21 @@ import (
 )
 
 type Descriptor struct {
-	Name      string   `json:"name"`
-	Upstream  string   `json:"upstream"`
-	Paths     []string `json:"paths"`
-	Methods   []string `json:"methods"`
-	Header    string   `json:"header"`
-	Prefix    string   `json:"prefix"`
-	Provider  string   `json:"provider,omitempty"`
-	SecretSet bool     `json:"secret_set"`
+	Name       string   `json:"name"`
+	Upstream   string   `json:"upstream"`
+	Paths      []string `json:"paths"`
+	ExactPaths []string `json:"exact_paths,omitempty"`
+	Methods    []string `json:"methods"`
+	Header     string   `json:"header"`
+	Prefix     string   `json:"prefix"`
+	Provider   string   `json:"provider,omitempty"`
+	SecretSet  bool     `json:"secret_set"`
 }
 
 type storedRoute struct {
 	Name, Upstream, Header, Prefix, Provider, Secret string
 	Paths, Methods                                   []string
+	ExactPaths                                       []string `json:"ExactPaths,omitempty"`
 }
 
 func DefaultPath() (string, error) {
@@ -53,7 +55,7 @@ func Template(name, route, origin, scope string) (Descriptor, error) {
 }
 
 func Validate(d Descriptor) error {
-	return authproxy.ValidateCredentialRoutes([]authproxy.CredentialRoute{{Name: d.Name, Upstream: d.Upstream, Paths: d.Paths, Methods: d.Methods, Header: d.Header, Prefix: d.Prefix, Provider: d.Provider, Secret: func(context.Context) (string, error) { return "", nil }}})
+	return authproxy.ValidateCredentialRoutes([]authproxy.CredentialRoute{{Name: d.Name, Upstream: d.Upstream, Paths: d.Paths, ExactPaths: d.ExactPaths, Methods: d.Methods, Header: d.Header, Prefix: d.Prefix, Provider: d.Provider, Secret: func(context.Context) (string, error) { return "", nil }}})
 }
 
 func decode(data []byte) ([]storedRoute, error) {
@@ -87,7 +89,7 @@ func decode(data []byte) ([]storedRoute, error) {
 }
 
 func describe(r storedRoute) Descriptor {
-	return Descriptor{Name: r.Name, Upstream: r.Upstream, Paths: r.Paths, Methods: r.Methods, Header: r.Header, Prefix: r.Prefix, Provider: r.Provider, SecretSet: r.Secret != ""}
+	return Descriptor{Name: r.Name, Upstream: r.Upstream, Paths: r.Paths, ExactPaths: r.ExactPaths, Methods: r.Methods, Header: r.Header, Prefix: r.Prefix, Provider: r.Provider, SecretSet: r.Secret != ""}
 }
 
 // Load returns scope metadata only. Decoder errors never include stored values.
@@ -121,7 +123,7 @@ func Save(path, expected string, d Descriptor, secret string) error {
 		if err != nil {
 			return nil, err
 		}
-		replacement := storedRoute{Name: d.Name, Upstream: d.Upstream, Header: d.Header, Prefix: d.Prefix, Provider: d.Provider, Paths: d.Paths, Methods: d.Methods, Secret: secret}
+		replacement := storedRoute{Name: d.Name, Upstream: d.Upstream, Header: d.Header, Prefix: d.Prefix, Provider: d.Provider, Paths: d.Paths, ExactPaths: d.ExactPaths, Methods: d.Methods, Secret: secret}
 		found := false
 		for i, r := range routes {
 			if r.Name == d.Name {

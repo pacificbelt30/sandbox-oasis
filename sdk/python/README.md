@@ -5,3 +5,5 @@
 - 自動再送は行いません。管理socketの権限とGo APIの要求ID・失敗の意味を維持します。
 - 導入・コマンド例・取消・復旧：[利用ガイド](https://pacificbelt30.github.io/sandbox-oasis/local-api-sdk/)。
 - 型・上限：[JSON Schema](https://github.com/pacificbelt30/sandbox-oasis/blob/main/api/local-v1/schema.json)。
+
+- 未リリースmainの追加操作：ファイルの読書き・一覧（1回512KiB）、background job・offset付きログ、disk checkpointの保存・照会・削除・新規VMへの復元。

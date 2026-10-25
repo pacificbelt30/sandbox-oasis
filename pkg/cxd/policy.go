@@ -3,6 +3,7 @@ package cxd
 import (
 	"context"
 	"fmt"
+	"github.com/pacificbelt30/codex-dock/internal/egresscontrol"
 	"github.com/pacificbelt30/codex-dock/internal/networkpolicy"
 	"github.com/pacificbelt30/codex-dock/internal/policyevents"
 	"github.com/pacificbelt30/codex-dock/internal/sandbox"
@@ -32,6 +33,9 @@ func (c *Client) ExplainPolicy(ctx context.Context, worker, destination string, 
 	if err != nil {
 		return PolicyDecision{}, err
 	}
+	if s.UpdatePending {
+		return PolicyDecision{}, fmt.Errorf("policy update pending; completion unconfirmed")
+	}
 	if s.QuarantinePending {
 		return PolicyDecision{}, fmt.Errorf("quarantine stop not confirmed; retry Quarantine for this worker")
 	}
@@ -51,4 +55,22 @@ type ReapAction = sandbox.ReapAction
 
 func (c *Client) Reap(ctx context.Context, dryRun bool) ([]ReapAction, error) {
 	return c.manager.Reap(ctx, time.Now(), dryRun)
+}
+
+type PolicyChangePlan = workeregress.ChangePlan
+type PolicyProposal = workeregress.Proposal
+type LivePolicyState = egresscontrol.State
+
+func (c *Client) PlanPolicyChange(ctx context.Context, worker string, p EgressPolicy) (PolicyChangePlan, error) {
+	return workeregress.PlanChange(ctx, c.opts.NodeSocket, worker, p.rules())
+}
+func (c *Client) ApplyPolicyChange(ctx context.Context, worker string, p EgressPolicy, plan string) (LivePolicyState, error) {
+	return workeregress.ApplyChange(ctx, c.opts.NodeSocket, worker, p.rules(), plan)
+}
+func (c *Client) ProposePolicy(ctx context.Context, worker, destination string) (PolicyProposal, error) {
+	s, err := c.Policy(ctx, worker)
+	if err != nil {
+		return PolicyProposal{}, err
+	}
+	return workeregress.Propose(ctx, s, destination)
 }

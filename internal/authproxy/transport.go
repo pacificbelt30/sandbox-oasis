@@ -87,3 +87,10 @@ func (p *Proxy) guardedDialContext(ctx context.Context, network, addr string) (n
 }
 
 func isBlockedDestErr(err error) bool { return errors.Is(err, networkpolicy.ErrDenied) }
+
+func (p *Proxy) requestForwardPolicy(r *http.Request) (networkpolicy.Policy, error) {
+	if policy, ok := r.Context().Value(egressPolicyKey{}).(*egressEpoch); ok {
+		return policy.policy, nil
+	}
+	return p.forwardPolicy()
+}

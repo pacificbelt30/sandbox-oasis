@@ -2,7 +2,7 @@
 
 [日本語](../../guides/encrypted-credentials.md) | **English**
 
-- **Available in v0.0.3 or later; unavailable in v0.0.2.**
+- **Available in v0.0.3 or later.**
 - New `login` profiles use the [keyring](keyring.md) by default. Existing profiles and low-level `auth profile set/import` keep their existing behavior.
 - Supports API keys and subscription credentials. The Auth Proxy remains; work VMs receive no real credentials.
 

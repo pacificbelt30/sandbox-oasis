@@ -19,6 +19,7 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/go-units"
 	"github.com/pacificbelt30/codex-dock/internal/kataguard"
+	"github.com/pacificbelt30/codex-dock/internal/launchtiming"
 	"github.com/pacificbelt30/codex-dock/internal/workerpolicy"
 )
 
@@ -257,6 +258,10 @@ func verifyGuest(data []byte, nonce, hostBoot, user string, waiting bool, profil
 }
 
 func (m *Manager) verifyKataGuest(ctx context.Context, id string, waiting bool) error {
+	return m.verifyKataGuestWithRuntime(ctx, id, waiting, "")
+}
+
+func (m *Manager) verifyKataGuestWithRuntime(ctx context.Context, id string, waiting bool, runtime string) error {
 	v, err := m.cli.ContainerInspect(ctx, id)
 	if err != nil {
 		return err
@@ -265,11 +270,36 @@ func (m *Manager) verifyKataGuest(ctx context.Context, id string, waiting bool) 
 	if err != nil {
 		return err
 	}
-	if v.Config.Labels[labelProfile] != g.Stamp() {
+	// Startup already has validated metadata; Exec may use a fresh manager.
+	if runtime == "" && v.Config.Labels[labelProfile] != g.Stamp() {
 		return fmt.Errorf("kata assets/profile changed; recreate this worker")
 	}
-	if err = g.Verify(ctx, v.Config.Labels[labelAllocation], id); err != nil {
+	if runtime != "" {
+		if combined, ok := g.(interface {
+			VerifyRuntime(context.Context, string, string, string) error
+		}); ok {
+			err = combined.VerifyRuntime(ctx, runtime, v.Config.Labels[labelAllocation], id)
+		} else {
+			err = g.Validate(ctx, runtime)
+			if err == nil {
+				err = g.Verify(ctx, v.Config.Labels[labelAllocation], id)
+			}
+		}
+	} else {
+		err = g.Verify(ctx, v.Config.Labels[labelAllocation], id)
+	}
+	if err != nil {
 		return err
+	}
+	if runtime != "" {
+		if v.Config.Labels[labelProfile] != g.Stamp() {
+			return fmt.Errorf("kata assets/profile changed; recreate this worker")
+		}
+		launchtiming.Next(ctx, "exec_configuration")
+		if err := m.validateKataWorker(ctx, id); err != nil {
+			return err
+		}
+		launchtiming.Next(ctx, "exec_guest")
 	}
 	boot, err := os.ReadFile("/proc/sys/kernel/random/boot_id")
 	if err != nil {

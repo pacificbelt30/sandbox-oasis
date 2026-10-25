@@ -73,11 +73,17 @@ func testKataNetworkRevocation(t *testing.T, secure, resources bool) {
 		t.Fatal(err)
 	}
 	brokerFile := filepath.Join(brokerDirectory, "routes.json")
-	createRoute := exec.CommandContext(ctx, binary, "broker", "--file", brokerFile, "set", "service", "--origin", "https://broker.fixture", "--path", "/v1/read", "--secret-stdin")
+	createRoute := exec.CommandContext(ctx, binary, "broker", "--file", brokerFile, "set", "service", "--origin", "https://broker.fixture", "--path", "/v1/read", "--exact-path", "/v1/exact", "--method", "GET", "--secret-stdin")
 	createRoute.Stdin = strings.NewReader("fixture-broker-secret\n")
 	if output, err := createRoute.CombinedOutput(); err != nil {
 		t.Fatalf("broker settings: %s %v", output, err)
 	}
+	writeRoute := exec.CommandContext(ctx, binary, "broker", "--file", brokerFile, "set", "service-write", "--origin", "https://broker.fixture", "--exact-path", "/v1/write", "--method", "POST", "--secret-stdin")
+	writeRoute.Stdin = strings.NewReader("fixture-broker-secret\n")
+	if output, err := writeRoute.CombinedOutput(); err != nil {
+		t.Fatalf("broker write settings: %s %v", output, err)
+	}
+
 	usageDirectory := t.TempDir()
 	if err := os.Chmod(usageDirectory, 0700); err != nil {
 		t.Fatal(err)
@@ -371,8 +377,12 @@ func testKataNetworkRevocation(t *testing.T, secure, resources bool) {
 		})
 		script := `import os,urllib.request,urllib.error
 assert not os.path.exists('/run/cxd-broker.json')
-for method,path,expected in [('GET','/v1/read/item',200),('POST','/v1/read/item',403),('GET','/private',403)]:
- req=urllib.request.Request(os.environ['CODEX_AUTH_PROXY_URL']+'/broker/service'+path,method=method,headers={'Authorization':'Bearer '+os.environ['CODEX_TOKEN']})
+for route,method,path,expected in [
+ ('service','GET','/v1/read/item',200),('service','POST','/v1/read/item',403),('service','GET','/private',403),
+ ('service','GET','/v1/exact',200),('service','GET','/v1/exact/child',403),('service','GET','/v1/exact-more',403),
+ ('service','GET','/v1/%65xact',403),('service','GET','/v1/exact%00',403),
+ ('service-write','POST','/v1/write',200),('service-write','GET','/v1/write',403),('service-write','POST','/v1/write/child',403)]:
+ req=urllib.request.Request(os.environ['CODEX_AUTH_PROXY_URL']+'/broker/'+route+path,method=method,headers={'Authorization':'Bearer '+os.environ['CODEX_TOKEN']})
  try:
   with urllib.request.urlopen(req,timeout=10) as r: status=r.status; body=r.read(); assert b'fixture-broker-secret' not in body
  except urllib.error.HTTPError as e: status=e.code; e.close()
@@ -392,7 +402,7 @@ print('BROKER_SCOPE_PASS')`
 		} else if !strings.Contains(err.Error(), "protected proxy") {
 			t.Fatalf("share denied for unrelated reason: %v", err)
 		}
-		t.Log("PASS: configured broker injects host-only secret on scoped GET, rejects method/path widening and credential-file sharing")
+		t.Log("PASS: configured broker enforces prefix/exact paths and explicit GET/POST, rejects encoded/control paths and credential-file sharing")
 	})
 
 	t.Run("execution-usage-persistence", func(t *testing.T) {

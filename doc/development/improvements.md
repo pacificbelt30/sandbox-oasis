@@ -28,7 +28,7 @@
 | P1 | 診断と監視の集約 | **完了（未リリースmain）**。[診断の保存・JSONL出力](../guides/observability.md)、CLI／Go APIの起動時間保存 | 秘密を除外、保持量を制限。外部の常設サービスを必須にしない |
 | P1 | 認証brokerの設定支援 | **完了（未リリースmain）**。[テンプレート・事前検証・既存TUI](../guides/credential-broker.md)。既存秘密の非表示・競合検知 | 既存brokerを使用。秘密の表示や未知の宛先への注入は追加しない |
 | P1 | 更新候補の確認 | **完了（未リリースmain）**。[候補の計画・隔離CLI・実Kataの一括検証](candidate-qualification.md)。結果と成果物hashを保存 | 差分だけで自動採用しない。失敗時は現行pinを維持し、戻せる状態を残す |
-| P2 | 起動・Exec・並列収容の改善 | 工程別の時間、待ち、CPU、メモリ、I/Oを測り、支配的な処理を最適化 | 同じ条件で前後比較。20%以上を狙える根拠を持ち、隔離検証を省略しない |
+| P2 | 起動・Exec・並列収容の改善 | **第1段完了（未リリースmain）**。[実測](../performance.md#2026-10-25の実測)：Exec 53.1%、2台同時Exec 43.3%短縮。要求内の重複検証を解消 | 全資産・host/guestの検証を維持。起動は8.2%短縮。収容台数の増加と起動の追加改善は未実装 |
 
 ## 追加する機能の候補
 
@@ -51,7 +51,7 @@
 | P1 | 保存できる監査記録 | **完了（未リリースmain）**。[操作の監査記録](../guides/audit.md)。作成・認証変更・許可付き発行・失効・削除の結果を保存 | 値ではなくID・理由・成否を保存。容量上限・欠損検知・秘密非記録を確認。rootに耐える改ざん防止をローカル保存だけで保証しない |
 | P1 | 不正入力・競合・障害の自動試験 | **完了（未リリースmain）**。[fuzz・負荷・競合・保存障害の検査](security-tests.md)。既存のCAS・回収試験も使用 | 既存試験に不足するfuzz・競合・障害注入を追加。大量・長寿命接続、途中終了、disk fullでも許可側へ倒れないことを確認 |
 | P2 | 秘密を扱うプロセスの保護 | [暗号化保存](local-credential-store.md)は同一UID・稼働メモリ・swapを保護しない | 専用UID、dump制限、解錠期限、鍵の保持時間を検討。Goのメモリ複製やhost rootまで完全に防げるとはしない |
-| P2 | 通信規則をさらに細かく限定 | [一般CONNECT](../proxy-policy.md)はTLS内のSNI・URLを検査しない | 固定origin brokerでpath・methodを絞れる範囲を先に使う。SNI照合だけではHTTP Host・path制限にならない |
+| P2 | 通信規則をさらに細かく限定 | **実装済み（未リリースmain）**。[固定origin broker](../guides/credential-broker.md)の完全一致path、CLIのmethod指定、TUI・Go API・設定ファイル | 従来の配下指定を維持。拒否時は秘密を読み出さない。一般CONNECTのTLS内検査、query・body制限は対象外 |
 
 - 上流の実APIキー・OAuth access/refresh/ID tokenは引き続き認証Proxyだけで保持します。
 - 作業VMへ渡すのは、上流認証に使えない短命・実行限定のProxy用認証情報です。証明書のhost側発行鍵は渡しません。
@@ -61,7 +61,7 @@
 
 | 案 | 変わる契約 | 先に確認すること |
 |---|---|---|
-| 通信規則の動的変更 | 現在は固定規則＋VM全体の隔離停止 | 規則の世代、適用完了応答、既存接続の終了、途中失敗と再起動時の復元 |
+| 通信規則の動的変更 | 未リリースmainで明示的なProxy単位の即時変更を追加。[手順と制限](../guides/live-policy.md) | 規則の世代、適用完了応答、既存接続の終了、途中失敗と再起動時の復元 |
 | 汎用TLS復号・L7制限 | guestの信頼CAと対応protocol | pinning、HTTP/2・gRPC・WS、署名要求、秘密のecho、ログ、追加負荷 |
 | メモリsnapshot・VM fork | process・RAM・接続・ID・期限を保存／複製 | token再発行、秘密残留、CPU互換、外部の処理を二重実行しないこと |
 | 別OS・複数ホスト・複数利用者 | 信頼済み単一ホストoperatorという前提 | 利用者認証、権限、容量、配置、相互認証、監査、障害回収 |
@@ -76,3 +76,16 @@
 
 - 実装済み：既定拒否、実行別モデル制限、PID profile、credential broker、Create→Start、PTY・files・jobs、独立login・暗号化保存。新規機能として重ねて追加しません。
 - 既存の追加制御・Go APIはv0.0.2、独立login・キーリング＋暗号化・状態／配布版更新の一括案内はv0.0.3が初収録です。詳しい条件は各機能の既存ページを参照してください。
+
+## 日常操作・組み込みの追加
+
+対象：**未リリース（main）**。実装・機能別の自動試験・実Kataの確認が完了。[確認範囲](../testing.md#p1の作業支援通信規則の即時変更2026-10-25)。
+
+| 優先 | 項目 | 提供範囲 |
+|---|---|---|
+| P1 | SDKの対応拡大 | [ファイル・jobs・checkpoint](../local-api-sdk.md#ファイルジョブcheckpointを操作する)。512KiBの転送上限と再送の契約を維持 |
+| P1 | Webプレビュー | [localhost・短命認証・指定したguestポート](../guides/preview.md) |
+| P1 | 通信許可の申請・確認 | [完全一致の候補、前後の規則、共有ワーカーの確認](../guides/live-policy.md) |
+| P1 | 成果物回収 | [指定ファイル・Git差分・manifestの確認付きtar出力](../guides/artifacts.md) |
+| P1 | checkpoint保持管理 | [保存期限・目標容量・pin・参照保護・確認付き削除](../guides/disk-checkpoint.md#保存期限容量を確認して回収する) |
+| 追加 | 通信規則の即時変更 | [世代管理・既存HTTP/CONNECTの終了確認・再起動復元](../guides/live-policy.md) |

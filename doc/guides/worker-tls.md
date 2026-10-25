@@ -22,6 +22,21 @@
 - 同じUID・ホストroot・node管理者を攻撃者とする保証ではありません。
 - エージェントごとのmTLS設定は不要です。固定bootstrapが、検証・token有効化の後で中継を起動してからユーザーコードを解放します。
 
+## 起動方法ごとの適用範囲
+
+| 起動方法 | VM向け通信 |
+|---|---|
+| `oaiso proxy run`の認証Proxy | mTLSを自動で有効化 |
+| Go APIの `EnsureCaseProxy` | mTLSを自動で有効化 |
+| `oaiso proxy serve`の直接起動 | `--worker-mtls`の明示が必要。別admin listenerと管理secretも必要 |
+| 独自のin-process Proxy | `WorkerMTLS`の明示設定が必要 |
+| Go APIの `StartCredentialBroker` | 現行helperはHTTP。TLS必須のVM向け経路には使わない |
+
+- 固定origin brokerは、標準の認証Proxyに`--credential-routes`で設定すれば、同じmTLSで保護されます。
+- `StartCredentialBroker`の平文互換経路まで、自動的にTLSへ切り替える実装ではありません。
+- 独自組み込みでは `ProxyCapabilities().WorkerMTLS` を確認し、TLSが必要な用途では未対応をエラーとして扱ってください。
+- 既存の稼働環境への自動適用は行いません。対応する版をそろえ、以下の手順で再作成します。
+
 ## 更新して使う
 
 旧ワーカーと旧Proxyを使っている場合、作業を保存して停止・削除してから、新しいCLI・node・guard・Proxyをそろえてください。既存環境を自動で停止・置換しません。

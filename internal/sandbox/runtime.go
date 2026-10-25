@@ -44,22 +44,8 @@ func ResolveRuntime(isolation, registration string) (string, string, error) {
 // worker additionally passes host-process and guest checks before release.
 // Explicit runc compatibility retains the containerd node service.
 func (m *Manager) CheckRuntime(ctx context.Context, opts RunOptions) error {
-	isolation, registration, err := ResolveRuntime(opts.Runtime, opts.KataRuntime)
+	isolation, registration, err := m.checkRuntimeMetadata(ctx, opts)
 	if err != nil {
-		return err
-	}
-	profile, err := m.resourceProfile(ctx, opts.ResourceProfile)
-	if err != nil {
-		return err
-	}
-	if isolation != RuntimeKata && profile.Name != "standard" {
-		return fmt.Errorf("invalid resource profile %q for %s runtime", opts.ResourceProfile, isolation)
-	}
-	info, err := m.cli.Info(ctx)
-	if err != nil {
-		return fmt.Errorf("checking containerd runtime: %w", err)
-	}
-	if err := validateRuntime(info, isolation, registration); err != nil {
 		return err
 	}
 	if isolation == RuntimeKata {
@@ -67,12 +53,38 @@ func (m *Manager) CheckRuntime(ctx context.Context, opts RunOptions) error {
 		if err != nil {
 			return err
 		}
-		if info.CgroupDriver != "cgroupfs" || info.CgroupVersion != "2" {
-			return fmt.Errorf("kata requires a cgroup v2 daemon using cgroupfs")
-		}
 		return guard.Validate(ctx, registration)
 	}
 	return nil
+}
+
+// Metadata checks precede either standalone validation or the combined
+// asset/host verification used by Exec. Neither path releases user code early.
+func (m *Manager) checkRuntimeMetadata(ctx context.Context, opts RunOptions) (string, string, error) {
+	isolation, registration, err := ResolveRuntime(opts.Runtime, opts.KataRuntime)
+	if err != nil {
+		return "", "", err
+	}
+	profile, err := m.resourceProfile(ctx, opts.ResourceProfile)
+	if err != nil {
+		return "", "", err
+	}
+	if isolation != RuntimeKata && profile.Name != "standard" {
+		return "", "", fmt.Errorf("invalid resource profile %q for %s runtime", opts.ResourceProfile, isolation)
+	}
+	info, err := m.cli.Info(ctx)
+	if err != nil {
+		return "", "", fmt.Errorf("checking containerd runtime: %w", err)
+	}
+	if err := validateRuntime(info, isolation, registration); err != nil {
+		return "", "", err
+	}
+	if isolation == RuntimeKata {
+		if info.CgroupDriver != "cgroupfs" || info.CgroupVersion != "2" {
+			return "", "", fmt.Errorf("kata requires a cgroup v2 daemon using cgroupfs")
+		}
+	}
+	return isolation, registration, nil
 }
 
 func validateRuntime(info system.Info, isolation, registration string) error {

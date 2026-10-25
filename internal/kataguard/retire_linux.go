@@ -69,6 +69,12 @@ func (g *Guard) Retire(ctx context.Context, allocation, worker string) error {
 	if err := g.Validate(ctx, g.manifest.Runtime); err != nil {
 		return err
 	}
+	return g.retireVerified(ctx, allocation, worker)
+}
+
+// Only call after full asset/runtime validation in this operation. Standalone
+// engine stop/delete callbacks must continue to use Retire, including validation.
+func (g *Guard) retireVerified(ctx context.Context, allocation, worker string) error {
 	r, err := g.readRecord(allocation)
 	if err != nil {
 		return err

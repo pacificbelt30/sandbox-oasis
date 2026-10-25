@@ -41,6 +41,19 @@ func methods() []methodSpec {
 		{"quarantine", WorkerParams{}, Success{}, true, "same_worker_id", "reconcile_worker"},
 		{"wait", WorkerParams{}, ExitResult{}, false, "read_only", "cancel_wait_only"},
 		{"exec", ExecParams{}, ExecResult{}, true, "never", "stop_guest_command_then_reconcile"},
+		{"read_file", FileParams{}, DataResult{}, false, "read_only", "cancel_call_only"},
+		{"write_file", FileParams{}, Success{}, true, "reconcile_file", "reconcile_file"},
+		{"list_files", FileParams{}, DataResult{}, false, "read_only", "cancel_call_only"},
+		{"start_job", ExecParams{}, cxd.Job{}, true, "never", "reconcile_jobs"},
+		{"job", JobParams{}, cxd.Job{}, false, "read_only", "cancel_call_only"},
+		{"list_jobs", WorkerParams{}, []cxd.Job{}, false, "read_only", "cancel_call_only"},
+		{"job_logs", JobParams{}, cxd.JobOutput{}, false, "read_only", "cancel_call_only"},
+		{"kill_job", JobParams{}, Success{}, true, "same_job_id", "reconcile_job"},
+		{"wait_job", JobParams{}, cxd.Job{}, false, "read_only", "cancel_wait_only"},
+		{"checkpoint", CheckpointParams{}, cxd.DiskCheckpoint{}, true, "never", "reconcile_checkpoints"},
+		{"checkpoints", struct{}{}, cxd.CheckpointCatalog{}, false, "read_only", "cancel_call_only"},
+		{"inspect_checkpoint", CheckpointParams{}, cxd.DiskCheckpoint{}, false, "read_only", "cancel_call_only"},
+		{"remove_checkpoint", CheckpointParams{}, Success{}, true, "reconcile_checkpoints", "reconcile_checkpoints"},
 	}
 }
 
@@ -109,6 +122,16 @@ func (g *schemaGenerator) schema(t reflect.Type) any {
 	switch t.Kind() {
 	case reflect.Struct:
 		name := t.Name()
+		if t.PkgPath() == "github.com/pacificbelt30/codex-dock/internal/diskcheckpoint" {
+			switch name {
+			case "Options":
+				name = "CheckpointOptions"
+			case "Info":
+				name = "DiskCheckpoint"
+			case "Catalog":
+				name = "CheckpointCatalog"
+			}
+		}
 		if t.PkgPath() == "github.com/pacificbelt30/codex-dock/pkg/cxd/localapi" {
 			name = "API" + name
 		}
@@ -137,7 +160,7 @@ func (g *schemaGenerator) schema(t reflect.Type) any {
 			properties[key] = g.schema(f.Type)
 			// DTOs used as input accept Go zero defaults. Responses and resource
 			// policies keep their exact fields, including nullable slices/times.
-			input := slices.Contains([]string{"Options", "LaunchRequest", "Filesystem", "Lifecycle", "Environment", "Compatibility", "Mount", "EgressPolicy", "Identity", "ModelPolicy", "UsagePolicy", "UsageLimits", "TemporaryStorage", "Limits"}, name)
+			input := slices.Contains([]string{"Options", "LaunchRequest", "Filesystem", "Lifecycle", "Environment", "Compatibility", "Mount", "EgressPolicy", "Identity", "ModelPolicy", "UsagePolicy", "UsageLimits", "TemporaryStorage", "Limits", "CheckpointOptions"}, name)
 			optional := input || slices.Contains(tag, "omitempty") || slices.Contains(tag, "omitzero")
 			if name == "LaunchRequest" && (key == "RequestID" || key == "ProjectDir") {
 				optional = false

@@ -25,6 +25,14 @@ try {
   const canceledWait = assert.rejects(waiting.result, e => e.code === 'canceled' && !e.requiresReconciliation, 'wait cancellation must reject');
   await waiting.cancel(); await canceledWait; assert.equal((await c.get(w.ID)).Status, 'running');
   console.log('Verified TypeScript wait cancellation');
+  await c.writeFile(w.ID,'sdk-binary',Buffer.from([0,255,3]));
+  assert.deepEqual(await c.readFile(w.ID,'sdk-binary'),Buffer.from([0,255,3]));
+  assert.ok((await c.listFiles(w.ID)).includes('sdk-binary'));
+  const job = await c.startJob(w.ID,['python3','-c','print("sdk-job-output");raise SystemExit(9)']);
+  assert.equal((await c.waitJob(w.ID,job.id)).exit_code,9);
+  assert.ok((await c.jobLogs(w.ID,job.id)).output.includes('sdk-job-output'));
+  assert.ok((await c.listJobs(w.ID)).some(j=>j.id===job.id));
+  assert.ok(Array.isArray((await c.checkpoints()).items));
   const heartbeat = request.ProjectDir + '/typescript-heartbeat';
   const command = c.submit('exec', {worker_id:w.ID, argv:['python3','-c','import time;from pathlib import Path\np=Path("/workspace/typescript-heartbeat")\nwhile True: p.write_text(str(time.time_ns()));time.sleep(.05)']});
   const canceledCommand = assert.rejects(command.result, e => e.code === 'canceled' && e.requiresReconciliation, 'exec cancellation must reject');

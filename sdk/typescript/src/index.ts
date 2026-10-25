@@ -5,7 +5,7 @@ export type * from './types.js';
 type Method = keyof MethodParams;
 export interface CallOptions { signal?: AbortSignal; timeoutMs?: number }
 export interface Call<T> { id: number; result: Promise<T>; cancel: () => Promise<MethodResults['cancel']> }
-const mutations = new Set<string>(['create','launch','start','stop','remove','remove_request','quarantine','exec']);
+const mutations = new Set<string>(['create','launch','start','stop','remove','remove_request','quarantine','exec','write_file','start_job','kill_job','checkpoint','remove_checkpoint']);
 const codes = new Set(['invalid_argument','version_mismatch','conflict','cleanup_pending','outcome_unknown','request_gone','in_progress','capacity','not_found','canceled','deadline_exceeded','permission_denied','output_limit','not_initialized','busy','internal','transport_lost','protocol_error']);
 
 export class APIError extends Error {
@@ -126,6 +126,36 @@ export class Client {
   async exec(workerID: string, argv: string[], input: { stdin?: Uint8Array; env?: string[]; workingDir?: string } = {}, options?: CallOptions): Promise<Omit<APIExecResult, 'stdout' | 'stderr'> & { stdout: Buffer; stderr: Buffer }> {
     const r = await this.call('exec', { worker_id: workerID, argv, stdin: input.stdin === undefined ? undefined : Buffer.from(input.stdin).toString('base64'), env: input.env, working_dir: input.workingDir }, options);
     return { ...r, stdout: Buffer.from(r.stdout ?? '', 'base64'), stderr: Buffer.from(r.stderr ?? '', 'base64') };
+  }
+  async readFile(workerID: string, path: string, options?: CallOptions): Promise<Buffer> {
+    const r = await this.call('read_file', { worker_id: workerID, path }, options);
+    return Buffer.from(r.data ?? '', 'base64');
+  }
+  writeFile(workerID: string, path: string, data: Uint8Array, options?: CallOptions) {
+    if (data.byteLength > 512 * 1024) throw new APIError('invalid_argument');
+    return this.call('write_file', { worker_id: workerID, path, data: Buffer.from(data).toString('base64') }, options);
+  }
+  async listFiles(workerID: string, path = '.', options?: CallOptions): Promise<string[]> {
+    const r = await this.call('list_files', { worker_id: workerID, path }, options);
+    return JSON.parse(Buffer.from(r.data ?? '', 'base64').toString('utf8')) as string[];
+  }
+  startJob(workerID: string, argv: string[], input: {env?: string[]; workingDir?: string} = {}, options?: CallOptions) {
+    return this.call('start_job', { worker_id: workerID, argv, env: input.env, working_dir: input.workingDir }, options);
+  }
+  listJobs(workerID: string, options?: CallOptions) { return this.call('list_jobs', {worker_id: workerID}, options); }
+  job(workerID: string, jobID: string, options?: CallOptions) { return this.call('job', {worker_id: workerID, job_id: jobID}, options); }
+  jobLogs(workerID: string, jobID: string, offset = 0, options?: CallOptions) { return this.call('job_logs', {worker_id: workerID, job_id: jobID, offset}, options); }
+  waitJob(workerID: string, jobID: string, options?: CallOptions) { return this.call('wait_job', {worker_id: workerID, job_id: jobID}, options); }
+  killJob(workerID: string, jobID: string, options?: CallOptions) { return this.call('kill_job', {worker_id: workerID, job_id: jobID}, options); }
+  checkpoint(workerID: string, input: MethodParams['checkpoint']['options'] = {}, options?: CallOptions) { return this.call('checkpoint', {worker_id: workerID, options: input}, options); }
+  checkpoints(options?: CallOptions) { return this.call('checkpoints', {}, options); }
+  inspectCheckpoint(id: string, options?: CallOptions) { return this.call('inspect_checkpoint', {checkpoint_id: id, options: {}}, options); }
+  removeCheckpoint(id: string, options?: CallOptions) { return this.call('remove_checkpoint', {checkpoint_id: id, options: {}}, options); }
+  async restoreCheckpoint(id: string, request: LaunchRequest, options?: CallOptions) {
+    if (request.Runtime && request.Runtime !== 'kata') throw new APIError('invalid_argument');
+    const info = await this.inspectCheckpoint(id, options);
+    if ((request.Image && request.Image !== info.image) || (request.Environment?.image_id && request.Environment.image_id !== info.digest)) throw new APIError('invalid_argument');
+    return this.launch({...request, Image: info.image, Environment: {...request.Environment, image_id: info.digest}}, options);
   }
   close(): Promise<void> {
     if (this.closing) return this.closing;

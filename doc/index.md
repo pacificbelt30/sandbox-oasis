@@ -22,7 +22,7 @@
 | 管理・運用 | 日常操作・ホスト更新・VM管理・障害対応 | [日常操作](operations.md)・[配置と更新](setup.md) |
 | 開発 | 仕組み・上流追従・テスト・今後の対応 | [構成](architecture.md)・[検証](testing.md) |
 
-- v0.0.3以降のキーリング・`login`：[インストールから最初のVM起動まで](guides/first-run.md)。公開v0.0.2とは認証の準備方法が異なります。
+- v0.0.3以降のキーリング・`login`：[インストールから最初のVM起動まで](guides/first-run.md)。
 
 ## 初めて使う
 

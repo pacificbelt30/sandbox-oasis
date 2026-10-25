@@ -24,6 +24,10 @@ import (
 
 // Proxy is the Auth Proxy server that issues short-lived tokens to containers.
 type Proxy struct {
+	egressPending         <-chan struct{}
+	egressMu              sync.Mutex
+	egressEpoch           *egressEpoch
+	egressAdmin           *http.Server
 	dataResources         *netquota.Listener
 	lifecycleMu           sync.Mutex
 	stopped               bool
@@ -367,6 +371,10 @@ func (p *Proxy) Start() error {
 	// The egress (forward-only) instance serves no reverse routes, no token
 	// endpoints, and no admin: just /health plus the forward proxy below.
 	if p.cfg.isEgress() {
+		if err := p.startEgressControl(); err != nil {
+			_ = ln.Close()
+			return err
+		}
 		p.server = &http.Server{Handler: p.workerFacingHandler(mux), ConnContext: p.workerConnectionContext, ReadHeaderTimeout: 10 * time.Second, MaxHeaderBytes: 64 << 10}
 		go func() {
 			if err := p.server.Serve(ln); err != nil && err != http.ErrServerClosed {
@@ -537,6 +545,15 @@ func (p *Proxy) Stop() {
 	p.tokens = make(map[string]*tokenRecord)
 	p.tokensByValue = make(map[string]*tokenRecord)
 	p.mu.Unlock()
+	p.egressMu.Lock()
+	if p.egressEpoch != nil {
+		p.egressEpoch.cancel()
+	}
+	p.egressMu.Unlock()
+	if p.egressAdmin != nil {
+		_ = p.egressAdmin.Close()
+	}
+
 	if p.dataResources != nil {
 		_ = p.dataResources.Close()
 	}

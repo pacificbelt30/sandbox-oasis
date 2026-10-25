@@ -12,6 +12,7 @@ import (
 	"path"
 	"regexp"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/pacificbelt30/codex-dock/pkg/cxd/identity"
 )
@@ -20,14 +21,15 @@ import (
 // name and a permitted path, never an upstream or an arbitrary secret header.
 // Secret is evaluated after live-token validation and is never exposed in APIs.
 type CredentialRoute struct {
-	Name     string
-	Upstream string
-	Paths    []string
-	Methods  []string
-	Header   string
-	Prefix   string
-	Provider string // empty/any, openai, or anthropic
-	Secret   func(context.Context) (string, error)
+	Name       string
+	Upstream   string
+	Paths      []string // Exact path or descendants, on a segment boundary.
+	ExactPaths []string // Exact decoded path only; no descendants.
+	Methods    []string
+	Header     string
+	Prefix     string
+	Provider   string // empty/any, openai, or anthropic
+	Secret     func(context.Context) (string, error)
 }
 
 var routeName = regexp.MustCompile(`^[a-z][a-z0-9-]{0,62}$`)
@@ -36,10 +38,10 @@ func validateRoutes(routes []CredentialRoute) error {
 	names := map[string]bool{}
 	for _, r := range routes {
 		u, err := url.Parse(r.Upstream)
-		if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || u.Path != "" && u.Path != "/" {
+		if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.RawQuery != "" || u.ForceQuery || u.Fragment != "" || u.RawPath != "" || u.Opaque != "" || u.Path != "" && u.Path != "/" {
 			return fmt.Errorf("credential route requires a fixed HTTPS origin")
 		}
-		if !routeName.MatchString(r.Name) || names[r.Name] || r.Secret == nil || len(r.Paths) == 0 || len(r.Methods) == 0 {
+		if !routeName.MatchString(r.Name) || names[r.Name] || r.Secret == nil || len(r.Paths)+len(r.ExactPaths) == 0 || len(r.Methods) == 0 {
 			return fmt.Errorf("invalid or duplicate credential route")
 		}
 		names[r.Name] = true
@@ -53,8 +55,8 @@ func validateRoutes(routes []CredentialRoute) error {
 		case "host", "connection", "proxy-authorization", "proxy-authenticate", "content-length", "transfer-encoding", "upgrade", "cookie", "set-cookie", "x-codex-token":
 			return fmt.Errorf("unsafe credential header")
 		}
-		for _, p := range r.Paths {
-			if !strings.HasPrefix(p, "/") || path.Clean(p) != p || strings.ContainsAny(p, "%?#\\") {
+		for _, p := range append(append([]string(nil), r.Paths...), r.ExactPaths...) {
+			if !validBrokerPath(p) {
 				return fmt.Errorf("invalid credential path scope")
 			}
 		}
@@ -113,13 +115,18 @@ func (p *Proxy) handleBroker(w http.ResponseWriter, r *http.Request) {
 	}
 	requested := "/" + relative
 	// Disallow alternate encodings and path normalization surprises before injecting.
-	if r.URL.RawPath != "" || strings.ContainsAny(requested, "%\\") || path.Clean(requested) != requested {
+	if r.URL.RawPath != "" || !validBrokerPath(requested) {
 		http.Error(w, "path not permitted", http.StatusForbidden)
 		return
 	}
 	permitted := false
 	for _, prefix := range route.Paths {
 		if requested == prefix || strings.HasPrefix(requested, strings.TrimSuffix(prefix, "/")+"/") {
+			permitted = true
+		}
+	}
+	for _, exact := range route.ExactPaths {
+		if requested == exact {
 			permitted = true
 		}
 	}
@@ -143,11 +150,15 @@ func (p *Proxy) handleBroker(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "credential unavailable", http.StatusServiceUnavailable)
 		return
 	}
-	target := strings.TrimRight(route.Upstream, "/") + requested
-	if r.URL.RawQuery != "" {
-		target += "?" + r.URL.RawQuery
+	origin, err := url.Parse(route.Upstream)
+	if err != nil {
+		http.Error(w, "credential route unavailable", http.StatusServiceUnavailable)
+		return
 	}
-	req, err := http.NewRequestWithContext(r.Context(), r.Method, target, r.Body)
+	// Build the target from separate URL fields. Neither the incoming Host nor
+	// any path/query spelling can replace the configured origin.
+	target := url.URL{Scheme: origin.Scheme, Host: origin.Host, Path: requested, RawQuery: r.URL.RawQuery}
+	req, err := http.NewRequestWithContext(r.Context(), r.Method, target.String(), r.Body)
 	if err != nil {
 		http.Error(w, "invalid upstream request", http.StatusBadRequest)
 		return
@@ -185,6 +196,7 @@ func cloneRoutes(routes []CredentialRoute) []CredentialRoute {
 	out := append([]CredentialRoute(nil), routes...)
 	for i := range out {
 		out[i].Paths = append([]string(nil), out[i].Paths...)
+		out[i].ExactPaths = append([]string(nil), out[i].ExactPaths...)
 		out[i].Methods = append([]string(nil), out[i].Methods...)
 	}
 	return out
@@ -199,7 +211,7 @@ func LoadCredentialRoutes(path string) ([]CredentialRoute, error) {
 	}
 	var records []struct {
 		Name, Upstream, Header, Prefix, Provider, Secret string
-		Paths, Methods                                   []string
+		Paths, ExactPaths, Methods                       []string
 	}
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
@@ -216,7 +228,7 @@ func LoadCredentialRoutes(path string) ([]CredentialRoute, error) {
 			return nil, fmt.Errorf("credential route secret is missing or invalid")
 		}
 		secret := r.Secret
-		routes = append(routes, CredentialRoute{Name: r.Name, Upstream: r.Upstream, Header: r.Header, Prefix: r.Prefix, Provider: r.Provider, Paths: r.Paths, Methods: r.Methods, Secret: func(context.Context) (string, error) { return secret, nil }})
+		routes = append(routes, CredentialRoute{Name: r.Name, Upstream: r.Upstream, Header: r.Header, Prefix: r.Prefix, Provider: r.Provider, Paths: r.Paths, ExactPaths: r.ExactPaths, Methods: r.Methods, Secret: func(context.Context) (string, error) { return secret, nil }})
 	}
 	if err = validateRoutes(routes); err != nil {
 		return nil, err
@@ -226,3 +238,17 @@ func LoadCredentialRoutes(path string) ([]CredentialRoute, error) {
 
 // ValidateCredentialRoutes validates trusted scopes without connecting or resolving secrets.
 func ValidateCredentialRoutes(routes []CredentialRoute) error { return validateRoutes(routes) }
+
+// Reject normalization and control-character ambiguities before either scope
+// matching or credential lookup. Query/body semantics belong to the origin.
+func validBrokerPath(value string) bool {
+	if !utf8.ValidString(value) || !strings.HasPrefix(value, "/") || path.Clean(value) != value || strings.ContainsAny(value, "%?#\\") {
+		return false
+	}
+	for _, c := range value {
+		if c < 0x20 || c == 0x7f {
+			return false
+		}
+	}
+	return true
+}

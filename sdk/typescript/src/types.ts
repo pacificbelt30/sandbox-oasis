@@ -7,12 +7,21 @@ export interface APICancelResult {
 }
 export interface APICapabilities {
   max_concurrent_calls: number;
+  max_file_transfer_bytes: number;
   max_output_bytes: number;
   max_request_bytes: number;
   max_response_bytes: number;
   methods: (string)[] | null;
   node: Capabilities;
   protocol_version: number;
+}
+export interface APICheckpointParams {
+  checkpoint_id?: string;
+  options: CheckpointOptions;
+  worker_id?: string;
+}
+export interface APIDataResult {
+  data: string | null;
 }
 export interface APIError {
   code: string;
@@ -34,6 +43,16 @@ export interface APIExecResult {
 }
 export interface APIExitResult {
   exit_code: number;
+}
+export interface APIFileParams {
+  data?: string | null;
+  path: string;
+  worker_id: string;
+}
+export interface APIJobParams {
+  job_id: string;
+  offset?: number;
+  worker_id: string;
 }
 export interface APILaunchParams {
   request: LaunchRequest;
@@ -67,10 +86,33 @@ export interface Capabilities {
   Features: (string)[] | null;
   ProtocolVersion: number;
 }
+export interface CheckpointCatalog {
+  capacity_bytes: number;
+  items: (DiskCheckpoint)[] | null;
+  used_bytes: number;
+}
+export interface CheckpointOptions {
+  exclude?: (string)[] | null;
+  max_bytes?: number;
+}
 export interface Compatibility {
   CABundle?: string;
   JVMProxy?: boolean;
   SSHProxy?: boolean;
+}
+export interface DiskCheckpoint {
+  build_version: string;
+  bytes: number;
+  created: string;
+  digest?: string;
+  entries: number;
+  entrypoint_sha256: string;
+  excluded: (string)[] | null;
+  format: string;
+  id: string;
+  image: string;
+  pinned: boolean;
+  source: string;
 }
 export interface EgressPolicy {
   AllowCIDRs?: (string)[] | null;
@@ -105,6 +147,18 @@ export interface Identity {
   connection_version?: string;
   provider?: string;
   run_id?: string;
+}
+export interface Job {
+  exit_code: number;
+  id: string;
+  running: boolean;
+  worker: string;
+}
+export interface JobOutput {
+  next: number;
+  output: string;
+  running: boolean;
+  truncated: boolean;
 }
 export interface LaunchRequest {
   Agent?: string;
@@ -256,6 +310,19 @@ export interface MethodParams {
   quarantine: APIWorkerParams;
   wait: APIWorkerParams;
   exec: APIExecParams;
+  read_file: APIFileParams;
+  write_file: APIFileParams;
+  list_files: APIFileParams;
+  start_job: APIExecParams;
+  job: APIJobParams;
+  list_jobs: APIWorkerParams;
+  job_logs: APIJobParams;
+  kill_job: APIJobParams;
+  wait_job: APIJobParams;
+  checkpoint: APICheckpointParams;
+  checkpoints: Record<string, never>;
+  inspect_checkpoint: APICheckpointParams;
+  remove_checkpoint: APICheckpointParams;
 }
 export interface MethodResults {
   open: APICapabilities;
@@ -277,4 +344,17 @@ export interface MethodResults {
   quarantine: APISuccess;
   wait: APIExitResult;
   exec: APIExecResult;
+  read_file: APIDataResult;
+  write_file: APISuccess;
+  list_files: APIDataResult;
+  start_job: Job;
+  job: Job;
+  list_jobs: (Job)[] | null;
+  job_logs: JobOutput;
+  kill_job: APISuccess;
+  wait_job: Job;
+  checkpoint: DiskCheckpoint;
+  checkpoints: CheckpointCatalog;
+  inspect_checkpoint: DiskCheckpoint;
+  remove_checkpoint: APISuccess;
 }

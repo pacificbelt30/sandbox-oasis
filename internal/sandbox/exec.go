@@ -11,6 +11,7 @@ import (
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/pacificbelt30/codex-dock/internal/launchtiming"
 	"github.com/pacificbelt30/codex-dock/internal/workerpolicy"
 )
 
@@ -45,14 +46,17 @@ func (m *Manager) ExecWithOptions(ctx context.Context, name string, opts ExecOpt
 	if len(argv) == 0 {
 		return 0, fmt.Errorf("exec requires a command")
 	}
+	launchtiming.Next(ctx, "exec_verification")
 	id, err := m.verifyExecWorker(ctx, name)
 	if err != nil {
 		return 0, err
 	}
+	launchtiming.Next(ctx, "exec_create")
 	created, err := m.cli.ContainerExecCreate(ctx, id, container.ExecOptions{Cmd: argv, AttachStdin: stdin != nil, AttachStdout: true, AttachStderr: true, WorkingDir: opts.WorkingDir, Env: opts.Env, Tty: opts.TTY})
 	if err != nil {
 		return 0, err
 	}
+	launchtiming.Next(ctx, "exec_attach")
 	stream, err := m.cli.ContainerExecAttach(ctx, created.ID, container.ExecAttachOptions{Tty: opts.TTY})
 	if err != nil {
 		return 0, err
@@ -79,6 +83,7 @@ func (m *Manager) ExecWithOptions(ctx context.Context, name string, opts ExecOpt
 	if stderr == nil {
 		stderr = io.Discard
 	}
+	launchtiming.Next(ctx, "exec_io")
 	var copyErr error
 	if opts.TTY {
 		_, copyErr = io.Copy(stdout, stream.Reader)
@@ -91,6 +96,7 @@ func (m *Manager) ExecWithOptions(ctx context.Context, name string, opts ExecOpt
 	if copyErr != nil {
 		return 0, copyErr
 	}
+	launchtiming.Next(ctx, "exec_result")
 	status, err := m.cli.ContainerExecInspect(ctx, created.ID)
 	if err != nil {
 		return 0, err
@@ -135,6 +141,7 @@ func (m *Manager) WaitContext(ctx context.Context, name string) (int64, error) {
 }
 
 func (m *Manager) verifyExecWorker(ctx context.Context, name string) (string, error) {
+	launchtiming.Next(ctx, "exec_lookup")
 	id, err := m.resolveID(name)
 	if err != nil {
 		return "", err
@@ -153,13 +160,13 @@ func (m *Manager) verifyExecWorker(ctx context.Context, name string) (string, er
 		return "", fmt.Errorf("worker %s is quarantined", name)
 	}
 	if v.Config.Labels[labelIsolation] == RuntimeKata {
-		if err := m.CheckRuntime(ctx, RunOptions{Runtime: RuntimeKata, KataRuntime: v.Config.Labels[labelRuntime], ResourceProfile: v.Config.Labels[labelPrefix+"resource-profile"]}); err != nil {
+		launchtiming.Next(ctx, "exec_runtime")
+		_, registration, err := m.checkRuntimeMetadata(ctx, RunOptions{Runtime: RuntimeKata, KataRuntime: v.Config.Labels[labelRuntime], ResourceProfile: v.Config.Labels[labelPrefix+"resource-profile"]})
+		if err != nil {
 			return "", err
 		}
-		if err := m.validateKataWorker(ctx, id); err != nil {
-			return "", err
-		}
-		if err := m.verifyKataGuest(ctx, id, false); err != nil {
+		launchtiming.Next(ctx, "exec_host")
+		if err := m.verifyKataGuestWithRuntime(ctx, id, false, registration); err != nil {
 			return "", err
 		}
 	}

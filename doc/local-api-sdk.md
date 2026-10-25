@@ -18,8 +18,8 @@
 | 設定 | `open`へ明示。CLIの設定ファイル・認証profileは自動で読み込まない |
 | 認証 | Proxy管理secretを既存の0600ファイルから読み、`Options.ProxyAdminSecret`へ渡す。実APIキー・OAuthは認証Proxyに保持 |
 | 作業ファイル | `ProjectDir`は実在する絶対パス。通常の`/workspace`共有と同じ影響がある |
-| 対応操作 | `create`・`launch`・`start`・`exec`・`get`・`list`・`wait`・`stop`・`remove`・`request`・`remove_request`・`quarantine`・資源とcapabilityの照会 |
-| Go APIで行う操作 | PTY・入出力stream・background job・image build・checkpoint・StoreやケースProxyの作成など。今回の薄いSDKには未収録 |
+| 対応操作 | `create`・`launch`・`start`・`exec`・`get`・`list`・`wait`・`stop`・`remove`・`request`・`remove_request`・`quarantine`・資源とcapabilityの照会。加えてfiles・jobs・checkpoint |
+| Go APIで行う操作 | PTY・入出力stream・image build・成果物tar・プレビュー・通信規則の即時変更・checkpointの保持管理・StoreやケースProxyの作成など |
 
 - 一般通信はGo APIと同じく既定拒否。許可を追加する場合は`Options.EgressPolicy`を設定します。
 - 作業ファイルへ書き込む場合は、所有者に合う数値UID/GIDを`LaunchRequest.User`へ指定します。省略時はイメージのユーザーを使用し、SDKは所有者を変更しません。
@@ -222,3 +222,56 @@ uv run --no-project --no-config --managed-python --python 3.12 python scripts/ve
 
 - 版違い・再送・競合・応答消失・取消・出力上限・秘密非記録・回収の試験を、両SDKへ同じGo adapterで実行します。
 - 実Kataの準備・実施範囲は[動作確認](testing.md)を参照。fixture成功と実アカウントへの推論成功は区別します。
+
+## ファイル・ジョブ・checkpointを操作する
+
+- 利用可能：**未リリース（main）**。ローカルAPI v1への追加操作です。
+- `client`は上の例で開いた接続、`worker_id`は起動中のワーカーIDです。
+
+| 操作 | Python | TypeScript |
+|---|---|---|
+| ファイルを読む | `read_file(worker_id, "result.json")` | `readFile(workerID, "result.json")` |
+| 書く | `write_file(worker_id, "input.json", data)` | `writeFile(workerID, "input.json", data)` |
+| 一覧 | `list_files(worker_id, ".")` | `listFiles(workerID, ".")` |
+| background実行 | `start_job(worker_id, argv)` | `startJob(workerID, argv)` |
+| ジョブの照会・一覧 | `job()`・`list_jobs()` | `job()`・`listJobs()` |
+| ログを読む | `job_logs(worker_id, job_id, offset=0)` | `jobLogs(workerID, jobID, 0)` |
+| 終了待ち・停止 | `wait_job()`・`kill_job()` | `waitJob()`・`killJob()` |
+| disk保存・一覧 | `checkpoint()`・`checkpoints()` | `checkpoint()`・`checkpoints()` |
+| 保存内容の確認・削除 | `inspect_checkpoint()`・`remove_checkpoint()` | `inspectCheckpoint()`・`removeCheckpoint()` |
+| 新規VMへ復元 | `restore_checkpoint(id, request)` | `restoreCheckpoint(id, request)` |
+
+Pythonの操作例：既存の`with Client(...) as client:`内で実行します。
+
+```python
+worker_id = worker["ID"]
+client.write_file(worker_id, "input.json", b'{"task":"example"}')
+print(client.list_files(worker_id))
+job = client.start_job(worker_id, ["python3", "-c", "print('done')"])
+finished = client.wait_job(worker_id, job["id"])
+logs = client.job_logs(worker_id, job["id"], offset=0)
+print(finished["exit_code"], logs["output"])
+```
+
+TypeScriptの同じ操作：既存の接続とワーカーを使います。
+
+```typescript
+await client.writeFile(worker.ID, "input.json", Buffer.from('{"task":"example"}'));
+console.log(await client.listFiles(worker.ID));
+const job = await client.startJob(worker.ID, ["python3", "-c", "print('done')"]);
+const finished = await client.waitJob(worker.ID, job.id);
+const logs = await client.jobLogs(worker.ID, job.id, 0);
+console.log(finished.exit_code, logs.output);
+```
+
+| 条件 | 動作 |
+|---|---|
+| ファイル | `/workspace`からの相対パス。symlinkをたどらない。1回512KiBまで。Go API／CLIの64MiB上限とは別 |
+| 大きなファイル | Go API／CLIを使う。SDKによる分割アップロードは未提供 |
+| ジョブの起動 | 自動再送しない。応答消失時は一覧・返された部分IDで照会 |
+| ログ | `next`を次のoffsetに使う。`truncated`なら保持範囲の欠損あり |
+| 終了待ちの取消 | 待機だけを中止し、ジョブを停止しない |
+| checkpoint | 停止済みKataを保存。作成応答が消えた場合は一覧を照会してから判断 |
+| 復元 | 新しいRequestIDを指定。イメージ・digestの矛盾とrunc指定を拒否 |
+
+- [checkpointの保存対象・制限](guides/disk-checkpoint.md)も確認してください。RAMや接続は保存しません。

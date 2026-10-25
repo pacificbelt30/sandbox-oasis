@@ -31,6 +31,11 @@ func (p *Proxy) workerFacingHandler(mux http.Handler) http.Handler {
 				http.Error(w, "this proxy does not forward general traffic; use the egress proxy", http.StatusMethodNotAllowed)
 				return
 			}
+			r, release, ok := p.beginEgress(w, r)
+			if !ok {
+				return
+			}
+			defer release()
 			if r.Method == http.MethodConnect {
 				p.handleForwardConnect(w, r)
 			} else {
@@ -51,7 +56,7 @@ func (p *Proxy) handleForwardConnect(w http.ResponseWriter, r *http.Request) {
 	if host == "" {
 		host = r.URL.Host
 	}
-	policy, err := p.forwardPolicy()
+	policy, err := p.requestForwardPolicy(r)
 	if err != nil {
 		http.Error(w, "invalid egress policy", http.StatusInternalServerError)
 		return
@@ -86,23 +91,31 @@ func (p *Proxy) handleForwardConnect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Keep the epoch lease until both tunnel directions have finished.
+	stop := context.AfterFunc(r.Context(), func() { _ = clientConn.Close(); _ = destConn.Close() })
+	defer stop()
+	done := make(chan struct{}, 2)
 	// Splice the two connections together until either side closes.
 	go func() {
+		defer func() { done <- struct{}{} }()
 		_, _ = io.Copy(destConn, buffered)
 		_ = destConn.Close()
 		_ = clientConn.Close()
 	}()
 	go func() {
+		defer func() { done <- struct{}{} }()
 		_, _ = io.Copy(clientConn, destConn)
 		_ = clientConn.Close()
 		_ = destConn.Close()
 	}()
+	<-done
+	<-done
 }
 
 // handleForwardHTTP forwards a plain (non-CONNECT) HTTP request received in
 // absolute form to its upstream and streams the response back to the worker.
 func (p *Proxy) handleForwardHTTP(w http.ResponseWriter, r *http.Request) {
-	policy, err := p.forwardPolicy()
+	policy, err := p.requestForwardPolicy(r)
 	if err != nil {
 		http.Error(w, "invalid egress policy", http.StatusInternalServerError)
 		return
@@ -117,6 +130,9 @@ func (p *Proxy) handleForwardHTTP(w http.ResponseWriter, r *http.Request) {
 	outReq.Header.Del("Proxy-Authorization")
 	client := *p.httpClient
 	base := client.Transport
+	if epoch, ok := r.Context().Value(egressPolicyKey{}).(*egressEpoch); ok {
+		base = epoch.transport
+	}
 	if base == nil {
 		base = http.DefaultTransport
 	}
@@ -140,7 +156,20 @@ func (p *Proxy) handleForwardHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	w.WriteHeader(resp.StatusCode)
-	if _, err := io.Copy(w, resp.Body); err != nil {
+	if _, err := io.Copy(forwardStreamWriter{w}, resp.Body); err != nil {
 		panic(http.ErrAbortHandler)
 	}
+}
+
+type forwardStreamWriter struct{ http.ResponseWriter }
+
+func (w forwardStreamWriter) Write(data []byte) (int, error) {
+	n, err := w.ResponseWriter.Write(data)
+	if err != nil {
+		return n, err
+	}
+	if f, ok := w.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+	return n, nil
 }

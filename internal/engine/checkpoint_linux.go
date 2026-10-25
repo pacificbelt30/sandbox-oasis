@@ -77,6 +77,7 @@ func (b *Backend) checkpointInfo(ctx context.Context, id string) (diskcheckpoint
 	if len(raw) > 1<<16 || json.Unmarshal([]byte(raw), &info) != nil || info.Validate() != nil || info.ID != id || ic.OS != "linux" || ic.Architecture != "amd64" || len(ic.RootFS.DiffIDs) != 1 {
 		return diskcheckpoint.Info{}, fmt.Errorf("checkpoint metadata is incompatible or corrupt")
 	}
+	info.Pinned = metadata.Labels[diskcheckpoint.PinLabel] == "true"
 	info.Digest = img.Target().Digest.String()
 	return info, nil
 }
@@ -258,6 +259,10 @@ func (b *Backend) createCheckpoint(ctx context.Context, worker string, options d
 }
 
 func (b *Backend) checkpointHTTP(w http.ResponseWriter, r *http.Request, ctx context.Context, path string) {
+	if path == "/checkpoints/retention" || path == "/checkpoints/pin" {
+		b.checkpointMaintenanceHTTP(w, r, ctx, path)
+		return
+	}
 	if path == "/checkpoints" {
 		if r.Method == http.MethodGet {
 			catalog, err := b.checkpointCatalog(ctx)
@@ -320,7 +325,12 @@ func (b *Backend) checkpointHTTP(w http.ResponseWriter, r *http.Request, ctx con
 				failure(w, err)
 				return
 			}
-			if record.Image == info.Image {
+			image, inspectErr := c.Image(ctx)
+			if inspectErr != nil {
+				failure(w, inspectErr)
+				return
+			}
+			if record.Image == info.Image || image.Target().Digest.String() == info.Digest {
 				failure(w, fmt.Errorf("checkpoint is used by a retained worker: %w", errdefs.ErrConflict))
 				return
 			}

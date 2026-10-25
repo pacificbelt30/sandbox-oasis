@@ -23,7 +23,9 @@
     - `Open` validates the node and its Go client protocol; an incompatible version returns `ErrVersionMismatch`.
     - Update the embedded package from the same source revision when updating the CLI and node.
 
-- The default proxy endpoints are `http://127.0.0.1:18081` for the host admin API, `http://codex-auth-proxy:18080` for guest authentication, and `http://codex-http-proxy:18082` for general egress.
+- The host admin API defaults to `http://127.0.0.1:18081`; general egress defaults to `http://codex-http-proxy:18082`.
+- Standard `proxy run`/`EnsureCaseProxy` uses TLS 1.3 and mTLS from the guest relay to the auth proxy. Agents connect to guest-only `http://127.0.0.1:18083`. See [coverage and custom-proxy limits](guides/worker-tls.md).
+- `Options.ProxyContainerURL` initially contains `http://codex-auth-proxy:18080` as connection configuration; the actual transport is selected after querying proxy capabilities.
 - Set `Options.ProxyAdminURL`, `ProxyContainerURL`, and `HTTPProxyURL` if your deployment differs.
 - Keep `Options.ProxyAdminSecret` in the host product process.
 
@@ -187,6 +189,7 @@ func main() {
 - See [operating conditions](sandbox-features.md#model-authorization-and-staged-startup).
 
 - Use `LaunchWithTimings(ctx, req)` for sequential startup measurements.
+- `ExecWithTimings(ctx, workerID, request)` returns the exit code, `ExecTimings` and error for Exec (unreleased main).
 - It returns `Worker`, `LaunchTimings` and `error` with the same contract as `Launch`.
 - See [measurement scope and reproduction](performance.md#locate-startup-costs).
 

@@ -17,7 +17,8 @@ func brokerSettingsPage(path string, back func()) tview.Primitive {
 	form := tview.NewForm()
 	name := tview.NewInputField().SetLabel("Route name: ").SetFieldWidth(50)
 	origin := tview.NewInputField().SetLabel("HTTPS origin: ").SetFieldWidth(60)
-	paths := tview.NewInputField().SetLabel("Paths (comma separated): ").SetFieldWidth(60)
+	paths := tview.NewInputField().SetLabel("Path prefixes (comma separated): ").SetFieldWidth(60)
+	exactPaths := tview.NewInputField().SetLabel("Exact paths (comma separated): ").SetFieldWidth(60)
 	methods := tview.NewInputField().SetLabel("Methods: ").SetText("GET, HEAD").SetFieldWidth(50)
 	header := tview.NewInputField().SetLabel("Credential header: ").SetText("Authorization").SetFieldWidth(50)
 	secret := tview.NewInputField().SetLabel("New secret (blank keeps saved): ").SetMaskCharacter('*').SetFieldWidth(50)
@@ -36,6 +37,7 @@ func brokerSettingsPage(path string, back func()) tview.Primitive {
 			if r.Name == name.GetText() {
 				origin.SetText(r.Upstream)
 				paths.SetText(strings.Join(r.Paths, ", "))
+				exactPaths.SetText(strings.Join(r.ExactPaths, ", "))
 				methods.SetText(strings.Join(r.Methods, ", "))
 				header.SetText(r.Header)
 				prefix, provider = r.Prefix, r.Provider
@@ -46,14 +48,20 @@ func brokerSettingsPage(path string, back func()) tview.Primitive {
 		status.SetText("No route selected. Enter a name and scope. Validate/save never makes network requests.")
 	}
 	collect := func() brokersettings.Descriptor {
-		return brokersettings.Descriptor{Name: name.GetText(), Upstream: origin.GetText(), Paths: splitBrokerFields(paths.GetText()), Methods: splitBrokerFields(methods.GetText()), Header: header.GetText(), Prefix: prefix, Provider: provider}
+		return brokersettings.Descriptor{Name: name.GetText(), Upstream: origin.GetText(), Paths: splitBrokerFields(paths.GetText()), ExactPaths: splitBrokerFields(exactPaths.GetText()), Methods: splitBrokerFields(methods.GetText()), Header: header.GetText(), Prefix: prefix, Provider: provider}
 	}
-	for _, item := range []tview.FormItem{template, name, origin, paths, methods, header, secret} {
+	for _, item := range []tview.FormItem{template, name, origin, paths, methods, header, secret, exactPaths} {
 		form.AddFormItem(item)
 	}
 	form.AddButton("Apply template", func() {
 		_, selected := template.GetCurrentOption()
-		d, err := brokersettings.Template(selected, name.GetText(), origin.GetText(), strings.TrimSpace(paths.GetText()))
+		seed := strings.TrimSpace(paths.GetText())
+		if seed == "" {
+			if exact := splitBrokerFields(exactPaths.GetText()); len(exact) > 0 {
+				seed = exact[0]
+			}
+		}
+		d, err := brokersettings.Template(selected, name.GetText(), origin.GetText(), seed)
 		if err != nil {
 			status.SetText(err.Error())
 			return

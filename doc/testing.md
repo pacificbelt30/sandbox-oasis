@@ -1,5 +1,31 @@
 # テストと動作確認
 
+## P1の作業支援・通信規則の即時変更（2026-10-25）
+
+- 対象：**未リリース（main）**。`d9c0419`を基に追加。
+- 認証情報は架空値、上流はローカルfixtureを使用。外部AIへの認証・推論は行っていません。
+
+| 対象 | 確認した内容・結果 |
+|---|---|
+| Go全体 | build・vet・lint、キャッシュなしの全件raceが成功 |
+| SDK | Python 9件・TypeScript 10件。ソースと、wheel／npm tarballから導入した状態の両方で成功 |
+| SDKの実Kata | 両言語の作成・再送・競合・取消・応答消失・回収に加え、バイナリファイル・ジョブ・ログ・checkpoint一覧を確認 |
+| 成果物 | 選択ファイル・未追跡ファイル・差分・ジョブ状態を保存。内容変更、symlink、既知の秘密パス、過大な出力を拒否。ホスト側のstdout／stderr上限とPythonの隔離モードも確認 |
+| プレビュー | HTTP／WebSocket、未認証・異なるOriginの拒否、CookieのVM非転送、期限切れ、VM停止による接続終了を確認 |
+| 通信許可候補 | 完全一致だけを追加し、既存の拒否・ポート制限を維持。IP許可の自動追加を拒否 |
+| 即時変更 | 実Kataの既存HTTP・CONNECTが終了。別経路のWebSocketプレビューは継続。実CLIのplan/applyとGo APIの計画が一致。世代競合・保存失敗・未完了操作の再送で許可側へ戻らないことを自動確認 |
+| checkpoint | Python SDKで保存し、TypeScript SDKで新規VMへ復元して実行。pin・保持ワーカーの参照を保護し、古い削除計画を拒否。確認済みの自作checkpointだけを回収 |
+| 既存の境界 | 5系統のfuzz、Python 65件、CLI名、上流契約のオフライン検査が成功。pin・baselineは変更なし |
+| 導入・更新・復旧 | 最終バンドルで新規導入、更新、旧版への暗黙の巻戻し拒否、起動失敗時の復旧、明示rollbackが成功。自作VM・task・コンテナ・netns・専用firewallの残留なし。既存共有サービスのPID・開始時刻は不変 |
+| 文書 | 日英の操作・上限・導入版・失敗時の確認方法を更新し、strictビルドを実行 |
+
+- 全SDK受入：`TestKataLocalSDK`、268.93秒。成果物のジョブ結果・ホスト上限を追加後は`TestKataLocalSDK/usability`を再実行し、168.37秒で成功。
+- 版：`v0.0.0-p1-usability-a/b`。最終CLI・試験バイナリ・SDKのhashを保存。
+- 証跡：`.kata-verification/p1-usability-20261025/`、全SDKは`.kata-verification/setup-e2e/71c2b1fab1be/`、最終の対象機能は`.kata-verification/setup-e2e/8d264399d299/`。
+- runcの管理helperで標準入力のEOF待ちを実Kataから検出し、上限付き1行JSONへ修正。入力を閉じないfixtureでも処理が進む試験を追加。
+- 操作方法：[SDK](local-api-sdk.md)、[成果物](guides/artifacts.md)、[プレビュー](guides/preview.md)、[通信の即時変更](guides/live-policy.md)、[checkpoint保持管理](guides/disk-checkpoint.md#保存期限容量を確認して回収する)。
+
+
 ## ローカルAPI・Python／TypeScript SDK（2026-10-25）
 
 - 対象：**未リリース（main）**。[仕様・導入・使い方](local-api-sdk.md)。`7d17212`を基に追加。
@@ -198,7 +224,7 @@
 
 - 通し試験・8スイート・更新／復旧の実行記録：`.kata-verification/setup-e2e/4561c54c0575`。試験ノードと専用ボリュームも回収済みです。
 - 修正：Kataの前面TTYをFIFO/passfd経由に変更し、短いコマンドの終了時も出力を読み終えてからCLIを終了。終了済みtaskへの入力専用接続は拒否します。
-- 対象は開発版から作成した検証用バンドルです。**公開済みv0.0.2の更新・新リリースの公開は行っていません。** [開発版の通し手順](guides/first-run.md)。
+- 対象は開発版から作成した検証用バンドルです。**公開配布版の更新・新リリースの公開は行っていません。** [開発版の通し手順](guides/first-run.md)。
 - OS依存パッケージは試験用イメージで準備し、Kata等の配布物にはチェックサム検証済みキャッシュを使用。標準ワーカーは新規ビルドしています。
 - 資格情報は架空で、loginの実API確認は`--skip-check`で省略。実アカウントのログイン・推論、実WSL、ホスト再起動、対話画面の全キーボード操作は未確認です。
 
@@ -222,7 +248,7 @@
 - メモリの参考値：架空データでの専用セッション内のRSSはGNOME Keyring 10,632 KiB、D-Bus 4,392 KiB。CLI・Proxy・VMは含みません。常駐するデスクトップサービスを再利用する場合、この2プロセスを追加起動しません。
 - GUIデスクトップ全体は不要ですが、Ubuntuの依存パッケージにはGUI関連ライブラリも含まれます。
 - 既存デスクトップのPAM連携、実WSL・実アカウントでのログイン・長期OAuth更新は未確認。PAM設定の自動変更は行いません。
-- 公開済みv0.0.2には含まれません。[準備・CLI操作・セッション終了時の扱い](guides/keyring.md)。
+- [準備・CLI操作・セッション終了時の扱い](guides/keyring.md)。
 
 ## age形式への移行検証（2026-10-24）
 
@@ -259,7 +285,7 @@
 - 解錠は旧形式の約138 ms／64 MiBより重くなっています。起動時に限定し、起動済みProxyは再利用します。
 - filesystem・fsync・機器で変動します。実AIの応答速度を示す測定ではありません。
 - 実アカウントのログイン・実APIキー・長期OAuth更新、実デスクトップSecret Service、WSL／DrvFSの実機検証は未完了です。
-- 公開済みv0.0.2には含まれません。[操作手順](guides/encrypted-credentials.md)・[実装仕様](development/local-credential-store.md)。
+- [操作手順](guides/encrypted-credentials.md)・[実装仕様](development/local-credential-store.md)。
 
 ## ローカル暗号化・状態表示・更新案内の検証（2026-10-23）
 
@@ -297,7 +323,7 @@
 - 実アカウントでのCodex／Claude Codeログイン、実APIキー、実推論、長期OAuth更新。
 - 実際のデスクトップSecret Serviceとの接続・画面・セッションlock。現在の試験はbackend障害と`secret-tool`互換の模擬clientです。
 - WSL 2・各Linux VM／SSH環境、実DrvFS等での拒否・鍵保管・KVM条件。
-- 公開済みv0.0.2には新機能を含みません。[暗号化の操作](guides/encrypted-credentials.md)・[実装仕様](development/local-credential-store.md)。
+- [暗号化の操作](guides/encrypted-credentials.md)・[実装仕様](development/local-credential-store.md)。
 
 
 - テストを「コードの確認」「実Kataでの確認」「実AIとの通信」に分けて説明します。
@@ -324,7 +350,7 @@
 - 実行環境は使い捨てUbuntu 26.04・KVM・Kata 4.2.0 / Dragonball。既存ホストのサービスは更新しません。
 - 最初の試行は試験用Proxyの識別ラベル不足で拒否されました。試験定義を補正し、保護を維持したまま5スイートを再実行して成功しています。
 - 試験は架空の資格情報とローカルfixtureを使用。実アカウントのログイン、実APIキーによる接続、実推論、長期OAuth更新は未確認です。
-- 公開済みv0.0.2に新しいloginコマンドは含まれません。[開発版の手順](commands/login.md)を参照。
+- [loginの操作手順](commands/login.md)を参照。
 
 ## v0.0.2配布インストーラーの検証（2026-10-23）
 
@@ -1055,3 +1081,74 @@ uv run --no-project --no-config --managed-python --python 3.12 python scripts/ve
 - 全Goテストのrace/coverage、vet、lint、Linux arm64・macOS arm64のクロスビルド、MkDocs strictビルドも成功しました。
 - 検証用のVM・コンテナ・task・ネットワークが0件であることを確認した後、専用node・containerd・BuildKit・mount・cgroup・socket・状態領域を回収しました。
 - 既存の3サービスは元のPIDで稼働し、既存nodeのhealth応答200と元ネットワークの所有権も維持されています。
+
+## 2026-10-25の高速化と回帰確認
+
+- 対象：**未リリース（main）**。条件・値・費用・未計測範囲は[性能ガイドの実測](performance.md#2026-10-25の実測)にまとめています。
+- 同じ専用nodeで変更前→変更後→変更後→変更前の順に実Kataを測り、4回すべて成功しました。
+- 各版で単独起動6回、2台同時起動6組、Exec14回、2台同時Exec10組を比較しています。
+- 変更後の2回とも、同じサイズ・更新時刻のkernel資産改変をExec前に拒否し、復元後の成功と、拒否したコマンドの未実行を確認しました。
+- Goの全件race／coverage、build・vet・lint、5種のsecurity fuzzが成功しました。macOS arm64向けの変更パッケージのビルドも通りました。macOSでのKata実行を確認したものではありません。
+- 単体試験は、初回接続、旧nodeへの接続、版・profile・共有設定の変更、検証・guest probeの失敗、ロック待ちの取消、待ちの後の資産再読込を確認します。
+- 初回の試作では、初回Execでnode情報を受け取る前に設定を照合する回帰を検出しました。検証完了後に照合する順序へ直し、初回接続の試験を追加しています。
+- 計測用service差し替えの復元待ち、更新試験用バンドルの版指定も修正しました。性能標本の成功と、導入・更新・復旧の通し確認は別に扱っています。
+- 生ログ・CPU／heap profile・バイナリとソースの保存版は `.kata-verification/performance-20261025/` に保存し、Gitには追加していません。
+
+### 実Kataの8スイート
+
+- 変更後の通常CLI・node・受入バイナリを同じ版で用意し、使い捨てノードで673.04秒（各スイート時間の合計）で成功しました。skipはありません。
+- 架空の資格情報とローカルfixtureを使用し、実アカウント・AI推論は使っていません。
+
+| スイート | 秒 | 主な確認 |
+|---|---:|---|
+| VM基本受入 | 303.32 | 実Codex CLIのツール実行、隔離、mount、ネットワーク分離、停止・再起動・削除、3台目の起動拒否 |
+| 認証専用VM | 22.23 | login用VMの制限、認証データの取出しと回収 |
+| 前面TTY | 14.77 | 最終出力、入力、終了 |
+| 共有 | 169.07 | UID/GID、read-only、相対パス、worktree、既定通信拒否、固定IPの規則 |
+| 追加制御 | 48.61 | ファイル・環境・資源・実行ポリシー |
+| 暗号化プロファイル | 26.30 | 暗号文のmount、秘密のstdin受渡し、VM・ログへの資格情報漏出なし、解錠・再起動 |
+| OSキーリング | 26.78 | 実Secret Serviceでの解錠とProxy再利用 |
+| 公開Go API | 61.96 | stdin EOF、取消によるexec停止、再送・再接続・競合、資格情報不在、ケース分離、失効、停止・回収 |
+
+- 監査記録266件を検証し、未完了の結果は0件、受入後の専用ネットワークは0件でした。
+- 8スイート成功後、導入・更新の確認はディスク不足で中断しました。自分の検証資源を回収し、同じ変更後コードで導入・更新・復旧だけを別ノードで再実行し、成功しました。
+
+### 導入・更新・復旧の再確認
+
+| 対象 | 結果 |
+|---|---|
+| 計画・初回導入 | 計画ではサービス未配置。適用後のnode readinessと実Kataの共有書込みに成功 |
+| 稼働中の更新 | 実行中ワーカーがある場合に拒否 |
+| 版をそろえた更新 | 成功。イメージと作業ファイルを保持 |
+| 暗黙の旧版への巻戻し | サービス停止前に拒否 |
+| 新サービス起動の故障注入 | 自動で直前の稼働版へ復旧 |
+| 明示ロールバック | CLI・nodeを対応する版へ復元し、最も新しい版の記録を保持 |
+| 回収 | VM・container・task・専用network・network namespace・firewallの残留なし。外側の専用node／volumeも回収 |
+| 既存環境 | 元のcontainerd・BuildKit・nodeのPIDと起動時刻を保持。管理socketへの疎通も成功 |
+
+- 試験用の2版は `v0.0.0-perf` と `v0.0.1-perf`。リリース公開は行っていません。
+- 実Kata受入は `fbcc86ead92e`、導入・更新・復旧は `4c97a41b2d5f` の証跡へ分けて保存しています。
+
+## 固定origin brokerの細かい制限
+
+- 対象：**未リリース（main）**。[完全一致pathとCLIのmethod指定](guides/credential-broker.md)を追加しました。従来のpath配下指定も維持します。
+- `TestKataWorkerMTLS` は専用ノードで104.16秒、broker部分は47.07秒で成功しました。架空の資格情報とローカルTLS fixtureを使い、実AI・実アカウントへは接続していません。
+
+| 確認 | 範囲 |
+|---|---|
+| 固定HTTPS origin・Host、method上書きヘッダー除去 | 単体試験で上流要求を確認 |
+| 配下指定・完全一致、明示GET／POST、子パス・別methodの拒否 | 単体試験・実Kata |
+| 別表記のエンコード・制御文字などの曖昧なpathの拒否 | 単体試験・fuzz・実Kata |
+| 拒否時に秘密のcallbackを呼ばない | 単体試験 |
+| 通信中のbroker SSEの失効 | 単体試験で上流側の切断まで確認 |
+| mTLS、既存AIのSSE／WS失効、隔離停止 | 既存の実Kata受入を再利用 |
+| 資格情報ファイルをVMへ共有しない | 実Kata |
+| CLI・TUIの保存、秘密の維持・非表示 | 単体試験。CLIは実行して確認 |
+| 旧形式との互換性 | 完全一致を使わないファイルを実際の旧CLIで読込。新形式は旧CLIが拒否 |
+
+- build、race付き全Goテスト、vet、lint、5種のsecurity fuzz、MkDocs strictが成功しました。
+- 実Kata受入の後、空の `ExactPaths` を保存しない互換性調整を追加し、全件race・build・vet・lintと実際の旧CLIで再確認しました。実Kataで使用した非空の完全一致設定の意味は変わりません。
+- 初回導入・稼働中の更新拒否・対応版への更新・暗黙の旧版拒否・故障時の自動復旧・明示ロールバックも同じ専用ノードで成功しました。
+- VM・container・task・専用network・namespace・firewallは残留なし。外側のnode／volumeも回収し、既存3サービスのPIDと管理socketの疎通を維持しました。
+- 証跡は `.kata-verification/broker-scope-20261025/` と使い捨てノード `aca02481c2ad` に保存しています。
+- 一般CONNECTのTLS内検査、query・bodyの内容制限、実サービス側の権限判定は検証対象外です。

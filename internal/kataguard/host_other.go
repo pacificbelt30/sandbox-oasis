@@ -55,3 +55,7 @@ func (*Guard) Inventory(context.Context) (Inventory, error) {
 func (*Guard) RecoverOrphan(context.Context, string, bool) error {
 	return fmt.Errorf("Kata requires Linux")
 }
+
+func (*Guard) VerifyRuntime(context.Context, string, string, string) error {
+	return fmt.Errorf("Kata requires Linux")
+}

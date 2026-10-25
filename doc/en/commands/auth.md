@@ -205,7 +205,7 @@ oaiso auth rotate
 
 ## Encrypted storage (v0.0.3+)
 
-- [Backends and operation](../guides/encrypted-credentials.md); unavailable in published v0.0.2.
+- [Backends and operation](../guides/encrypted-credentials.md).
 - New: `oaiso login --encrypt` / `--keyring`.
 - Migrate plaintext: `oaiso auth profile encrypt NAME`.
 - Migrate legacy ciphertext to age: `oaiso auth profile migrate-age NAME`.

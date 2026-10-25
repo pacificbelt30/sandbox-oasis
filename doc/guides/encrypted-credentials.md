@@ -2,7 +2,7 @@
 
 **日本語** | [English](../en/guides/encrypted-credentials.md)
 
-- **v0.0.3以降で利用できます。v0.0.2には含まれません。**
+- **v0.0.3以降で利用できます。**
 - 新規`login`は[キーリング方式](keyring.md)が既定。既存プロファイルと低水準の`auth profile set/import`は従来の方式を維持します。
 - APIキー・サブスクの両方が対象です。認証Proxyを維持し、作業VMへ実資格情報を渡しません。
 

@@ -16,7 +16,7 @@
 | Lightweight local encrypted storage | [Implemented in v0.0.3](guides/encrypted-credentials.md): keyring-default new login profiles, explicit migration, passphrase changes and locking; see [verification](../testing.md) |
 | Unified update guidance | Implemented in v0.0.3: `oaiso upgrade` plans/applies distribution updates and explains image update order |
 
-- [Login is available in v0.0.3+](commands/login.md); v0.0.2 manual setup remains supported.
+- [Login is available in v0.0.3+](commands/login.md).
 
 - In addition to Codex CLI and Claude Code, the following coding agents are candidates for future integration.
 - They are not currently supported.

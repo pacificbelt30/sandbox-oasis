@@ -9,7 +9,7 @@ import threading
 _VERSION = 1
 _MAX_REQUEST = 1 << 20
 _MAX_RESPONSE = 4 << 20
-_MUTATIONS = frozenset({"create", "launch", "start", "stop", "remove", "remove_request", "quarantine", "exec"})
+_MUTATIONS = frozenset({"create", "launch", "start", "stop", "remove", "remove_request", "quarantine", "exec", "write_file", "start_job", "kill_job", "checkpoint", "remove_checkpoint"})
 _CODES = frozenset({"invalid_argument", "version_mismatch", "conflict", "cleanup_pending", "outcome_unknown", "request_gone", "in_progress", "capacity", "not_found", "canceled", "deadline_exceeded", "permission_denied", "output_limit", "not_initialized", "busy", "internal", "transport_lost", "protocol_error"})
 
 
@@ -196,6 +196,64 @@ class Client:
 
     def proxy_capabilities(self, **kwargs):
         return self.call("proxy_capabilities", **kwargs)
+
+    def read_file(self, worker_id, path, **kwargs):
+        r = self.call("read_file", {"worker_id": worker_id, "path": path}, **kwargs)
+        return base64.b64decode(r["data"] or "", validate=True)
+
+    def write_file(self, worker_id, path, data, **kwargs):
+        if len(data) > 512 * 1024:
+            raise APIError("invalid_argument")
+        return self.call("write_file", {"worker_id": worker_id, "path": path, "data": base64.b64encode(data).decode()}, **kwargs)
+
+    def list_files(self, worker_id, path=".", **kwargs):
+        r = self.call("list_files", {"worker_id": worker_id, "path": path}, **kwargs)
+        return json.loads(base64.b64decode(r["data"] or "", validate=True))
+
+    def start_job(self, worker_id, argv, *, env=None, working_dir="", **kwargs):
+        return self.call("start_job", {"worker_id": worker_id, "argv": argv, "env": env or [], "working_dir": working_dir}, **kwargs)
+
+    def list_jobs(self, worker_id, **kwargs):
+        return self.call("list_jobs", {"worker_id": worker_id}, **kwargs)
+
+    def job(self, worker_id, job_id, **kwargs):
+        return self.call("job", {"worker_id": worker_id, "job_id": job_id}, **kwargs)
+
+    def job_logs(self, worker_id, job_id, offset=0, **kwargs):
+        return self.call("job_logs", {"worker_id": worker_id, "job_id": job_id, "offset": offset}, **kwargs)
+
+    def wait_job(self, worker_id, job_id, **kwargs):
+        return self.call("wait_job", {"worker_id": worker_id, "job_id": job_id}, **kwargs)
+
+    def kill_job(self, worker_id, job_id, **kwargs):
+        return self.call("kill_job", {"worker_id": worker_id, "job_id": job_id}, **kwargs)
+
+    def checkpoint(self, worker_id, options=None, **kwargs):
+        return self.call("checkpoint", {"worker_id": worker_id, "options": options or {}}, **kwargs)
+
+    def checkpoints(self, **kwargs):
+        return self.call("checkpoints", {}, **kwargs)
+
+    def inspect_checkpoint(self, checkpoint_id, **kwargs):
+        return self.call("inspect_checkpoint", {"checkpoint_id": checkpoint_id, "options": {}}, **kwargs)
+
+    def remove_checkpoint(self, checkpoint_id, **kwargs):
+        return self.call("remove_checkpoint", {"checkpoint_id": checkpoint_id, "options": {}}, **kwargs)
+
+    def restore_checkpoint(self, checkpoint_id, request, **kwargs):
+        if request.get("Runtime") not in (None, "", "kata"):
+            raise APIError("invalid_argument")
+        info = self.inspect_checkpoint(checkpoint_id, **kwargs)
+        request = dict(request)
+        if request.get("Image") not in (None, "", info["image"]):
+            raise APIError("invalid_argument")
+        environment = dict(request.get("Environment") or {})
+        if environment.get("image_id") not in (None, "", info["digest"]):
+            raise APIError("invalid_argument")
+        request["Image"] = info["image"]
+        environment["image_id"] = info["digest"]
+        request["Environment"] = environment
+        return self.launch(request, **kwargs)
 
     def close(self):
         self._fail("transport_lost")

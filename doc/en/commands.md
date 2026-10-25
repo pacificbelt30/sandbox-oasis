@@ -79,3 +79,14 @@
 For administrator-only `node serve` and `runtime-lock`, see [host setup](../kata.md) (Japanese).
 
 - Removed `firewall` functionality: [migration](commands/firewall.md); not a current executable command.
+
+## Additional workflow commands
+
+Available: **unreleased (main)**.
+
+| Command | Details |
+|---|---|
+| `artifact plan/bundle` | [Review and recover selected files](guides/artifacts.md) |
+| `preview WORKER PORT` | [Authenticated loopback web preview](guides/preview.md) |
+| `policy propose/plan/apply` | [Explicit shared-proxy live policy changes](guides/live-policy.md) |
+| `checkpoint pin/prune` | [Retention planning and protection](guides/disk-checkpoint.md#retention-planning-and-pins) |

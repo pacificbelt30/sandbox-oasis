@@ -5,18 +5,20 @@ package localapi
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"time"
 
 	"github.com/pacificbelt30/codex-dock/pkg/cxd"
 )
 
 const (
-	ProtocolVersion    = 1
-	MaxRequestBytes    = 1 << 20
-	MaxResponseBytes   = 4 << 20
-	MaxOutputBytes     = 256 << 10 // Per exec stream; buffers are never unbounded.
-	MaxConcurrentCalls = 16
-	MaxTimeoutMS       = 1200000
+	ProtocolVersion      = 1
+	MaxRequestBytes      = 1 << 20
+	MaxResponseBytes     = 4 << 20
+	MaxOutputBytes       = 256 << 10 // Per exec stream; buffers are never unbounded.
+	MaxConcurrentCalls   = 16
+	MaxTimeoutMS         = 1200000
+	MaxFileTransferBytes = 512 << 10
 )
 
 type Request struct {
@@ -93,13 +95,14 @@ type Success struct {
 	OK bool `json:"ok"`
 }
 type Capabilities struct {
-	ProtocolVersion    int              `json:"protocol_version"`
-	Node               cxd.Capabilities `json:"node"`
-	Methods            []string         `json:"methods"`
-	MaxRequestBytes    int              `json:"max_request_bytes"`
-	MaxResponseBytes   int              `json:"max_response_bytes"`
-	MaxOutputBytes     int              `json:"max_output_bytes"`
-	MaxConcurrentCalls int              `json:"max_concurrent_calls"`
+	MaxFileTransferBytes int              `json:"max_file_transfer_bytes"`
+	ProtocolVersion      int              `json:"protocol_version"`
+	Node                 cxd.Capabilities `json:"node"`
+	Methods              []string         `json:"methods"`
+	MaxRequestBytes      int              `json:"max_request_bytes"`
+	MaxResponseBytes     int              `json:"max_response_bytes"`
+	MaxOutputBytes       int              `json:"max_output_bytes"`
+	MaxConcurrentCalls   int              `json:"max_concurrent_calls"`
 }
 
 // Backend deliberately calls the same exported operations as an embedded Go
@@ -126,3 +129,39 @@ type Backend interface {
 }
 
 type Factory func(context.Context, cxd.Options) (Backend, error)
+
+type FileParams struct {
+	WorkerID string `json:"worker_id"`
+	Path     string `json:"path"`
+	Data     []byte `json:"data,omitempty"`
+}
+type DataResult struct {
+	Data []byte `json:"data"`
+}
+type JobParams struct {
+	WorkerID string `json:"worker_id"`
+	JobID    string `json:"job_id"`
+	Offset   int64  `json:"offset,omitempty"`
+}
+type CheckpointParams struct {
+	WorkerID string                `json:"worker_id,omitempty"`
+	ID       string                `json:"checkpoint_id,omitempty"`
+	Options  cxd.CheckpointOptions `json:"options"`
+}
+
+// WorkspaceBackend extends v1 additively without changing lifecycle contracts.
+type WorkspaceBackend interface {
+	ReadFile(context.Context, string, string, io.Writer) error
+	WriteFile(context.Context, string, string, io.Reader) error
+	ListFiles(context.Context, string, string, io.Writer) error
+	StartJob(context.Context, string, cxd.ExecRequest) (cxd.Job, error)
+	Job(context.Context, string, string) (cxd.Job, error)
+	ListJobs(context.Context, string) ([]cxd.Job, error)
+	JobLogs(context.Context, string, string, int64) (cxd.JobOutput, error)
+	KillJob(context.Context, string, string) error
+	WaitJob(context.Context, string, string) (cxd.Job, error)
+	Checkpoint(context.Context, string, cxd.CheckpointOptions) (cxd.DiskCheckpoint, error)
+	Checkpoints(context.Context) (cxd.CheckpointCatalog, error)
+	InspectCheckpoint(context.Context, string) (cxd.DiskCheckpoint, error)
+	RemoveCheckpoint(context.Context, string) error
+}

@@ -22,7 +22,7 @@
 | OS・CPU | Ubuntu 26.04・Linux x86_64 |
 | ホスト機能 | systemd・KVM（`/dev/kvm`）・cgroup v2の `cpu memory pids` |
 | 実行アカウント | `sudo` が使える通常ユーザー |
-| 事前ツール | Bash・curl・CA証明書。Go・Make・Gitは不要 |
+| 事前ツール | Bash・curl・CA証明書・GitHub CLI（署名検証用）。Go・Make・Gitは不要 |
 | ホストPython | uv管理の3.12。uv・Pythonがなければユーザー用領域へ自動準備 |
 | メモリ目安 | 既定の2ワーカー構成は8 GiB以上。ビルド用の余裕も確保 |
 | 通信 | GitHub Releases・uv/Python・固定ランタイム配布物・OSパッケージ・コンテナイメージの取得先に到達可能 |
@@ -32,12 +32,27 @@
 
 ## 2. ツールを準備する
 
-**通常ユーザーのシェルで実行。curlが未導入の場合だけ必要です。**
+**通常ユーザーのシェルで実行。curl・CA証明書と、署名検証用のGitHub CLIを準備します。**
 
 ```bash
+bash <<'SH'
+set -euo pipefail
 sudo apt-get update
 sudo apt-get install -y curl ca-certificates
+sudo install -d -m 0755 /etc/apt/keyrings
+oaiso_gh_key=$(mktemp)
+trap 'rm -f -- "$oaiso_gh_key"' EXIT
+curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o "$oaiso_gh_key"
+sudo install -m 0644 "$oaiso_gh_key" /etc/apt/keyrings/githubcli-archive-keyring.gpg
+printf 'deb [arch=%s signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main\n' "$(dpkg --print-architecture)" | sudo tee /etc/apt/sources.list.d/github-cli.list >/dev/null
+sudo apt-get update
+sudo apt-get install -y gh
+gh attestation verify --help >/dev/null
+SH
 ```
+
+- [GitHub CLI公式のAPT導入手順](https://github.com/cli/cli/blob/trunk/docs/install_linux.md#debian)に沿って公式配布元を登録します。既に対応版が使える場合は省略できます。
+- 成功の目印：最後のコマンドが終了コード0。`gh auth login`は不要です。
 
 - uv本体：[Astral公式インストーラー](https://docs.astral.sh/uv/getting-started/installation/)で `~/.local/bin` へ準備。既に使えるuvがあれば利用します。
 - Python：[uv管理の3.12](https://docs.astral.sh/uv/guides/install-python/)を使用。OSのPythonは変更しません。
@@ -158,6 +173,7 @@ user sudo codex-dock
 |---|---|---|
 | Bash | ホストのシェル。Ubuntu標準のものを使用 | [GNU Bashの導入](https://www.gnu.org/software/bash/manual/html_node/Installing-Bash.html) |
 | curl | ホストでインストーラー・配布物を取得 | [公式ダウンロード案内](https://curl.se/download.html) |
+| GitHub CLI | 配布物の署名・作成元を確認 | [公式Linux手順](https://github.com/cli/cli/blob/trunk/docs/install_linux.md) |
 | uv | 未導入ならインストーラーが自動準備 | [uvのインストール](https://docs.astral.sh/uv/getting-started/installation/) |
 | Python | uv管理の3.12を自動準備。配置・更新処理に使用 | [uvによるPythonの導入](https://docs.astral.sh/uv/guides/install-python/) |
 | Kata Containers | VMによるワーカー隔離。インストーラーが配置 | [インストールガイド](https://github.com/kata-containers/kata-containers/blob/main/docs/install/README.md) |

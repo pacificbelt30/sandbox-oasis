@@ -2,7 +2,7 @@
 
 [日本語](../../commands/login.md) | **English**
 
-**Available in v0.0.3 or later. v0.0.2 uses [manual independent profile setup](auth.md#independent-profiles).**
+**Available in v0.0.3 or later.**
 
 - Keyring storage is the default. On headless hosts, first open `oaiso auth keyring session`. [Setup and use](../guides/keyring.md).
 

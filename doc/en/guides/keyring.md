@@ -2,7 +2,7 @@
 
 [日本語](../../guides/keyring.md) | **English**
 
-- **Available in v0.0.3 or later; unavailable in v0.0.2.**
+- **Available in v0.0.3 or later.**
 - New `oaiso login` profiles use Secret Service by default. Existing profiles keep their storage backend.
 - API keys and OAuth tokens remain age-encrypted in `.vault`. The keyring holds the age private identity and authentication key.
 - Work VMs receive no keyring, D-Bus socket or real credentials.

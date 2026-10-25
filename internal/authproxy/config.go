@@ -22,6 +22,7 @@ const (
 
 // Config configures the Auth Proxy.
 type Config struct {
+	PolicyControlDir string // Optional private durable control socket; egress role only.
 	// NetworkResources bounds the data listener, independently of execution usage budgets.
 	NetworkResources netquota.Limits
 	// WorkerMTLS encrypts the worker data listener and binds every token to its client certificate.

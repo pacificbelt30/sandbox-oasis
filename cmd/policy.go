@@ -8,9 +8,11 @@ import (
 	"github.com/pacificbelt30/codex-dock/internal/policyevents"
 	"github.com/pacificbelt30/codex-dock/internal/proxysettings"
 	"github.com/pacificbelt30/codex-dock/internal/sandbox"
+	"github.com/pacificbelt30/codex-dock/internal/strictjson"
 	"github.com/pacificbelt30/codex-dock/internal/workeregress"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"os"
 )
 
 func configuredPolicy() proxysettings.Settings {
@@ -22,7 +24,7 @@ func configuredPolicy() proxysettings.Settings {
 }
 
 func newPolicyCommand() *cobra.Command {
-	policy := &cobra.Command{Use: "policy", Short: "Inspect immutable egress policies or quarantine a selected worker"}
+	policy := &cobra.Command{Use: "policy", Short: "Inspect, propose and apply egress policies or quarantine a selected worker"}
 	var worker, preset string
 	var domains []string
 	var asJSON, resolve bool
@@ -52,6 +54,9 @@ func newPolicyCommand() *cobra.Command {
 			}
 			if asJSON {
 				return json.NewEncoder(cmd.OutOrStdout()).Encode(s)
+			}
+			if s.UpdatePending {
+				return fmt.Errorf("policy update pending; new connections are blocked and completion is unconfirmed")
 			}
 			if s.Quarantined {
 				if s.QuarantinePending {
@@ -142,6 +147,87 @@ func newPolicyCommand() *cobra.Command {
 		_, err = fmt.Fprintf(cmd.OutOrStdout(), "Worker %s quarantined: all work and network access stopped; workspace/logs retained. Create a new worker to apply a new policy.\n", worker)
 		return err
 	}})
+	var policyFile, planID string
+	for _, action := range []string{"plan", "apply"} {
+		action := action
+		c := &cobra.Command{Use: action, Args: cobra.NoArgs, Short: "Review or apply a shared proxy policy change; old connections are closed", RunE: func(cmd *cobra.Command, _ []string) error {
+			if worker == "" || policyFile == "" || preset != "" || len(domains) > 0 {
+				return fmt.Errorf("--worker and --file are required; presets/overrides cannot be combined")
+			}
+			f, err := os.Open(policyFile)
+			if err != nil {
+				return err
+			}
+			defer func() { _ = f.Close() }()
+			var proposal workeregress.Proposal
+			if err := strictjson.Decode(f, 64<<10, &proposal); err != nil {
+				return fmt.Errorf("invalid policy proposal: %w", err)
+			}
+			if action == "plan" {
+				p, err := workeregress.PlanChange(cmd.Context(), engine.Socket(), worker, proposal.Rules)
+				if err != nil {
+					return err
+				}
+				if err := proposal.ValidateBase(p.Before); err != nil {
+					return err
+				}
+				return json.NewEncoder(cmd.OutOrStdout()).Encode(p)
+			}
+			state, err := workeregress.ApplyChange(cmd.Context(), engine.Socket(), worker, proposal.Rules, planID)
+			if err != nil {
+				return err
+			}
+			return json.NewEncoder(cmd.OutOrStdout()).Encode(state)
+		}}
+		c.Flags().StringVar(&policyFile, "file", "", "Reviewed proposal JSON file")
+		if action == "apply" {
+			c.Flags().StringVar(&planID, "plan-id", "", "Reviewed change plan ID")
+		}
+		policy.AddCommand(c)
+	}
+	var proposalOutput string
+	propose := &cobra.Command{Use: "propose [HOST:PORT]", Args: cobra.MaximumNArgs(1), Short: "Draft an exact-host grant; omit destination to use the latest retained denial", RunE: func(cmd *cobra.Command, args []string) error {
+		if worker == "" || proposalOutput == "" || preset != "" || len(domains) > 0 {
+			return fmt.Errorf("--worker and --output are required")
+		}
+		current, err := workeregress.Inspect(cmd.Context(), engine.Socket(), worker)
+		if err != nil {
+			return err
+		}
+		destination := ""
+		if len(args) == 1 {
+			destination = args[0]
+		} else {
+			err = workeregress.Events(cmd.Context(), engine.Socket(), worker, false, func(e policyevents.Event) error {
+				if e.Destination != "" && e.PolicyID == current.PolicyID {
+					destination = e.Destination
+				}
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+		}
+		if destination == "" {
+			return fmt.Errorf("no suitable retained denial; specify HOST:PORT")
+		}
+		p, err := workeregress.Propose(cmd.Context(), current, destination)
+		if err != nil {
+			return err
+		}
+		f, err := os.OpenFile(proposalOutput, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+		if err != nil {
+			return err
+		}
+		defer func() { _ = f.Close() }()
+		if err = json.NewEncoder(f).Encode(p); err != nil {
+			_ = os.Remove(proposalOutput)
+			return err
+		}
+		return f.Sync()
+	}}
+	propose.Flags().StringVar(&proposalOutput, "output", "", "New proposal JSON file; never automatically approved")
+	policy.AddCommand(propose)
 	return policy
 }
 func init() { rootCmd.AddCommand(newPolicyCommand()) }

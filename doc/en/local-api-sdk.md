@@ -17,8 +17,8 @@
 | Configuration | Explicit Open options; no automatic loading of CLI configuration or credential profiles |
 | Credentials | Read the existing owner-only 0600 proxy admin-secret file into `Options.ProxyAdminSecret`. Real provider credentials stay in the auth proxy |
 | Workspace | Existing absolute `ProjectDir`; normal `/workspace` sharing and host-file effects apply |
-| Included | Create, launch, start, exec, get, list, wait, stop, remove, request reconciliation, quarantine, resources and capabilities |
-| Use Go for | PTY, streaming I/O, background jobs, image builds, checkpoints, credential Store and case-proxy creation |
+| Included | Create, launch, start, exec, get, list, wait, stop, remove, request reconciliation, quarantine, resources and capabilities; files, jobs and disk checkpoints |
+| Use Go for | PTY, streaming I/O, image builds, artifact bundles, previews, live policy changes, checkpoint retention, credential Store and case-proxy creation |
 
 - For writable workspaces, set `LaunchRequest.User` to the owning numeric UID/GID. Omitting it uses the image user; the SDK does not change host ownership.
 - General egress defaults to deny, as in Go. Host grants use `Options.EgressPolicy`.
@@ -211,3 +211,53 @@ uv run --no-project --no-config --managed-python --python 3.12 python scripts/ve
 
 - Both SDKs use the same Go adapter for version/retry/conflict/lost-response/cancel/output-bound/redaction/cleanup tests.
 - See [verification records](../testing.md) for real Kata prerequisites, scope and results. Synthetic success is separate from real-account authentication/inference.
+
+## Files, jobs and checkpoints
+
+- Available: **unreleased (main)**; additive methods within local API v1.
+
+| Operation | Python | TypeScript |
+|---|---|---|
+| Read / write / list | `read_file` / `write_file` / `list_files` | `readFile` / `writeFile` / `listFiles` |
+| Background execution | `start_job` | `startJob` |
+| Job lookup / list | `job` / `list_jobs` | `job` / `listJobs` |
+| Logs with offset | `job_logs(worker_id, job_id, offset=0)` | `jobLogs(workerID, jobID, 0)` |
+| Wait / kill | `wait_job` / `kill_job` | `waitJob` / `killJob` |
+| Save / list disk checkpoints | `checkpoint` / `checkpoints` | `checkpoint` / `checkpoints` |
+| Inspect / remove | `inspect_checkpoint` / `remove_checkpoint` | `inspectCheckpoint` / `removeCheckpoint` |
+| Restore to a new VM | `restore_checkpoint(id, request)` | `restoreCheckpoint(id, request)` |
+
+Inside an existing Python client context with a running `worker`:
+
+```python
+worker_id = worker["ID"]
+client.write_file(worker_id, "input.json", b'{"task":"example"}')
+print(client.list_files(worker_id))
+job = client.start_job(worker_id, ["python3", "-c", "print('done')"])
+finished = client.wait_job(worker_id, job["id"])
+logs = client.job_logs(worker_id, job["id"], offset=0)
+print(finished["exit_code"], logs["output"])
+```
+
+The TypeScript equivalent using an existing client/worker:
+
+```typescript
+await client.writeFile(worker.ID, "input.json", Buffer.from('{"task":"example"}'));
+console.log(await client.listFiles(worker.ID));
+const job = await client.startJob(worker.ID, ["python3", "-c", "print('done')"]);
+const finished = await client.waitJob(worker.ID, job.id);
+const logs = await client.jobLogs(worker.ID, job.id, 0);
+console.log(finished.exit_code, logs.output);
+```
+
+| Contract | Behavior |
+|---|---|
+| Files | Relative to `/workspace`, no symlink traversal, at most 512 KiB per transfer. Go/CLI retain their separate 64 MiB limit |
+| Larger files | Use Go/CLI; chunked SDK upload is not provided |
+| Starting jobs | Never automatically retried. Reconcile uncertain outcomes using job IDs/listing |
+| Logs | Use `next` for the next offset; `truncated` indicates a retention gap |
+| Canceling job wait | Cancels waiting only, not the job |
+| Checkpoint creation | Requires a stopped Kata worker. Inspect the catalog after losing a create response |
+| Restore | New RequestID required; reject conflicting image/digest or runc |
+
+See [disk checkpoint scope](guides/disk-checkpoint.md). RAM and connections are excluded.

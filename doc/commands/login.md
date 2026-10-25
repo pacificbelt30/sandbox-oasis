@@ -2,7 +2,7 @@
 
 **日本語** | [English](../en/commands/login.md)
 
-**v0.0.3以降で利用できます。v0.0.2では[独立プロファイルの手動設定](auth.md#独立プロファイル)を使用してください。**
+**v0.0.3以降で利用できます。**
 
 - 既定はキーリング保存です。GUIなしでは先に`oaiso auth keyring session`を開いてください。[準備と操作](../guides/keyring.md)。
 

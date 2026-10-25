@@ -143,13 +143,7 @@ func Serve(ctx context.Context, cfg Config, socket string, gid int) error {
 			switch req.Action {
 			case "validate":
 				err = g.Validate(ctx, req.Runtime)
-				reply.Info = NodeInfo{ProtocolVersion: 2, Profile: Profile, Endpoint: cfg.Endpoint, Stamp: g.Stamp(), Launcher: g.Launcher(), Root: cfg.CgroupRoot, SharedFSCache: "none", BuildVersion: buildinfo.Version, Capabilities: []string{"disk-checkpoint-v1", "request-status-v1", "request-cleanup-v1", "resource-profiles-v1", "operator-resource-profiles-v1", "filesystem-policy-v1", "idle-activity-v1", "idle-safe-v1", "create-before-start-v1", "exec-options-v1", "background-jobs-v1", "exec-pty-resize-v1", "image-digest-v1", "worker-quarantine-v1"}, Protected: append(g.ProtectedPaths(), socket)}
-				if g.temporaryStorage {
-					reply.Info.Capabilities = append(reply.Info.Capabilities, "bounded-tmpfs-v1")
-				}
-				if g.supportsPIDProfiles() {
-					reply.Info.Capabilities = append(reply.Info.Capabilities, "dynamic-pid-profiles-v1")
-				}
+				reply.Info = g.nodeInfo(socket)
 			case "inventory":
 				reply.Inventory, err = g.Inventory(ctx)
 			case "profiles":
@@ -158,6 +152,9 @@ func Serve(ctx context.Context, cfg Config, socket string, gid int) error {
 				err = g.RecoverOrphan(ctx, req.Allocation, req.Force)
 			case "reserve":
 				reply.Parent, err = g.ReserveProfile(ctx, req.Allocation, req.ResourceProfile)
+			case "verify-runtime":
+				err = g.VerifyRuntime(ctx, req.Runtime, req.Allocation, req.Worker)
+				reply.Info = g.nodeInfo(socket)
 			case "verify":
 				err = g.Verify(ctx, req.Allocation, req.Worker)
 			case "release":
@@ -205,6 +202,17 @@ func Serve(ctx context.Context, cfg Config, socket string, gid int) error {
 		return nil
 	}
 	return err
+}
+
+func (g *Guard) nodeInfo(socket string) NodeInfo {
+	info := NodeInfo{ProtocolVersion: 2, Profile: Profile, Endpoint: g.config.Endpoint, Stamp: g.Stamp(), Launcher: g.Launcher(), Root: g.config.CgroupRoot, SharedFSCache: "none", BuildVersion: buildinfo.Version, Capabilities: []string{"verify-runtime-v1", "checkpoint-retention-v1", "disk-checkpoint-v1", "request-status-v1", "request-cleanup-v1", "resource-profiles-v1", "operator-resource-profiles-v1", "filesystem-policy-v1", "idle-activity-v1", "idle-safe-v1", "create-before-start-v1", "exec-options-v1", "background-jobs-v1", "exec-pty-resize-v1", "image-digest-v1", "worker-quarantine-v1"}, Protected: append(g.ProtectedPaths(), socket)}
+	if g.temporaryStorage {
+		info.Capabilities = append(info.Capabilities, "bounded-tmpfs-v1")
+	}
+	if g.supportsPIDProfiles() {
+		info.Capabilities = append(info.Capabilities, "dynamic-pid-profiles-v1")
+	}
+	return info
 }
 
 type Client struct {
@@ -284,21 +292,25 @@ func (c *Client) Validate(ctx context.Context, runtime string) error {
 	if err != nil {
 		return err
 	}
-	if r.Info.Profile != Profile || r.Info.Endpoint != c.endpoint || len(r.Info.Stamp) != 64 || !cleanPath(r.Info.Root) || !cleanPath(r.Info.Launcher) {
+	return c.acceptInfo(r.Info)
+}
+
+func (c *Client) acceptInfo(info NodeInfo) error {
+	if info.Profile != Profile || info.Endpoint != c.endpoint || len(info.Stamp) != 64 || !cleanPath(info.Root) || !cleanPath(info.Launcher) {
 		return fmt.Errorf("kata node returned another profile")
 	}
-	if buildinfo.Version != "dev" && r.Info.BuildVersion != buildinfo.Version {
-		return &VersionMismatchError{ClientVersion: buildinfo.Version, NodeVersion: r.Info.BuildVersion}
+	if buildinfo.Version != "dev" && info.BuildVersion != buildinfo.Version {
+		return &VersionMismatchError{ClientVersion: buildinfo.Version, NodeVersion: info.BuildVersion}
 	}
-	if r.Info.SharedFSCache != "none" {
+	if info.SharedFSCache != "none" {
 		return fmt.Errorf("kata node does not enforce coherent shared workspaces; update the node, regenerate its config with virtio_fs_cache=\"none\" and reseal the asset manifest")
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if c.info.Stamp != "" && r.Info.Stamp != c.info.Stamp {
+	if c.info.Stamp != "" && info.Stamp != c.info.Stamp {
 		return fmt.Errorf("kata node profile changed; recreate manager/workers")
 	}
-	c.info = r.Info
+	c.info = info
 	return nil
 }
 
@@ -349,6 +361,40 @@ func (c *Client) Verify(ctx context.Context, id, worker string) error {
 	_, err := c.call(ctx, nodeRequest{Action: "verify", Allocation: id, Worker: worker})
 	return err
 }
+
+// VerifyRuntime performs full pinned-asset and host verification once per
+// operation. Older nodes retain the separate validation and verification path.
+func (c *Client) VerifyRuntime(ctx context.Context, runtime, id, worker string) error {
+
+	c.mu.RLock()
+	known := c.info.Stamp != ""
+	supported := false
+	for _, feature := range c.info.Capabilities {
+		if feature == "verify-runtime-v1" {
+			supported = true
+			break
+		}
+	}
+	c.mu.RUnlock()
+	if supported || !known {
+		r, err := c.call(ctx, nodeRequest{Action: "verify-runtime", Runtime: runtime, Allocation: id, Worker: worker})
+		if err == nil {
+			return c.acceptInfo(r.Info)
+		}
+		// A fresh manager has no capability metadata yet. Old nodes explicitly
+		// reject this action before performing verification; retain their full path.
+		// Never downgrade a known node or retry an attestation/transport failure.
+		var nodeErr *NodeError
+		if known || !errors.As(err, &nodeErr) || nodeErr.Code != "" || nodeErr.Message != "unknown node action" {
+			return err
+		}
+	}
+	if err := c.Validate(ctx, runtime); err != nil {
+		return err
+	}
+	return c.Verify(ctx, id, worker)
+}
+
 func (c *Client) Release(ctx context.Context, id, worker string) error {
 	_, err := c.call(ctx, nodeRequest{Action: "release", Allocation: id, Worker: worker})
 	return err

@@ -231,7 +231,7 @@ oaiso auth rotate
 
 ## 暗号化して保存する（v0.0.3以降）
 
-- [方式・操作・出力例](../guides/encrypted-credentials.md)。公開済みv0.0.2では利用できません。
+- [方式・操作・出力例](../guides/encrypted-credentials.md)。
 - 新規：`oaiso login --encrypt`／`--keyring`。
 - 既存の平文を移行：`oaiso auth profile encrypt NAME`。
 - 旧暗号化形式からageへ：`oaiso auth profile migrate-age NAME`。

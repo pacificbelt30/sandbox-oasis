@@ -98,3 +98,21 @@ test('absent stdin and explicit empty EOF preserve Go semantics', async t => {
   assert.equal((await c.exec('worker',['stdin-mode'],{stdin:Buffer.alloc(0)})).stdout.toString(),'empty');
   assert.equal((await c.exec('worker',['stdin-mode'],{stdin:Buffer.from('data')})).stdout.toString(),'present');
 });
+
+test('binary files, job offsets, checkpoints and uncertain job start', async t => {
+ const c = await open(); t.after(() => c.close());
+ const data = Buffer.from([0,255,3]);
+ await c.writeFile('worker','binary',data); assert.deepEqual(await c.readFile('worker','binary'),data);
+ assert.deepEqual(await c.listFiles('worker'),['binary']);
+ const job = await c.startJob('worker',['run']);
+ assert.equal((await c.listJobs('worker'))[0].id,job.id);
+ assert.equal((await c.jobLogs('worker',job.id,15)).next,22);
+ assert.equal((await c.waitJob('worker',job.id)).exit_code,7);
+ await c.killJob('worker',job.id);
+ await assert.rejects(c.startJob('worker',['lost-job']),e => e.requiresReconciliation && e.partialResult.id === 'job-1');
+ const saved = await c.checkpoint('worker');
+ assert.equal((await c.inspectCheckpoint(saved.id)).id,saved.id); await c.checkpoints();
+ assert.equal((await c.restoreCheckpoint(saved.id,{RequestID:'restore',ProjectDir:'/workspace'})).Image,'checkpoint');
+ await c.removeCheckpoint(saved.id);
+ assert.throws(() => c.writeFile('worker','binary',Buffer.alloc(512*1024+1)),e => e.code==='invalid_argument');
+});

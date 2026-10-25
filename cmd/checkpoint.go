@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/pacificbelt30/codex-dock/internal/diskcheckpoint"
 	"github.com/pacificbelt30/codex-dock/internal/engine"
@@ -42,7 +43,30 @@ func init() {
 	}}
 	// Restoration shares all existing run flags and their precedence, rather than
 	// duplicating authentication, mounts, networking or foreground cleanup.
-	root.AddCommand(create, list, inspect, remove)
+	var retention diskcheckpoint.RetentionOptions
+	var maxAge time.Duration
+	prune := &cobra.Command{Use: "prune", Args: cobra.NoArgs, Short: "Plan checkpoint retention; apply only a reviewed plan ID", RunE: func(cmd *cobra.Command, _ []string) error {
+		if maxAge < 0 {
+			return fmt.Errorf("max-age must be nonnegative")
+		}
+		retention.MaxAgeSeconds = int64(maxAge / time.Second)
+		var out diskcheckpoint.RetentionPlan
+		if err := engine.CheckpointMaintenance(cmd.Context(), engine.Socket(), "retention", retention, &out); err != nil {
+			return err
+		}
+		return json.NewEncoder(cmd.OutOrStdout()).Encode(out)
+	}}
+	prune.Flags().Int64Var(&retention.KeepBytes, "keep-bytes", 0, "Target logical archive bytes after cleanup; hard node capacity remains 16 GiB")
+	prune.Flags().DurationVar(&maxAge, "max-age", 0, "Remove unpinned, unused checkpoints older than this age")
+	prune.Flags().BoolVar(&retention.Apply, "apply", false, "Delete only after recomputing the reviewed plan")
+	prune.Flags().StringVar(&retention.ExpectedPlan, "plan-id", "", "Reviewed plan ID required with --apply")
+	var unpin bool
+	pin := &cobra.Command{Use: "pin ID", Args: cobra.ExactArgs(1), Short: "Protect a checkpoint from retention cleanup", RunE: func(cmd *cobra.Command, args []string) error {
+		var out any
+		return engine.CheckpointMaintenance(cmd.Context(), engine.Socket(), "pin", diskcheckpoint.PinRequest{ID: args[0], Pinned: !unpin}, &out)
+	}}
+	pin.Flags().BoolVar(&unpin, "unpin", false, "Remove retention protection; explicit rm remains available")
+	root.AddCommand(create, list, inspect, remove, prune, pin)
 	rootCmd.AddCommand(root)
 	runCmd.Flags().String("checkpoint", "", "Restore this disk checkpoint as a NEW worker (image is selected automatically)")
 }

@@ -9,8 +9,7 @@
 - 提供するコマンドは `oaiso` のみ。旧 `cxd` / `codex-dock` の互換コマンド・補完は生成しません。
 - シェルスクリプト・CI・ショートカット内の旧コマンド名を `oaiso` に置換してください。
 - GoでCLIだけを配置する場合は `go install github.com/pacificbelt30/codex-dock/cmd/oaiso@latest` を使用します。
-- **v0.0.2からビルド済み版を配布**。[配布インストーラー](installation.md)でCLI・node・補助プログラムをまとめて配置・更新できます。
-- 旧 `v0.0.1` は `oaiso` 未対応。旧環境からは[導入方法に合う更新手順](commands/update.md#導入方法に合わせて更新する)で移行してください。
+- [配布インストーラー](installation.md)でCLI・node・補助プログラムをまとめて配置・更新できます。
 
 ## プロジェクト設定を oaiso.toml に変更する
 

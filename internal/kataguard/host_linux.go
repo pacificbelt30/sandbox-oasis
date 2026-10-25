@@ -346,14 +346,23 @@ func (g *Guard) walkGroups(id, worker string, visit func(string) error) error {
 }
 
 func (g *Guard) Verify(ctx context.Context, id, worker string) error {
-	if err := g.Validate(ctx, g.manifest.Runtime); err != nil {
-		return err
-	}
+	return g.VerifyRuntime(ctx, g.manifest.Runtime, id, worker)
+}
+
+// VerifyRuntime combines runtime attestation and host verification without
+// retaining validation results across operations.
+func (g *Guard) VerifyRuntime(ctx context.Context, runtime, id, worker string) error {
 	unlock, err := g.admissionLock(ctx)
 	if err != nil {
 		return err
 	}
 	defer unlock()
+	// Validate after waiting for admission, before any process/ledger mutation.
+	// The same operation may then retire the verified supervisor without another
+	// asset read; ownership, process and limit checks still run in full.
+	if err := g.Validate(ctx, runtime); err != nil {
+		return err
+	}
 	if _, err = g.scanProcesses(ctx, id, worker, true); err != nil {
 		return err
 	}
@@ -363,7 +372,7 @@ func (g *Guard) Verify(ctx context.Context, id, worker string) error {
 	// Kata may clean up its sandbox while serving Wait, before the engine sees
 	// an exit result. Keep its supervisor out of that self-deleted leaf before
 	// the bootstrap gate releases user code, including naturally exiting tasks.
-	return g.Retire(ctx, id, worker)
+	return g.retireVerified(ctx, id, worker)
 }
 
 func (g *Guard) scanProcesses(ctx context.Context, id, worker string, complete bool) ([]VMProcess, error) {

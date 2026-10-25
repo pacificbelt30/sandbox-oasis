@@ -2,19 +2,12 @@
 
 [日本語](../../guides/first-run.md) | **English**
 
-## Supported versions
-
-| Version | Install | Authentication |
-|---|---|---|
-| v0.0.3 or later | [Prebuilt installer](../installation.md) | Follow this page's keyring and login steps |
-| v0.0.2 | Older release assets | [Manual set/import](authentication.md#2-choose-the-agent-and-authentication-method); no keyring or `login` |
-
 - This page covers v0.0.3 or later. Check `oaiso --version` first.
 - Requires Ubuntu 26.04, x86_64, systemd, KVM and cgroup v2. [Requirements](../installation.md#1-requirements).
 
 ## 1. Install the prebuilt release
 
-Run as a normal user, review the plan, then apply it. If curl is missing, first [prepare curl](../installation.md#2-prepare-curl).
+Run as a normal user, review the plan, then apply it. First [prepare curl, CA certificates and GitHub CLI](../installation.md#2-prepare-tools). GitHub CLI verifies release signatures.
 
 ```bash
 curl -fsSL https://github.com/pacificbelt30/sandbox-oasis/releases/latest/download/install.sh | bash
@@ -82,12 +75,16 @@ Settings: /home/user/.config/codex-dock/config.toml
 
 Run only the matching agent:
 
-```bash
-# Codex
-oaiso init --agent codex
+**For Codex**
 
-# For Claude Code instead:
-# oaiso init --agent claude
+```bash
+oaiso init --agent codex
+```
+
+**For Claude Code**
+
+```bash
+oaiso init --agent claude
 ```
 
 - An uncached first run downloads/builds the default worker image and needs network access and time.

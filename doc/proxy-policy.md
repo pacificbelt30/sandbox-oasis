@@ -75,6 +75,21 @@ oaiso proxy run \
 - 接続先を検査したIPでCONNECTし、管理対象の宛先ポリシーを維持。独自CAは `[proxy].ca_bundle` または `--ca-bundle PATH`。
 - TLS内のURL・SNIを検査する機能は、この指定でも追加されない。
 
+### path・methodまで限定する場合
+
+| 検査 | 一般CONNECT | 固定origin broker |
+|---|---|---|
+| 接続先 | CONNECTの宛先host・port・解決IP | 設定したHTTPS origin |
+| TLS内のHTTP Host・path・method | 検査しない | 上流Hostを固定し、許可path・methodでだけ転送 |
+| path指定 | なし | 配下を含む `Paths`、完全一致の `ExactPaths` |
+| query・body | 検査しない | 内容を検査しない。上流API自身の権限も必要 |
+
+- brokerの完全一致pathとCLIのmethod指定は**未リリース（main）**です。[設定・具体例](guides/credential-broker.md)を参照してください。
+- SNIの照合だけでは、暗号化されたHTTP Hostやpathを制限できません。
+- brokerだけを通したい場合は、一般egressを止めるか、そのoriginへの一般HTTP/CONNECTを許可しないでください。
+- 固定AI経路の認可は独立しています。brokerの規則で、他の経路の権限が変わることはありません。
+- 任意のTLS通信を復号する機能は追加していません。
+
 ## 更新と既存環境からの移行
 
 - 未設定時の既定値を既定拒否へ変更しました。
@@ -87,9 +102,9 @@ oaiso proxy run \
 - ドメイン・ポートをDNS問い合わせ前に、解決されたIPをTCP接続前に検査します。
 - 直接通信の隔離は名前解決の失敗に依存せず、経路・転送制御とnftablesで維持します。
 
-- ルールは起動時に検証して固定する。
+- 起動時に規則を検証する。設定ファイルの自動再読込は行わない。
 - 未知のロール、誤ったドメイン/CIDR/ポートは起動エラー。
-- ホットリロードは提供しない。
+- 未リリースmainでは、[確認・承認付きの即時変更](guides/live-policy.md)を利用可能。既存接続を閉じ、規則の世代と完了状態を確認する。
 - 通常のワーカーは共有egress proxyを使用する。
 - `oaiso run --egress-allow-domain api.example.com` を指定したワーカーは、ポリシーの識別子を持つ専用egress proxyに接続する。
 - 異なる許可リストのワーカーはproxyを共有しない。
@@ -98,12 +113,12 @@ oaiso proxy run \
 - ホストのグローバル許可ドメインがある場合、ワーカーの指定はその範囲内に限る。
 - `--no-internet` は一般通信を止める。
 
-- 許可ルールの変更は新しいproxyと新しいワーカーに適用される。
+- 設定ファイルの変更は新しいproxy・ワーカーへ適用する。既存Proxyを変更する場合は、明示的な`policy plan/apply`を使う。
 - 設定編集だけでは既存のCONNECTや通信中のストリームを打ち切らない。
 - 緊急時は `oaiso policy quarantine --worker <ID>` で対象ワーカーを停止・隔離する。
 - 一般通信だけでなくAI通信と全ジョブも終了し、再起動は禁止される。
 - workspace・worktree・ログは保持する。
-- 新しいルールで再開するには新しいワーカー・要求IDを使う。
+- 隔離停止したワーカーから再開する場合は、新しいワーカー・要求IDを使う。
 - 隔離の詳細と失敗時の扱いは[追加制御](sandbox-features.md#通信の停止と隔離)を参照。
 - 不要になったポリシーproxyは、利用ワーカーを停止した後に `oaiso proxy rm --name <proxy名> --force` で回収できる。
 

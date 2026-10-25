@@ -2,7 +2,7 @@
 
 **日本語** | [English](../en/development/local-credential-store.md)
 
-- v0.0.3以降の仕様です。v0.0.2には含まれません。
+- v0.0.3以降の仕様です。
 - 操作：[暗号化して保存する](../guides/encrypted-credentials.md)。
 - 保存API：[Credential Store契約](../credential-store.md)。
 

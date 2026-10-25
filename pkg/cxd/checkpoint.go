@@ -57,3 +57,16 @@ func (c *Client) RestoreCheckpoint(ctx context.Context, id string, request Launc
 	request.Environment.ImageID = info.Digest
 	return c.Launch(ctx, request)
 }
+
+type CheckpointRetentionOptions = diskcheckpoint.RetentionOptions
+type CheckpointRetentionPlan = diskcheckpoint.RetentionPlan
+
+func (c *Client) RetainCheckpoints(ctx context.Context, o CheckpointRetentionOptions) (CheckpointRetentionPlan, error) {
+	var out CheckpointRetentionPlan
+	err := engine.CheckpointMaintenance(ctx, c.opts.NodeSocket, "retention", o, &out)
+	return out, err
+}
+func (c *Client) PinCheckpoint(ctx context.Context, id string, pin bool) error {
+	var out any
+	return engine.CheckpointMaintenance(ctx, c.opts.NodeSocket, "pin", diskcheckpoint.PinRequest{ID: id, Pinned: pin}, &out)
+}

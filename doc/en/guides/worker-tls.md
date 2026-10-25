@@ -19,6 +19,21 @@ Copied tokens alone, or combined with another execution's certificate, are rejec
 
 The verified bootstrap starts the loopback relay after verification/token activation, before releasing user code. Agent-specific mTLS configuration is unnecessary.
 
+## Coverage by entrypoint
+
+| Entrypoint | Worker-facing transport |
+|---|---|
+| Auth proxy created by `oaiso proxy run` | Automatically enables mTLS |
+| Go `EnsureCaseProxy` | Automatically enables mTLS |
+| Direct `oaiso proxy serve` | Explicit `--worker-mtls`, separate admin listener and protected admin secret required |
+| Custom in-process proxy | Explicit `WorkerMTLS` configuration required |
+| Go `StartCredentialBroker` | Current helper uses HTTP; do not use for VM paths requiring TLS |
+
+- Configure fixed-origin broker routes through `--credential-routes` on the standard auth proxy to receive the same mTLS protection.
+- The legacy plaintext `StartCredentialBroker` path is not automatically converted to TLS.
+- Custom integrations should check `ProxyCapabilities().WorkerMTLS` and reject unsupported proxies when TLS is required.
+- Existing deployments are not automatically changed; align component versions and recreate them as below.
+
 ## Upgrade and use
 
 Save work and drain/remove old workers/proxies before upgrading matching CLI/node/guard/proxy components. Existing environments are not automatically stopped or replaced.

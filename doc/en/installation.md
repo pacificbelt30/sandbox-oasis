@@ -22,7 +22,7 @@
 | OS and CPU | Ubuntu 26.04, Linux x86_64 |
 | Host features | systemd, KVM (`/dev/kvm`), cgroup v2 with `cpu memory pids` |
 | Account | A normal user with `sudo` access |
-| Prerequisites | Bash, curl and CA certificates; Go, Make and Git are not required |
+| Prerequisites | Bash, curl, CA certificates and GitHub CLI for signature verification; no Go, Make or Git required |
 | Host Python | uv-managed Python 3.12; missing uv/Python is prepared in user-owned directories |
 | Memory guidance | At least 8 GiB for the default two-worker configuration; allow extra capacity for builds |
 | Network | Access to GitHub Releases, uv/Python, pinned runtime archives, OS packages and container images |
@@ -30,14 +30,29 @@
 
 - Operator group membership grants root-equivalent host management access. Choose trusted users only.
 
-## 2. Prepare curl
+## 2. Prepare tools
 
-**Run as a normal user if curl is missing.**
+**Run as a normal user to install curl, CA certificates and GitHub CLI for signature verification.**
 
 ```bash
+bash <<'SH'
+set -euo pipefail
 sudo apt-get update
 sudo apt-get install -y curl ca-certificates
+sudo install -d -m 0755 /etc/apt/keyrings
+oaiso_gh_key=$(mktemp)
+trap 'rm -f -- "$oaiso_gh_key"' EXIT
+curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o "$oaiso_gh_key"
+sudo install -m 0644 "$oaiso_gh_key" /etc/apt/keyrings/githubcli-archive-keyring.gpg
+printf 'deb [arch=%s signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main\n' "$(dpkg --print-architecture)" | sudo tee /etc/apt/sources.list.d/github-cli.list >/dev/null
+sudo apt-get update
+sudo apt-get install -y gh
+gh attestation verify --help >/dev/null
+SH
 ```
+
+- Uses the [official GitHub CLI APT repository](https://github.com/cli/cli/blob/trunk/docs/install_linux.md#debian). Skip this block if compatible tools are already installed.
+- Success: the final command exits with code 0. `gh auth login` is not required.
 
 - The installer uses [Astral’s official installer](https://docs.astral.sh/uv/getting-started/installation/) to prepare uv in `~/.local/bin` if needed.
 - Host Python is [uv-managed 3.12](https://docs.astral.sh/uv/guides/install-python/); the OS Python is retained.
@@ -166,6 +181,7 @@ user sudo codex-dock
 |---|---|---|
 | Bash | Host shell; use Ubuntu's supplied shell | [GNU Bash installation](https://www.gnu.org/software/bash/manual/html_node/Installing-Bash.html) |
 | curl | Download the installer and release assets | [Official download guide](https://curl.se/download.html) |
+| GitHub CLI | Verify signatures and provenance | [Official Linux installation](https://github.com/cli/cli/blob/trunk/docs/install_linux.md) |
 | uv | Prepared automatically when missing | [uv installation](https://docs.astral.sh/uv/getting-started/installation/) |
 | Python | Managed 3.12, prepared through uv for setup and updates | [Install Python with uv](https://docs.astral.sh/uv/guides/install-python/) |
 | Kata Containers | Worker VM isolation; deployed by the installer | [Installation guides](https://github.com/kata-containers/kata-containers/blob/main/docs/install/README.md) |

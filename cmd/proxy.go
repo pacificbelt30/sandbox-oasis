@@ -39,6 +39,7 @@ const (
 )
 
 var (
+	proxyPolicyControlDir string
 	proxyListenAddr       string
 	proxyAdminListenAddr  string
 	proxyAdminSecret      string
@@ -159,7 +160,7 @@ var proxyServeCmd = &cobra.Command{
 			}
 		}
 		p, err := authproxy.NewProxy(authproxy.Config{
-			UpstreamProxyURL: proxyUpstreamURL, CABundlePEM: bundle,
+			PolicyControlDir: proxyPolicyControlDir, UpstreamProxyURL: proxyUpstreamURL, CABundlePEM: bundle,
 			NetworkResources:     resources,
 			CredentialRoutesFile: proxyBrokerFile,
 			AllowedModels:        proxyAllowedModels,
@@ -617,6 +618,7 @@ func init() {
 	proxyServeCmd.Flags().StringVar(&proxyAdminSecret, "admin-secret", "", "admin secret for /admin/* endpoints")
 	proxyServeCmd.Flags().StringVar(&proxyAdminSecretFile, "admin-secret-file", "", "Owner-only (0600) file containing the admin secret")
 	bindForwardPolicyFlags(proxyServeCmd)
+	proxyServeCmd.Flags().StringVar(&proxyPolicyControlDir, "policy-control-dir", "", "Private egress-only durable policy control directory")
 	bindNetworkResourceFlags(proxyServeCmd)
 	proxyServeCmd.Flags().StringVar(&proxyBrokerFile, "credential-routes", "", "Private JSON file of fixed credential routes")
 	proxyServeCmd.Flags().BoolVar(&proxyBlockPrivate, "block-private", false, "Refuse outbound connections to private/LAN/link-local addresses (RFC1918, 127/8, 169.254/16, ULA, CGNAT)")
@@ -803,6 +805,9 @@ func buildProxyRunArgs(a proxyRunArgs) []string {
 	}
 	if a.role != "" {
 		args = append(args, "--role", a.role)
+	}
+	if a.role == authproxy.RoleEgress {
+		args = append(args, "--policy-control-dir", "/var/lib/oaiso-egress")
 	}
 	if a.role == authproxy.RoleAuth {
 		args = append(args, "--worker-mtls")

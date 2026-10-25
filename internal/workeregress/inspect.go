@@ -20,13 +20,15 @@ type Snapshot struct {
 	Worker            string              `json:"worker,omitempty"`
 	Proxy             string              `json:"proxy,omitempty"`
 	PolicyID          string              `json:"policy_id,omitempty"`
+	Generation        uint64              `json:"generation,omitempty"`
+	UpdatePending     bool                `json:"update_pending,omitempty"`
 	GeneralEgress     bool                `json:"general_egress"`
 	Quarantined       bool                `json:"quarantined,omitempty"`
 	QuarantinePending bool                `json:"quarantine_pending,omitempty"`
 	Rules             networkpolicy.Rules `json:"rules"`
 }
 
-// Inspect reads the actual immutable proxy selected by a managed worker. It
+// Inspect reads the launch policy and live generation of the selected proxy. It
 // does not confuse a newly edited host config with a running proxy's policy.
 func Inspect(ctx context.Context, socket, worker string) (Snapshot, error) {
 	cli, err := engine.NewClientAt(socket)
@@ -84,6 +86,14 @@ func Inspect(ctx context.Context, socket, worker string) (Snapshot, error) {
 		return result, fmt.Errorf("proxy policy identity does not match its launch configuration")
 	}
 	result.Proxy, result.PolicyID, result.Rules, result.GeneralEgress = p.ID, ID(rules), rules, true
+	if HasLiveControl(p.Config.Cmd) {
+		state, err := Control(ctx, socket, p.ID, nil)
+		if err != nil {
+			return result, err
+		}
+		result.Source = "selected proxy live policy generation"
+		result.PolicyID, result.Rules, result.Generation, result.UpdatePending = state.PolicyID, state.Rules, state.Generation, !state.Ready
+	}
 	return result, nil
 }
 

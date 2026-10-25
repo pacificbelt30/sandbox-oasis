@@ -106,3 +106,60 @@ oaiso checkpoint rm "$checkpoint_id"
 
 - 旧nodeでは制限を省略せず非対応エラーにします。
 - 保存の応答消失は結果不明です。保存元ID・作成時刻を一覧で照合してから再実行してください。
+
+## 保存期限・容量を確認して回収する
+
+- 利用可能：**未リリース（main）**。
+- nodeの合計上限は従来どおり16GiB。`--keep-bytes`は回収後の目標容量です。将来の作成を指定容量で止める設定ではありません。
+- 容量は論理的なtarのバイト数。containerdの共有content・展開先・ホスト全体の使用量とは異なります。
+
+### 残すcheckpointを保護する
+
+IDは`oaiso checkpoint list`で確認します。
+
+```bash
+read -r -p 'Checkpoint ID to protect: ' checkpoint_id
+```
+
+```bash
+oaiso checkpoint pin "$checkpoint_id"
+oaiso checkpoint inspect "$checkpoint_id"
+```
+
+- `pinned: true`なら保護済みです。
+- 保護の解除：`oaiso checkpoint pin "$checkpoint_id" --unpin`。
+- 保護は自動回収用です。IDを明示した`checkpoint rm`は禁止しません。
+
+### 削除予定を確認する
+
+例：7日より古いものを回収し、保存済みアーカイブを合計8GiB以下へ減らす場合。
+
+```bash
+oaiso checkpoint prune --max-age 168h --keep-bytes 8589934592
+```
+
+| 出力 | 意味 |
+|---|---|
+| `delete` | 削除予定のID。古いものから選ぶ |
+| `protected` | pin済み、または保持中ワーカーが同じイメージdigestを使用 |
+| `remaining_bytes` | 削除後の見込み容量 |
+| `target_met` | 容量目標を達成できるか。保護対象が多い場合はfalse |
+| `id` | この削除計画のID |
+
+### 確認した計画を適用する
+
+```bash
+read -r -p 'Checkpoint retention plan ID: ' retention_plan_id
+```
+
+```bash
+oaiso checkpoint prune --max-age 168h --keep-bytes 8589934592 \
+  --apply --plan-id "$retention_plan_id"
+oaiso checkpoint list
+```
+
+- `--apply`なしでは削除しません。定期回収はこのCLIを外部のスケジューラー等から明示的に実行します。
+- 適用前に計画を作り直します。新しい保存・pin・ワーカー参照・期限到達で計画が変わった場合は拒否します。
+- 途中失敗時は一部が削除済みの場合があります。`list`を確認し、新しい計画を確認してから再実行してください。
+- 取得失敗を「未使用」と判断せず、回収を中止します。共有contentへの一括pruneは行いません。
+- Go API：`RetainCheckpoints(ctx, cxd.CheckpointRetentionOptions{...})`、`PinCheckpoint(ctx, id, true)`。適用時は`Apply: true`と`ExpectedPlan`を指定します。

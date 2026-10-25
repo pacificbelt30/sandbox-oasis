@@ -2,19 +2,12 @@
 
 **日本語** | [English](../en/guides/first-run.md)
 
-## 対応する版
-
-| 版 | インストール | 認証の準備 |
-|---|---|---|
-| v0.0.3以降 | [ビルド済みインストーラー](../installation.md) | このページの`login`・キーリング |
-| v0.0.2 | 旧版の配布物 | [手動のset/import](authentication.md#2-エージェントと認証方式を選ぶ)。キーリング・`login`は未収録 |
-
 - このページはv0.0.3以降の手順です。`oaiso --version`で導入した版を確認してください。
 - 以下はUbuntu 26.04・x86_64・systemd・KVM・cgroup v2があるホスト向けです。[前提条件](../installation.md#1-前提条件)。
 
 ## 1. ビルド済み版をインストールする
 
-通常ユーザーで計画を表示し、内容を確認して適用します。`curl`がない場合は先に[ツールの準備](../installation.md#2-ツールを準備する)を行います。
+通常ユーザーで計画を表示し、内容を確認して適用します。先に[curl・CA証明書・GitHub CLIを準備](../installation.md#2-ツールを準備する)してください。GitHub CLIは署名検証に使います。
 
 ```bash
 curl -fsSL https://github.com/pacificbelt30/sandbox-oasis/releases/latest/download/install.sh | bash
@@ -89,12 +82,16 @@ Settings: /home/user/.config/codex-dock/config.toml
 
 ログインした側だけを実行します。
 
-```bash
-# Codexを選んだ場合
-oaiso init --agent codex
+**Codexの場合**
 
-# Claude Codeを選んだ場合はこちら
-# oaiso init --agent claude
+```bash
+oaiso init --agent codex
+```
+
+**Claude Codeの場合**
+
+```bash
+oaiso init --agent claude
 ```
 
 - 初回は既定のワーカーイメージを取得・ビルドするため、通信と時間が必要です。

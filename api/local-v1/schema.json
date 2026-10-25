@@ -31,6 +31,9 @@
         "max_concurrent_calls": {
           "type": "integer"
         },
+        "max_file_transfer_bytes": {
+          "type": "integer"
+        },
         "max_output_bytes": {
           "type": "integer"
         },
@@ -57,6 +60,7 @@
         }
       },
       "required": [
+        "max_file_transfer_bytes",
         "protocol_version",
         "node",
         "methods",
@@ -64,6 +68,40 @@
         "max_response_bytes",
         "max_output_bytes",
         "max_concurrent_calls"
+      ],
+      "type": "object"
+    },
+    "APICheckpointParams": {
+      "additionalProperties": false,
+      "properties": {
+        "checkpoint_id": {
+          "type": "string"
+        },
+        "options": {
+          "$ref": "#/$defs/CheckpointOptions"
+        },
+        "worker_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "options"
+      ],
+      "type": "object"
+    },
+    "APIDataResult": {
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "contentEncoding": "base64",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "data"
       ],
       "type": "object"
     },
@@ -212,6 +250,48 @@
       ],
       "type": "object"
     },
+    "APIFileParams": {
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "contentEncoding": "base64",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "path": {
+          "type": "string"
+        },
+        "worker_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "worker_id",
+        "path"
+      ],
+      "type": "object"
+    },
+    "APIJobParams": {
+      "additionalProperties": false,
+      "properties": {
+        "job_id": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer"
+        },
+        "worker_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "worker_id",
+        "job_id"
+      ],
+      "type": "object"
+    },
     "APILaunchParams": {
       "additionalProperties": false,
       "properties": {
@@ -352,6 +432,51 @@
       ],
       "type": "object"
     },
+    "CheckpointCatalog": {
+      "additionalProperties": false,
+      "properties": {
+        "capacity_bytes": {
+          "type": "integer"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/DiskCheckpoint"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "used_bytes": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "capacity_bytes",
+        "used_bytes",
+        "items"
+      ],
+      "type": "object"
+    },
+    "CheckpointOptions": {
+      "additionalProperties": false,
+      "properties": {
+        "exclude": {
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "max_bytes": {
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
     "Compatibility": {
       "additionalProperties": false,
       "properties": {
@@ -366,6 +491,68 @@
         }
       },
       "required": [],
+      "type": "object"
+    },
+    "DiskCheckpoint": {
+      "additionalProperties": false,
+      "properties": {
+        "build_version": {
+          "type": "string"
+        },
+        "bytes": {
+          "type": "integer"
+        },
+        "created": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "digest": {
+          "type": "string"
+        },
+        "entries": {
+          "type": "integer"
+        },
+        "entrypoint_sha256": {
+          "type": "string"
+        },
+        "excluded": {
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "format": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "image": {
+          "type": "string"
+        },
+        "pinned": {
+          "type": "boolean"
+        },
+        "source": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "pinned",
+        "format",
+        "id",
+        "image",
+        "created",
+        "source",
+        "build_version",
+        "entrypoint_sha256",
+        "bytes",
+        "entries",
+        "excluded"
+      ],
       "type": "object"
     },
     "EgressPolicy": {
@@ -549,6 +736,54 @@
         }
       },
       "required": [],
+      "type": "object"
+    },
+    "Job": {
+      "additionalProperties": false,
+      "properties": {
+        "exit_code": {
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "running": {
+          "type": "boolean"
+        },
+        "worker": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "worker",
+        "running",
+        "exit_code"
+      ],
+      "type": "object"
+    },
+    "JobOutput": {
+      "additionalProperties": false,
+      "properties": {
+        "next": {
+          "type": "integer"
+        },
+        "output": {
+          "type": "string"
+        },
+        "running": {
+          "type": "boolean"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "output",
+        "next",
+        "running",
+        "truncated"
+      ],
       "type": "object"
     },
     "LaunchRequest": {
@@ -1500,6 +1735,424 @@
             "params"
           ],
           "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "method": {
+              "const": "read_file"
+            },
+            "params": {
+              "$ref": "#/$defs/APIFileParams"
+            },
+            "timeout_ms": {
+              "default": 180000,
+              "maximum": 1200000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "version": {
+              "const": 1
+            }
+          },
+          "required": [
+            "version",
+            "id",
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "method": {
+              "const": "write_file"
+            },
+            "params": {
+              "$ref": "#/$defs/APIFileParams"
+            },
+            "timeout_ms": {
+              "default": 180000,
+              "maximum": 1200000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "version": {
+              "const": 1
+            }
+          },
+          "required": [
+            "version",
+            "id",
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "method": {
+              "const": "list_files"
+            },
+            "params": {
+              "$ref": "#/$defs/APIFileParams"
+            },
+            "timeout_ms": {
+              "default": 180000,
+              "maximum": 1200000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "version": {
+              "const": 1
+            }
+          },
+          "required": [
+            "version",
+            "id",
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "method": {
+              "const": "start_job"
+            },
+            "params": {
+              "$ref": "#/$defs/APIExecParams"
+            },
+            "timeout_ms": {
+              "default": 180000,
+              "maximum": 1200000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "version": {
+              "const": 1
+            }
+          },
+          "required": [
+            "version",
+            "id",
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "method": {
+              "const": "job"
+            },
+            "params": {
+              "$ref": "#/$defs/APIJobParams"
+            },
+            "timeout_ms": {
+              "default": 180000,
+              "maximum": 1200000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "version": {
+              "const": 1
+            }
+          },
+          "required": [
+            "version",
+            "id",
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "method": {
+              "const": "list_jobs"
+            },
+            "params": {
+              "$ref": "#/$defs/APIWorkerParams"
+            },
+            "timeout_ms": {
+              "default": 180000,
+              "maximum": 1200000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "version": {
+              "const": 1
+            }
+          },
+          "required": [
+            "version",
+            "id",
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "method": {
+              "const": "job_logs"
+            },
+            "params": {
+              "$ref": "#/$defs/APIJobParams"
+            },
+            "timeout_ms": {
+              "default": 180000,
+              "maximum": 1200000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "version": {
+              "const": 1
+            }
+          },
+          "required": [
+            "version",
+            "id",
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "method": {
+              "const": "kill_job"
+            },
+            "params": {
+              "$ref": "#/$defs/APIJobParams"
+            },
+            "timeout_ms": {
+              "default": 180000,
+              "maximum": 1200000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "version": {
+              "const": 1
+            }
+          },
+          "required": [
+            "version",
+            "id",
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "method": {
+              "const": "wait_job"
+            },
+            "params": {
+              "$ref": "#/$defs/APIJobParams"
+            },
+            "timeout_ms": {
+              "default": 180000,
+              "maximum": 1200000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "version": {
+              "const": 1
+            }
+          },
+          "required": [
+            "version",
+            "id",
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "method": {
+              "const": "checkpoint"
+            },
+            "params": {
+              "$ref": "#/$defs/APICheckpointParams"
+            },
+            "timeout_ms": {
+              "default": 180000,
+              "maximum": 1200000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "version": {
+              "const": 1
+            }
+          },
+          "required": [
+            "version",
+            "id",
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "method": {
+              "const": "checkpoints"
+            },
+            "params": {
+              "additionalProperties": false,
+              "properties": {},
+              "type": "object"
+            },
+            "timeout_ms": {
+              "default": 180000,
+              "maximum": 1200000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "version": {
+              "const": 1
+            }
+          },
+          "required": [
+            "version",
+            "id",
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "method": {
+              "const": "inspect_checkpoint"
+            },
+            "params": {
+              "$ref": "#/$defs/APICheckpointParams"
+            },
+            "timeout_ms": {
+              "default": 180000,
+              "maximum": 1200000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "version": {
+              "const": 1
+            }
+          },
+          "required": [
+            "version",
+            "id",
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "method": {
+              "const": "remove_checkpoint"
+            },
+            "params": {
+              "$ref": "#/$defs/APICheckpointParams"
+            },
+            "timeout_ms": {
+              "default": 180000,
+              "maximum": 1200000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "version": {
+              "const": 1
+            }
+          },
+          "required": [
+            "version",
+            "id",
+            "method",
+            "params"
+          ],
+          "type": "object"
         }
       ]
     },
@@ -1722,6 +2375,51 @@
             },
             {
               "$ref": "#/$defs/APIExecResult"
+            },
+            {
+              "$ref": "#/$defs/APIDataResult"
+            },
+            {
+              "$ref": "#/$defs/APISuccess"
+            },
+            {
+              "$ref": "#/$defs/APIDataResult"
+            },
+            {
+              "$ref": "#/$defs/Job"
+            },
+            {
+              "$ref": "#/$defs/Job"
+            },
+            {
+              "items": {
+                "$ref": "#/$defs/Job"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            },
+            {
+              "$ref": "#/$defs/JobOutput"
+            },
+            {
+              "$ref": "#/$defs/APISuccess"
+            },
+            {
+              "$ref": "#/$defs/Job"
+            },
+            {
+              "$ref": "#/$defs/DiskCheckpoint"
+            },
+            {
+              "$ref": "#/$defs/CheckpointCatalog"
+            },
+            {
+              "$ref": "#/$defs/DiskCheckpoint"
+            },
+            {
+              "$ref": "#/$defs/APISuccess"
             }
           ]
         },
@@ -1983,6 +2681,84 @@
         "mutation": true,
         "name": "exec",
         "retry": "never"
+      },
+      {
+        "cancel": "cancel_call_only",
+        "mutation": false,
+        "name": "read_file",
+        "retry": "read_only"
+      },
+      {
+        "cancel": "reconcile_file",
+        "mutation": true,
+        "name": "write_file",
+        "retry": "reconcile_file"
+      },
+      {
+        "cancel": "cancel_call_only",
+        "mutation": false,
+        "name": "list_files",
+        "retry": "read_only"
+      },
+      {
+        "cancel": "reconcile_jobs",
+        "mutation": true,
+        "name": "start_job",
+        "retry": "never"
+      },
+      {
+        "cancel": "cancel_call_only",
+        "mutation": false,
+        "name": "job",
+        "retry": "read_only"
+      },
+      {
+        "cancel": "cancel_call_only",
+        "mutation": false,
+        "name": "list_jobs",
+        "retry": "read_only"
+      },
+      {
+        "cancel": "cancel_call_only",
+        "mutation": false,
+        "name": "job_logs",
+        "retry": "read_only"
+      },
+      {
+        "cancel": "reconcile_job",
+        "mutation": true,
+        "name": "kill_job",
+        "retry": "same_job_id"
+      },
+      {
+        "cancel": "cancel_wait_only",
+        "mutation": false,
+        "name": "wait_job",
+        "retry": "read_only"
+      },
+      {
+        "cancel": "reconcile_checkpoints",
+        "mutation": true,
+        "name": "checkpoint",
+        "retry": "never"
+      },
+      {
+        "cancel": "cancel_call_only",
+        "mutation": false,
+        "name": "checkpoints",
+        "retry": "read_only"
+      },
+      {
+        "cancel": "cancel_call_only",
+        "mutation": false,
+        "name": "inspect_checkpoint",
+        "retry": "read_only"
+      },
+      {
+        "cancel": "reconcile_checkpoints",
+        "mutation": true,
+        "name": "remove_checkpoint",
+        "retry": "reconcile_checkpoints"
       }
     ],
     "node_authority": "caller_unix_socket_permissions_root_equivalent",
@@ -2124,6 +2900,90 @@
         "method": "exec",
         "result": {
           "$ref": "#/$defs/APIExecResult"
+        }
+      },
+      {
+        "method": "read_file",
+        "result": {
+          "$ref": "#/$defs/APIDataResult"
+        }
+      },
+      {
+        "method": "write_file",
+        "result": {
+          "$ref": "#/$defs/APISuccess"
+        }
+      },
+      {
+        "method": "list_files",
+        "result": {
+          "$ref": "#/$defs/APIDataResult"
+        }
+      },
+      {
+        "method": "start_job",
+        "result": {
+          "$ref": "#/$defs/Job"
+        }
+      },
+      {
+        "method": "job",
+        "result": {
+          "$ref": "#/$defs/Job"
+        }
+      },
+      {
+        "method": "list_jobs",
+        "result": {
+          "items": {
+            "$ref": "#/$defs/Job"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        }
+      },
+      {
+        "method": "job_logs",
+        "result": {
+          "$ref": "#/$defs/JobOutput"
+        }
+      },
+      {
+        "method": "kill_job",
+        "result": {
+          "$ref": "#/$defs/APISuccess"
+        }
+      },
+      {
+        "method": "wait_job",
+        "result": {
+          "$ref": "#/$defs/Job"
+        }
+      },
+      {
+        "method": "checkpoint",
+        "result": {
+          "$ref": "#/$defs/DiskCheckpoint"
+        }
+      },
+      {
+        "method": "checkpoints",
+        "result": {
+          "$ref": "#/$defs/CheckpointCatalog"
+        }
+      },
+      {
+        "method": "inspect_checkpoint",
+        "result": {
+          "$ref": "#/$defs/DiskCheckpoint"
+        }
+      },
+      {
+        "method": "remove_checkpoint",
+        "result": {
+          "$ref": "#/$defs/APISuccess"
         }
       }
     ],

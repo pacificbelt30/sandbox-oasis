@@ -6,7 +6,7 @@
 - Configure authentication on the trusted host, including a WSL or VM host.
 
 - For new v0.0.3+ installations, follow [install → keyring → login → first startup](first-run.md). Login selects the profile and prepares the admin secret automatically.
-- The manual steps below also support v0.0.2; do not combine both setup flows.
+- The steps below cover manual registration with `set/import`; do not combine them with the `login` flow.
 
 ## 1. Choose credential separation
 
@@ -82,7 +82,7 @@ Anthropic: disabled
 
 - Expected in profile mode: `Profile: work`, and `api-key` or `oauth` for the selected provider.
 - Creating a profile does not select it. Before selection, `auth show` reports legacy OpenAI information.
-- Published v0.0.2 uses the manual registration/import above. v0.0.3+ also offers [login Kata and live API connection checks](../commands/login.md).
+- For login through a dedicated Kata VM, see [login and API connection checks](../commands/login.md).
 
 ## 4. Continue to the first worker
 

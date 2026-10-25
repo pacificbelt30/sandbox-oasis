@@ -35,7 +35,9 @@ func TestSettingsPreserveHiddenSecretsAndRejectLostUpdates(t *testing.T) {
 	if bytes.Contains(data, []byte("fixture-private-secret")) {
 		t.Fatal("secret rendered")
 	}
-	d.Paths = []string{"/v2/read"}
+	d.Paths = nil
+	d.ExactPaths = []string{"/v2/read"}
+	d.Methods = []string{"POST"}
 	if err := Save(path, rev, d, ""); err != nil {
 		t.Fatal(err)
 	}
@@ -47,7 +49,7 @@ func TestSettingsPreserveHiddenSecretsAndRejectLostUpdates(t *testing.T) {
 		t.Fatal(err)
 	}
 	secret, err := loaded[0].Secret(context.Background())
-	if err != nil || secret != "fixture-private-secret" || loaded[0].Paths[0] != "/v2/read" {
+	if err != nil || secret != "fixture-private-secret" || len(loaded[0].Paths) != 0 || len(loaded[0].ExactPaths) != 1 || loaded[0].ExactPaths[0] != "/v2/read" || len(loaded[0].Methods) != 1 || loaded[0].Methods[0] != "POST" {
 		t.Fatal("saved routes lost compatibility or secret")
 	}
 	info, _ := os.Stat(path)
@@ -80,5 +82,36 @@ func TestSettingsRejectUnsafeFilesAndNeverEchoInvalidSecretValues(t *testing.T) 
 		if _, err := Template("bearer-readonly", "service", origin, "/v1"); err == nil {
 			t.Fatal("unsafe template origin accepted")
 		}
+	}
+}
+
+func TestLegacyPrefixSaveOmitsOptionalExactPaths(t *testing.T) {
+	dir := t.TempDir()
+	_ = os.Chmod(dir, 0700)
+	file := filepath.Join(dir, "routes.json")
+	d, err := Template("bearer-readonly", "legacy", "https://api.example.com", "/v1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, rev, err := Load(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = Save(file, rev, d, "fixture-secret"); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// An older strict decoder must still accept a route that uses old features.
+	var legacy []struct {
+		Name, Upstream, Header, Prefix, Provider, Secret string
+		Paths, Methods                                   []string
+	}
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err = decoder.Decode(&legacy); err != nil || len(legacy) != 1 || legacy[0].Paths[0] != "/v1" {
+		t.Fatalf("legacy schema no longer readable: %v", err)
 	}
 }
