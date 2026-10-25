@@ -30,7 +30,7 @@
 | GitHub CLI（`gh`） | 署名付き配布物の導入・`upgrade`。通常のVM利用には不要 | [Linuxへの導入](https://github.com/cli/cli/blob/trunk/docs/install_linux.md) |
 | Bash・curl・CA証明書・uv管理Python | 従来の配布インストーラー | [インストール](../installation.md) |
 
-- `gh attestation verify`の`--bundle`・`--signer-workflow`・`--source-ref`・`--cert-identity`に対応する版を使用します。
+- `gh attestation verify`の`--bundle`・`--source-ref`・`--cert-identity`に対応する版を使用します。
 - 保存した証跡bundleを使うため、GitHubへのログインは要求しません。検証に使う信頼情報の取得・更新に通信する場合があります。
 - ツール不足・署名不一致・未知の署名者・別workflow・別タグ・証跡不足は、配置前にエラーにします。
 
@@ -51,7 +51,6 @@ curl -fLsS --proto '=https' --proto-redir '=https' "$base/provenance.json" -o "$
 gh attestation verify "$oaiso_install_dir/install.sh" \
   --bundle "$oaiso_install_dir/provenance.json" \
   --repo pacificbelt30/sandbox-oasis \
-  --signer-workflow pacificbelt30/sandbox-oasis/.github/workflows/release.yml \
   --source-ref "refs/tags/$RELEASE_TAG" \
   --cert-identity "https://github.com/pacificbelt30/sandbox-oasis/.github/workflows/release.yml@refs/tags/$RELEASE_TAG" \
   --cert-oidc-issuer https://token.actions.githubusercontent.com \

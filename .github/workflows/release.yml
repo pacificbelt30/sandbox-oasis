@@ -84,10 +84,12 @@ jobs:
 
       - name: Verify signed artifacts before upload
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_CONFIG_DIR: ${{ runner.temp }}/oaiso-gh-verify
         run: |
+          unset GH_TOKEN GITHUB_TOKEN GH_ENTERPRISE_TOKEN GITHUB_ENTERPRISE_TOKEN
+          mkdir -m 700 -- "$GH_CONFIG_DIR"
           for asset in oaiso-linux-amd64.tar.gz install.sh SHA256SUMS sbom.cdx.json; do
-            gh attestation verify "dist/release/$asset" --bundle dist/release/provenance.json --repo "$GITHUB_REPOSITORY" --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" --source-ref "refs/tags/$RELEASE_TAG" --cert-identity "https://github.com/$GITHUB_REPOSITORY/.github/workflows/release.yml@refs/tags/$RELEASE_TAG" --source-digest "$GITHUB_SHA" --deny-self-hosted-runners
+            gh attestation verify "dist/release/$asset" --bundle dist/release/provenance.json --repo "$GITHUB_REPOSITORY" --source-ref "refs/tags/$RELEASE_TAG" --cert-identity "https://github.com/$GITHUB_REPOSITORY/.github/workflows/release.yml@refs/tags/$RELEASE_TAG" --cert-oidc-issuer https://token.actions.githubusercontent.com --source-digest "$GITHUB_SHA" --deny-self-hosted-runners --hostname github.com
           done
 
       - name: Upload complete release, then publish

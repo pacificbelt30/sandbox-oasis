@@ -77,22 +77,31 @@ jobs:
         id: ci_provenance
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
-          subject-path: dist/release/oaiso-linux-amd64.tar.gz
+          subject-path: |
+            dist/release/oaiso-linux-amd64.tar.gz
+            dist/release/install.sh
+            dist/release/SHA256SUMS
+            dist/release/sbom.cdx.json
           create-storage-record: false
 
       - name: Verify signature, tamper rejection and signer constraints
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_CONFIG_DIR: ${{ runner.temp }}/oaiso-gh-verify
           ATTESTATION_BUNDLE: ${{ steps.ci_provenance.outputs.bundle-path }}
         run: |
-          args=(--bundle "$ATTESTATION_BUNDLE" --repo "$GITHUB_REPOSITORY" --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/ci.yml" --source-ref refs/heads/main --source-digest "$GITHUB_SHA" --deny-self-hosted-runners)
-          gh attestation verify dist/release/oaiso-linux-amd64.tar.gz "${args[@]}"
+          unset GH_TOKEN GITHUB_TOKEN GH_ENTERPRISE_TOKEN GITHUB_ENTERPRISE_TOKEN
+          mkdir -m 700 -- "$GH_CONFIG_DIR"
+          args=(--bundle "$ATTESTATION_BUNDLE" --repo "$GITHUB_REPOSITORY" --source-digest "$GITHUB_SHA" --cert-oidc-issuer https://token.actions.githubusercontent.com --deny-self-hosted-runners --hostname github.com)
+          identity="https://github.com/$GITHUB_REPOSITORY/.github/workflows/ci.yml@refs/heads/main"
+          for asset in oaiso-linux-amd64.tar.gz install.sh SHA256SUMS sbom.cdx.json; do
+            gh attestation verify "dist/release/$asset" "${args[@]}" --cert-identity "$identity" --source-ref refs/heads/main
+          done
           cp dist/release/oaiso-linux-amd64.tar.gz /tmp/tampered-oaiso.tar.gz
           printf altered >> /tmp/tampered-oaiso.tar.gz
-          if gh attestation verify /tmp/tampered-oaiso.tar.gz "${args[@]}"; then exit 1; fi
-          if gh attestation verify dist/release/oaiso-linux-amd64.tar.gz "${args[@]}" --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml"; then exit 1; fi
-          if gh attestation verify dist/release/oaiso-linux-amd64.tar.gz "${args[@]}" --source-ref refs/tags/v0.0.0-ci; then exit 1; fi
+          if gh attestation verify /tmp/tampered-oaiso.tar.gz "${args[@]}" --cert-identity "$identity" --source-ref refs/heads/main; then exit 1; fi
+          if gh attestation verify dist/release/oaiso-linux-amd64.tar.gz "${args[@]}" --cert-identity "https://github.com/$GITHUB_REPOSITORY/.github/workflows/release.yml@refs/heads/main" --source-ref refs/heads/main; then exit 1; fi
+          if gh attestation verify dist/release/oaiso-linux-amd64.tar.gz "${args[@]}" --cert-identity "$identity" --source-ref refs/tags/v0.0.0-ci; then exit 1; fi
 
       - name: Cross-compile (macOS arm64)
         run: GOOS=darwin GOARCH=arm64 go build -o oaiso-darwin-arm64 .

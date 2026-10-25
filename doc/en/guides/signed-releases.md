@@ -21,7 +21,7 @@ Checksums detect corruption; they do not replace signatures. CI obtains short-li
 
 ## Prerequisites
 
-- Official [GitHub CLI for Linux](https://github.com/cli/cli/blob/trunk/docs/install_linux.md), supporting `gh attestation verify --bundle --signer-workflow --source-ref --cert-identity`. Needed for signed installation/upgrade, not ordinary VM use.
+- Official [GitHub CLI for Linux](https://github.com/cli/cli/blob/trunk/docs/install_linux.md), supporting `gh attestation verify --bundle --source-ref --cert-identity`. Needed for signed installation/upgrade, not ordinary VM use.
 - Existing [installer prerequisites](../installation.md): Bash, curl, CA certificates and uv-managed Python. No Go/Make required for prebuilt installation.
 - Local evidence bundles avoid a GitHub login requirement. Trusted-root refresh may use the network.
 - Missing tools/evidence, altered signatures, unexpected signer/workflow/tag fail before placement.
@@ -43,7 +43,6 @@ curl -fLsS --proto '=https' --proto-redir '=https' "$base/provenance.json" -o "$
 gh attestation verify "$oaiso_install_dir/install.sh" \
   --bundle "$oaiso_install_dir/provenance.json" \
   --repo pacificbelt30/sandbox-oasis \
-  --signer-workflow pacificbelt30/sandbox-oasis/.github/workflows/release.yml \
   --source-ref "refs/tags/$RELEASE_TAG" \
   --cert-identity "https://github.com/pacificbelt30/sandbox-oasis/.github/workflows/release.yml@refs/tags/$RELEASE_TAG" \
   --cert-oidc-issuer https://token.actions.githubusercontent.com \

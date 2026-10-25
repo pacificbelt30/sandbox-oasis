@@ -244,7 +244,10 @@ class SignatureBoundaryTests(unittest.TestCase):
                 unpack.assert_not_called()
                 argv = verify.call_args.args[0]
                 self.assertIn('refs/tags/v1.2.3', argv)
-                self.assertIn(INSTALLER.REPOSITORY + '/.github/workflows/release.yml', argv)
+                self.assertIn('https://github.com/' + INSTALLER.REPOSITORY + '/.github/workflows/release.yml@refs/tags/v1.2.3', argv)
+                selectors = {'--cert-identity', '--cert-identity-regex', '--signer-repo', '--signer-workflow'}
+                self.assertEqual(sum(argument in selectors for argument in argv), 1)
+                self.assertIn('--cert-oidc-issuer', argv)
                 self.assertIn('--deny-self-hosted-runners', argv)
 
     def test_sbom_uses_built_binary_dependencies_and_runtime_pins(self):

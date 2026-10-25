@@ -147,7 +147,7 @@ def verify_attestation(artifact, bundle, version):
     if not verifier:
         raise ValueError('signed release verification requires GitHub CLI (gh): https://github.com/cli/cli/blob/trunk/docs/install_linux.md')
     subprocess.run([verifier, 'attestation', 'verify', str(artifact), '--bundle', str(bundle),
-                    '--repo', REPOSITORY, '--signer-workflow', REPOSITORY + '/.github/workflows/release.yml',
+                    '--repo', REPOSITORY,
                     '--source-ref', 'refs/tags/' + version,
                     '--cert-identity', 'https://github.com/' + REPOSITORY + '/.github/workflows/release.yml@refs/tags/' + version,
                     '--cert-oidc-issuer', 'https://token.actions.githubusercontent.com',
