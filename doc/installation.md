@@ -166,3 +166,7 @@ user sudo codex-dock
 | runc | Proxyコンテナの実行。インストーラーが配置 | [公式配布物の導入](https://github.com/opencontainers/runc#releases) |
 
 - Goが必要になるのは、製品自体やGo APIを使う呼び出し側をソースからビルドする環境です。[Go公式のLinux手順](https://go.dev/doc/install)に沿った[コマンド例](development/toolchain.md#2-goを公式linux手順で導入する)を掲載しています。
+
+## 署名付き配布物（未リリースmain）
+
+- [署名・作成元・SBOM・旧版への巻戻し防止](guides/signed-releases.md)。次の署名付き配布版ではGitHub CLIも必要です。公開済みv0.0.3にはまだ適用されません。

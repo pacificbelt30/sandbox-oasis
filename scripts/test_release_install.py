@@ -58,7 +58,8 @@ class ReleaseIntegrityTests(unittest.TestCase):
             root = Path(temporary)
             source = bundle(root / 'source')
             with patch.object(PACKAGER.subprocess, 'check_output', return_value='oaiso version v1.2.3\n'), \
-                    patch.object(PACKAGER, 'collect_notices', return_value='fixture notices'):
+                    patch.object(PACKAGER, 'collect_notices', return_value='fixture notices'), \
+                    patch.object(PACKAGER, 'collect_sbom', return_value={'bomFormat': 'CycloneDX', 'specVersion': '1.6', 'version': 1, 'components': []}):
                 for name in ['first', 'second']:
                     PACKAGER.package(source, root / name, 'v1.2.3', ROOT / 'install.sh')
             self.assertEqual((root / 'first/oaiso-linux-amd64.tar.gz').read_bytes(),
@@ -159,7 +160,7 @@ class ReleaseIntegrityTests(unittest.TestCase):
                         target.write_bytes(archive.read_bytes())
                 destination = root / 'download'
                 destination.mkdir()
-                with patch.object(INSTALLER, 'download', side_effect=download), patch.object(INSTALLER.subprocess, 'run') as execute:
+                with patch.object(INSTALLER, 'download', side_effect=download), patch.object(INSTALLER.subprocess, 'run') as execute, patch.object(INSTALLER, 'verify_attestation'):
                     with self.assertRaisesRegex(ValueError, mismatch):
                         INSTALLER.get_release(destination, 'v2.0.0' if mismatch == 'version' else 'v1.2.3')
                     execute.assert_not_called()
@@ -212,6 +213,65 @@ class PipedInstallerTests(unittest.TestCase):
                                 input=(ROOT / 'install.sh').read_text(), capture_output=True, text=True)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('--offline requires --bundle', result.stderr)
+
+
+
+
+
+class SignatureBoundaryTests(unittest.TestCase):
+    def test_bad_signature_refuses_before_unpack(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = bundle(root / 'source')
+            archive = root / 'fixture.tar.gz'
+            archive_bundle(source, archive)
+            digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+            def download(url, target, limit):
+                if url.endswith('SHA256SUMS'):
+                    target.write_text(digest + '  ' + INSTALLER.ARCHIVE + '\n')
+                elif url.endswith('provenance.json'):
+                    target.write_text('{}')
+                else:
+                    target.write_bytes(archive.read_bytes())
+            destination = root / 'download'
+            destination.mkdir()
+            with patch.object(INSTALLER, 'download', side_effect=download), \
+                    patch.object(INSTALLER.shutil, 'which', return_value='/fixture/gh'), \
+                    patch.object(INSTALLER.subprocess, 'run', side_effect=subprocess.CalledProcessError(1, 'gh')) as verify, \
+                    patch.object(INSTALLER, 'unpack') as unpack:
+                with self.assertRaises(subprocess.CalledProcessError):
+                    INSTALLER.get_release(destination, 'v1.2.3')
+                unpack.assert_not_called()
+                argv = verify.call_args.args[0]
+                self.assertIn('refs/tags/v1.2.3', argv)
+                self.assertIn(INSTALLER.REPOSITORY + '/.github/workflows/release.yml', argv)
+                self.assertIn('--deny-self-hosted-runners', argv)
+
+    def test_sbom_uses_built_binary_dependencies_and_runtime_pins(self):
+        info = {'GoVersion': 'go1.27.3', 'Deps': [{'Path': 'example.org/dependency', 'Version': 'v1.2.3', 'Sum': 'h1:fixture'}]}
+        with tempfile.TemporaryDirectory() as temporary:
+            source = bundle(Path(temporary) / 'source')
+            with patch.object(PACKAGER.subprocess, 'check_output', return_value=json.dumps(info)):
+                inventory = PACKAGER.collect_sbom(source, 'v1.2.3')
+            self.assertEqual(inventory['bomFormat'], 'CycloneDX')
+            dependencies = [item for item in inventory['components'] if item['name'] == 'example.org/dependency']
+            self.assertEqual(len(dependencies), 1)
+            self.assertEqual(dependencies[0]['version'], 'v1.2.3')
+            self.assertTrue(any(item['name'] == 'kata' for item in inventory['components']))
+            self.assertEqual(len([item for item in inventory['components'] if item['type'] == 'file']), 3)
+
+
+class SourceBindingTests(unittest.TestCase):
+    def test_stale_or_dirty_binary_is_not_publishable(self):
+        revision = 'a' * 40
+        for recorded, dirty in [('b' * 40, 'false'), (revision, 'true'), (None, 'false')]:
+            info = {'Settings': [{'Key': 'vcs.revision', 'Value': recorded}, {'Key': 'vcs.modified', 'Value': dirty}]}
+            with patch.object(PACKAGER.subprocess, 'check_output', side_effect=[revision, '', json.dumps(info)]):
+                with self.assertRaisesRegex(ValueError, 'revision/cleanliness'):
+                    PACKAGER.verify_source(Path('/fixture'))
+        info = {'Settings': [{'Key': 'vcs.revision', 'Value': revision}, {'Key': 'vcs.modified', 'Value': 'false'}]}
+        with patch.object(PACKAGER.subprocess, 'check_output', side_effect=[revision, '', *[json.dumps(info)] * 3]):
+            PACKAGER.verify_source(Path('/fixture'))
 
 
 if __name__ == '__main__':

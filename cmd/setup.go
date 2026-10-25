@@ -16,7 +16,7 @@ import (
 
 func init() {
 	var bundle, operator, cache, python string
-	var apply, offline, rollback bool
+	var apply, offline, rollback, allowDowngrade bool
 	setup := &cobra.Command{Use: "setup", Short: "Plan or apply a verified Ubuntu 26.04 x86_64 node install/update", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, args []string) (runErr error) {
 		if apply && os.Geteuid() != 0 {
 			return fmt.Errorf("--apply needs root to install services; run the displayed plan first and use sudo for setup only")
@@ -61,6 +61,9 @@ func init() {
 		if offline {
 			argv = append(argv, "--offline")
 		}
+		if allowDowngrade {
+			argv = append(argv, "--allow-downgrade")
+		}
 		if rollback {
 			argv = append(argv, "--rollback")
 		}
@@ -79,6 +82,7 @@ func init() {
 	setup.Flags().StringVar(&cache, "cache", "/var/cache/codex-dock-setup", "Verified upstream archive cache")
 	setup.Flags().BoolVar(&apply, "apply", false, "Install/update the dedicated services (default prints a plan)")
 	setup.Flags().BoolVar(&offline, "offline", false, "Require cached archives and already installed system packages")
+	setup.Flags().BoolVar(&allowDowngrade, "allow-downgrade", false, "Explicitly allow a release older than the installed high-water mark")
 	setup.Flags().BoolVar(&rollback, "rollback", false, "Restore the previous successful setup transaction after all containers are removed")
 	rootCmd.AddCommand(setup)
 }

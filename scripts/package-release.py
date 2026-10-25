@@ -11,6 +11,7 @@ import re
 import struct
 import subprocess
 import tarfile
+import urllib.parse
 
 
 FILES = ['oaiso', 'codex-dock-worker-guard', 'codex-dock-io-logger']
@@ -45,7 +46,48 @@ def collect_notices():
     return '\n\n' + ('\n\n' + '=' * 72 + '\n\n').join(sections)
 
 
-def package(bundle, output, version, installer):
+def collect_sbom(bundle, version):
+    components = {}
+    binaries = []
+    for name in FILES:
+        path = bundle / name
+        info = json.loads(subprocess.check_output(['go', 'version', '-m', '-json', str(path)], text=True))
+        binaries.append({'type': 'file', 'name': name, 'bom-ref': 'file:' + name,
+                         'hashes': [{'alg': 'SHA-256', 'content': hashlib.sha256(path.read_bytes()).hexdigest()}]})
+        toolchain = info['GoVersion']
+        components['stdlib:' + toolchain] = {'type': 'library', 'name': 'Go standard library', 'version': toolchain,
+                                           'bom-ref': 'stdlib:' + toolchain}
+        for module in info.get('Deps', []):
+            module = module.get('Replace') or module
+            if not module.get('Version') or not module.get('Sum'):
+                raise ValueError('release dependency lacks immutable module identity: ' + module['Path'])
+            ref = 'pkg:golang/' + urllib.parse.quote(module['Path'], safe='/') + '@' + urllib.parse.quote(module['Version'], safe='')
+            components[ref] = {'type': 'library', 'name': module['Path'], 'version': module['Version'],
+                               'bom-ref': ref, 'purl': ref,
+                               'properties': [{'name': 'go:module:sum', 'value': module['Sum']}]}
+    for name, asset in json.loads((ROOT / 'deploy/kata/assets.lock.json').read_text()).items():
+        components['runtime:' + name] = {'type': 'application', 'name': name, 'version': asset['version'],
+                                         'bom-ref': 'runtime:' + name,
+                                         'hashes': [{'alg': 'SHA-256', 'content': asset['sha256']}],
+                                         'externalReferences': [{'type': 'distribution', 'url': asset['url']}]}
+    return {'bomFormat': 'CycloneDX', 'specVersion': '1.6', 'version': 1,
+            'metadata': {'component': {'type': 'application', 'name': 'Oaiso', 'version': version},
+                         'properties': [{'name': 'oaiso:coverage', 'value': 'Host executables, linked Go modules and pinned downloaded runtime assets; excludes guest images and OS packages'}]},
+            'components': sorted([*components.values(), *binaries], key=lambda item: item['bom-ref'])}
+
+
+def verify_source(bundle):
+    revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
+    if subprocess.check_output(['git', 'status', '--porcelain'], cwd=ROOT, text=True).strip():
+        raise ValueError('release source tree must be clean')
+    for name in FILES:
+        info = json.loads(subprocess.check_output(['go', 'version', '-m', '-json', str(bundle / name)], text=True))
+        settings = {item['Key']: item['Value'] for item in info.get('Settings', [])}
+        if settings.get('vcs.revision') != revision or settings.get('vcs.modified') != 'false':
+            raise ValueError('release binary source revision/cleanliness mismatch: ' + name)
+
+
+def package(bundle, output, version, installer, require_clean_source=False):
     if not re.fullmatch(r'v[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?', version):
         raise ValueError('expected a release tag such as v0.0.2')
     record = json.loads((bundle / 'bundle.json').read_text())
@@ -70,6 +112,8 @@ def package(bundle, output, version, installer):
             stream.seek(0)
             if hashlib.file_digest(stream, 'sha256').hexdigest() != record['files'][name]:
                 raise ValueError('bundle executable checksum mismatch: ' + name)
+    if require_clean_source:
+        verify_source(bundle)
     if subprocess.check_output([str((bundle / 'oaiso').resolve()), '--version'], text=True).strip() != 'oaiso version ' + version:
         raise ValueError('CLI version does not match release tag')
     output.mkdir(parents=True, exist_ok=True)
@@ -96,8 +140,9 @@ def package(bundle, output, version, installer):
     if script.count(marker) != 1:
         raise ValueError('installer is missing its release version marker')
     (output / 'install.sh').write_text(script.replace(marker, 'DEFAULT_VERSION = ' + repr(version)))
+    (output / 'sbom.cdx.json').write_text(json.dumps(collect_sbom(bundle, version), sort_keys=True, indent=2) + '\n')
     lines = []
-    for name in ['oaiso-linux-amd64.tar.gz', 'install.sh']:
+    for name in ['oaiso-linux-amd64.tar.gz', 'install.sh', 'sbom.cdx.json']:
         with (output / name).open('rb') as stream:
             lines.append(hashlib.file_digest(stream, 'sha256').hexdigest() + '  ' + name)
     (output / 'SHA256SUMS').write_text('\n'.join(lines) + '\n')
@@ -108,6 +153,7 @@ if __name__ == '__main__':
     parser.add_argument('--bundle', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--version', required=True)
+    parser.add_argument('--require-clean-source', action='store_true', help='Require each binary to identify the clean current Git commit')
     parser.add_argument('--installer', type=Path, default=Path(__file__).resolve().parents[1] / 'install.sh')
     args = parser.parse_args()
-    package(args.bundle, args.output, args.version, args.installer)
+    package(args.bundle, args.output, args.version, args.installer, args.require_clean_source)

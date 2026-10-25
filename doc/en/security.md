@@ -137,3 +137,7 @@
 ## Operation audit
 
 - Unreleased (main): [Persistence, gap detection, capacity and failure behavior](guides/audit.md). Local root-resistant integrity is not guaranteed.
+
+## Distribution signatures
+
+- Unreleased main: [Signature/provenance/SBOM/rollback policy](guides/signed-releases.md). Published v0.0.3 uses checksums.

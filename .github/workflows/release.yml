@@ -26,6 +26,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
+      attestations: write
     env:
       RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
     steps:
@@ -49,6 +51,7 @@ jobs:
       - name: Verify release source
         run: |
           [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?$ ]]
+          test "$GITHUB_REF" = "refs/tags/$RELEASE_TAG"
           test "$(git rev-parse HEAD)" = "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")"
           test "$(head -n 1 doc/release-notes.md)" = "# Oaiso $RELEASE_TAG"
           bash -n install.sh scripts/install.sh
@@ -59,9 +62,33 @@ jobs:
       - name: Build and package
         run: |
           make node-bundle VERSION="$RELEASE_TAG"
-          uv run --no-project --no-config --managed-python --python 3.12 python scripts/package-release.py --bundle dist/node-bundle --output dist/release --version "$RELEASE_TAG"
+          uv run --no-project --no-config --managed-python --python 3.12 python scripts/package-release.py --require-clean-source --bundle dist/node-bundle --output dist/release --version "$RELEASE_TAG"
           cd dist/release
           sha256sum --check SHA256SUMS
+
+      - name: Sign release provenance
+        id: provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: |
+            dist/release/oaiso-linux-amd64.tar.gz
+            dist/release/install.sh
+            dist/release/SHA256SUMS
+            dist/release/sbom.cdx.json
+          create-storage-record: false
+
+      - name: Save portable signature evidence
+        env:
+          ATTESTATION_BUNDLE: ${{ steps.provenance.outputs.bundle-path }}
+        run: cp -- "$ATTESTATION_BUNDLE" dist/release/provenance.json
+
+      - name: Verify signed artifacts before upload
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for asset in oaiso-linux-amd64.tar.gz install.sh SHA256SUMS sbom.cdx.json; do
+            gh attestation verify "dist/release/$asset" --bundle dist/release/provenance.json --repo "$GITHUB_REPOSITORY" --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" --source-ref "refs/tags/$RELEASE_TAG" --cert-identity "https://github.com/$GITHUB_REPOSITORY/.github/workflows/release.yml@refs/tags/$RELEASE_TAG" --source-digest "$GITHUB_SHA" --deny-self-hosted-runners
+          done
 
       - name: Upload complete release, then publish
         env:
@@ -74,7 +101,7 @@ jobs:
           else
             gh release create "$RELEASE_TAG" --verify-tag --draft --title "Oaiso $RELEASE_TAG" --notes-file doc/release-notes.md
           fi
-          gh release upload "$RELEASE_TAG" dist/release/oaiso-linux-amd64.tar.gz dist/release/install.sh dist/release/SHA256SUMS --clobber
+          gh release upload "$RELEASE_TAG" dist/release/oaiso-linux-amd64.tar.gz dist/release/install.sh dist/release/SHA256SUMS dist/release/sbom.cdx.json dist/release/provenance.json --clobber
           if [ "$PUBLISH" = true ]; then
             release_base=${RELEASE_TAG%%+*}
             case "$release_base" in

@@ -199,3 +199,7 @@
 ## 操作の監査記録
 
 - 未リリース（main）：[保存・欠損検知・容量・障害時の扱い](guides/audit.md)。ローカルrootに耐える改ざん防止は保証しません。
+
+## 配布物の署名
+
+- 未リリースmain：[署名・作成元・SBOM・巻戻し防止](guides/signed-releases.md)。公開v0.0.3はchecksum方式です。

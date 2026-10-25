@@ -36,7 +36,7 @@ bash -n dist/release/install.sh
 ## 許可された公開を行う
 
 1. 対象の変更をcommit・pushし、そのコミットSHAのCI成功を確認する。
-2. 同じコミットへ指定タグを作成・pushする。タグpushはworkflowによる公開につながる。
+2. 同じコミットへ指定タグを作成・pushする。workflow_dispatchは対象タグのrefで起動し、入力tagとも一致させる。タグpushはworkflowによる公開につながる。
 3. Release workflowの成功と、下書きへの全ファイル添付後の公開を確認する。
 
 - 公開済みリリースは不変として扱う。失敗時はジョブ・ステップ・ログを確認し、原因を説明できた場合だけ未公開の同じworkflowを再試行する。修正のない連続再実行や、タグの移動で失敗を隠さない。
@@ -44,9 +44,11 @@ bash -n dist/release/install.sh
 
 ## 公開物を確認する
 
-- リリースAPIでタグ、draft/prerelease、latest、対象コミット、3つのアセットを確認する。
-- 実ファイルを取得し、`SHA256SUMS`・bundle manifest・版表示を照合する。Go build情報が含まれる場合はソースコミットとクリーンなビルドも確認する。
-- 公開インストーラーを通常ユーザーでパイプ実行し、`--apply`なしの計画を確認する。Goが不要という説明はGoをPATHから外して確認する。
+- リリースAPIでタグ、draft/prerelease、latest、対象コミット、5つのアセット（archive・install.sh・SHA256SUMS・sbom.cdx.json・provenance.json）を確認する。
+- 未リリースmain以降の署名付き版は[署名・作成元の検証](../../../doc/guides/signed-releases.md)を先に行う。repo・release workflow・対象タグ・runner種別を照合し、不足や不一致をchecksumだけで代用しない。旧公開版には署名を後付けしない。
+- 実ファイルを取得し、`SHA256SUMS`・bundle manifest・SBOM・版表示を照合する。Go build情報が含まれる場合はソースコミットとクリーンなビルドも確認する。
+- 署名付き版はインストーラー自体を実行前に検証する。パイプ実行はHTTPS bootstrapを信頼する手順として区別する。
+- 公開インストーラーを通常ユーザーで実行し、`--apply`なしの計画を確認する。Goが不要という説明はGoをPATHから外して確認する。
 - 公開ファイルのダウンロード確認に、事前展開したバンドル向けの`--offline`を混ぜない。オフライン利用には`--bundle`と必要な資産の準備が必要。
 - 検証目的で既存ホストへ適用・サービス再起動をしない。実配置・更新・rollbackは使い捨てノードで確認する。
 - タグとmainの関係、CI・workflow・アセット・計画表示の結果を報告する。公開したリンクを示し、確認した範囲を超えて動作保証しない。

@@ -13,12 +13,11 @@ import (
 	"time"
 )
 
-// Installer downloads the requested release's script and checks its published
-// SHA-256 before returning a private, non-executable file. The checksum detects
-// corruption/mismatches; it is not an independent publisher signature.
+// Installer checks the requested release installer hash and verifies its signed
+// provenance before returning a private, non-executable file.
 func Installer(ctx context.Context, tag, directory string) (string, error) {
 	client := &http.Client{Timeout: 30 * time.Second, CheckRedirect: releaseRedirect}
-	return installer(ctx, client, tag, directory)
+	return signedInstaller(ctx, client, tag, directory)
 }
 
 func releaseRedirect(req *http.Request, via []*http.Request) error {
@@ -94,5 +93,44 @@ func installer(ctx context.Context, client *http.Client, tag, directory string) 
 	if err := f.Close(); err != nil {
 		return "", err
 	}
+	return path, nil
+}
+
+func signedInstaller(ctx context.Context, client *http.Client, tag, directory string) (string, error) {
+	path, err := installer(ctx, client, tag, directory)
+	if err != nil {
+		return "", err
+	}
+	// Keep the unsigned helper private for checksum fixture tests only.
+	verified := false
+	defer func() {
+		if !verified {
+			_ = os.Remove(path)
+		}
+	}()
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://github.com/"+Repository+"/releases/download/"+tag+"/provenance.json", nil)
+	if err != nil {
+		return "", err
+	}
+	response, err := client.Do(request)
+	if err != nil {
+		return "", fmt.Errorf("release attestation unavailable")
+	}
+	defer func() { _ = response.Body.Close() }()
+	if response.StatusCode != 200 {
+		return "", fmt.Errorf("release attestation unavailable")
+	}
+	data, err := io.ReadAll(io.LimitReader(response.Body, (4<<20)+1))
+	if err != nil || len(data) > 4<<20 {
+		return "", fmt.Errorf("release attestation exceeds limit")
+	}
+	bundle := filepath.Join(directory, "provenance.json")
+	if err = os.WriteFile(bundle, data, 0600); err != nil {
+		return "", err
+	}
+	if err = VerifyAttestation(ctx, path, bundle, tag); err != nil {
+		return "", err
+	}
+	verified = true
 	return path, nil
 }

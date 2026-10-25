@@ -174,3 +174,7 @@ user sudo codex-dock
 | runc | Proxy containers; deployed by the installer | [Releases](https://github.com/opencontainers/runc#releases) |
 
 - Go is needed in environments that build Oaiso or a product embedding its Go API. See the [official Go Linux procedure](https://go.dev/doc/install) and our [command examples](development/toolchain.md#2-install-go-using-the-official-linux-procedure).
+
+## Signed distributions (Unreleased main)
+
+- [Signatures, provenance, SBOM and rollback protection](guides/signed-releases.md). The next signed distribution also requires GitHub CLI; published v0.0.3 is unchanged.

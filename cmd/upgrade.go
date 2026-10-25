@@ -14,10 +14,11 @@ func init() { rootCmd.AddCommand(newUpgradeCommand()) }
 
 func newUpgradeCommand() *cobra.Command {
 	var version string
-	var apply bool
+	var apply, allowDowngrade bool
 	cmd := &cobra.Command{Use: "upgrade", Short: "Review a verified release installation plan; apply only with --apply", Args: cobra.NoArgs}
 	cmd.Flags().StringVar(&version, "version", "", "Target release tag; defaults to the latest stable GitHub release")
 	cmd.Flags().BoolVar(&apply, "apply", false, "Apply the verified host installer after planning; live resources block installation")
+	cmd.Flags().BoolVar(&allowDowngrade, "allow-downgrade", false, "Explicitly allow an older signed release; the high-water mark is retained")
 	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
 		if os.Geteuid() == 0 {
 			return fmt.Errorf("run upgrade as the normal operator; the installer elevates through sudo when applying")
@@ -54,6 +55,9 @@ func newUpgradeCommand() *cobra.Command {
 			return err
 		}
 		args := []string{installer, "--version", version}
+		if allowDowngrade {
+			args = append(args, "--allow-downgrade")
+		}
 		if apply {
 			args = append(args, "--apply")
 		}

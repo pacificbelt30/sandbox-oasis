@@ -193,5 +193,34 @@ class SetupTests(unittest.TestCase):
             command.assert_not_called()
 
 
+
+
+
+class ReleaseFloorTests(unittest.TestCase):
+    def test_semver_order_including_numeric_prerelease(self):
+        versions = ['v1.0.0-alpha', 'v1.0.0-alpha.1', 'v1.0.0-alpha.beta',
+                    'v1.0.0-beta', 'v1.0.0-beta.2', 'v1.0.0-beta.11', 'v1.0.0-rc.1',
+                    'v1.0.0', 'v1.0.1', 'v2.0.0']
+        for a, b in zip(versions, versions[1:]):
+            self.assertTrue(setup.version_less(a, b), (a, b))
+            self.assertFalse(setup.version_less(b, a), (b, a))
+        self.assertFalse(setup.version_less('v1.0.0+build1', 'v1.0.0+build2'))
+        self.assertIsNone(setup.release_version('v1.0.0-beta.01'))
+
+    def test_floor_survives_explicit_older_version_and_corruption_denies(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.object(setup, 'STATE', Path(tmp)), patch.object(setup, 'trusted'):
+            path = Path(tmp) / 'release-floor.json'
+            path.write_text(json.dumps({'schema': 1, 'version': 'v2.0.0'}))
+            current = {'bundle': {'version': 'v1.0.0'}}
+            with self.assertRaisesRegex(ValueError, 'downgrade'):
+                setup.check_release_floor({'version': 'v1.5.0'}, current)
+            self.assertEqual(setup.check_release_floor({'version': 'v1.5.0'}, current, True), 'v2.0.0')
+            self.assertEqual(json.loads(path.read_text())['version'], 'v2.0.0')
+            self.assertEqual(setup.check_release_floor({'version': 'v2.1.0'}, current), 'v2.0.0')
+            path.write_text('{')
+            with self.assertRaises(ValueError):
+                setup.check_release_floor({'version': 'v2.1.0'}, current)
+
+
 if __name__ == '__main__':
     unittest.main()

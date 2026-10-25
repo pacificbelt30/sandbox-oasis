@@ -219,8 +219,21 @@ cli runtime-check --json > /evidence/readiness-updated.json
 ctr_node images list -q | sort > /evidence/images-after-update.txt
 cmp /evidence/images-before-update.txt /evidence/images-after-update.txt
 proof 'successful matched-version update retains images and project files'
+if [[ -f /var/lib/codex-dock-setup/release-floor.json ]]; then
+ cp /var/lib/codex-dock-setup/release-floor.json /evidence/release-floor.json
+ before_refusal=$(systemctl show --property MainPID --value codex-dock-node codex-dock-buildkit codex-dock-containerd)
+ if /bundle/oaiso setup --python "$setup_python" --bundle /bundle --operator kata-test --offline --apply > /evidence/downgrade-refused.txt 2>&1; then
+  echo 'implicit release downgrade unexpectedly succeeded' >&2; exit 1
+ fi
+ [[ $(< /evidence/downgrade-refused.txt) == *'refusing release downgrade'* ]]
+ [[ $(systemctl show --property MainPID --value codex-dock-node codex-dock-buildkit codex-dock-containerd) == "$before_refusal" ]]
+ [[ $(release) == "$updated_release" ]]
+ proof 'implicit downgrade rejected before stopping services'
+fi
 # Fail only the newly staged BuildKit executable. Old release assets stay intact.
-/bundle/oaiso setup --python "$setup_python" --bundle /bundle --operator kata-test --offline --apply > /evidence/failed-update.txt 2>&1 &
+downgrade_args=()
+if [[ $(/bundle/oaiso setup --help) == *'--allow-downgrade'* ]]; then downgrade_args+=(--allow-downgrade); fi
+/bundle/oaiso setup --python "$setup_python" --bundle /bundle --operator kata-test --offline "${downgrade_args[@]}" --apply > /evidence/failed-update.txt 2>&1 &
 update_pid=$!
 faulted=''
 for attempt in $(seq 1 3000); do
@@ -245,6 +258,14 @@ proof 'failed new service activation automatically restores previous working rel
 /usr/local/bin/oaiso setup --python "$setup_python" --rollback --apply > /evidence/rollback.txt 2>&1
 [[ $(release) == "$initial_release" ]]
 cli runtime-check --json > /evidence/readiness-rollback.json
+if [[ -f /evidence/release-floor.json ]]; then
+ cmp /evidence/release-floor.json /var/lib/codex-dock-setup/release-floor.json
+ if /bundle/oaiso setup --python "$setup_python" --bundle /bundle --operator kata-test --offline > /evidence/downgrade-after-rollback.txt 2>&1; then
+  echo 'rollback silently lowered release floor' >&2; exit 1
+ fi
+ /bundle/oaiso setup --python "$setup_python" --bundle /bundle --operator kata-test --offline --allow-downgrade > /evidence/explicit-downgrade-plan.txt
+ proof 'explicit rollback preserves high-water mark; older installation still requires explicit approval flag'
+fi
 cli vm ps -a --json > /evidence/final-vms.json
 ctr_node containers list -q > /evidence/final-containers.txt
 ctr_node tasks list -q > /evidence/final-tasks.txt

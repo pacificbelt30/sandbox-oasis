@@ -8,14 +8,14 @@ main() {
   while (($#)); do
     argument=$1
     case "$argument" in
-      --apply) ;;
+      --apply|--allow-downgrade) ;;
       --offline) offline=true ;;
       --operator|--bundle|--cache|--version)
         (($# >= 2)) || { echo "install: missing value for $argument" >&2; return 1; }
         case "$argument" in --operator) operator=$2 ;; --bundle) bundle=$2 ;; esac
         shift ;;
       -h|--help)
-        printf '%s\n' 'Usage: install.sh [--apply] [--version TAG] [--operator USER] [--bundle PATH] [--cache PATH] [--offline]' \
+        printf '%s\n' 'Usage: install.sh [--apply] [--allow-downgrade] [--version TAG] [--operator USER] [--bundle PATH] [--cache PATH] [--offline]' \
           'Downloads a prebuilt Oaiso release and shows its installation plan.' \
           '--apply installs after the plan succeeds. No Go, Make or checkout is needed.' \
           '--bundle uses an existing bundle; --offline requires it and prepared uv/Python.'
@@ -29,6 +29,9 @@ main() {
   if "$offline" && [[ -z $bundle ]]; then
     echo 'install: --offline requires --bundle PATH; prepare the release and uv/Python first' >&2
     return 1
+  fi
+  if [[ -z $bundle ]]; then
+    command -v gh >/dev/null || { echo 'install: signed releases require GitHub CLI (gh): https://github.com/cli/cli/blob/trunk/docs/install_linux.md' >&2; return 1; }
   fi
   if ! uv=$(command -v uv); then
     if [[ -x "$HOME/.local/bin/uv" ]]; then
@@ -139,6 +142,19 @@ def unpack(archive, destination):
         raise ValueError('incomplete release archive')
 
 
+def verify_attestation(artifact, bundle, version):
+    verifier = shutil.which('gh')
+    if not verifier:
+        raise ValueError('signed release verification requires GitHub CLI (gh): https://github.com/cli/cli/blob/trunk/docs/install_linux.md')
+    subprocess.run([verifier, 'attestation', 'verify', str(artifact), '--bundle', str(bundle),
+                    '--repo', REPOSITORY, '--signer-workflow', REPOSITORY + '/.github/workflows/release.yml',
+                    '--source-ref', 'refs/tags/' + version,
+                    '--cert-identity', 'https://github.com/' + REPOSITORY + '/.github/workflows/release.yml@refs/tags/' + version,
+                    '--cert-oidc-issuer', 'https://token.actions.githubusercontent.com',
+                    '--deny-self-hosted-runners', '--hostname', 'github.com'],
+                   check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=60)
+
+
 def get_release(work, version):
     if not version:
         metadata = work / 'release.json'
@@ -148,6 +164,8 @@ def get_release(work, version):
         raise ValueError('version must be a release tag such as v0.0.2')
     base = 'https://github.com/' + REPOSITORY + '/releases/download/' + urllib.parse.quote(version, safe='') + '/'
     checksums, archive = work / 'SHA256SUMS', work / ARCHIVE
+    attestation = work / 'provenance.json'
+    download(base + 'provenance.json', attestation, 4 << 20)
     download(base + 'SHA256SUMS', checksums, 1 << 20)
     matches = [line.split()[0] for line in checksums.read_text().splitlines()
                if len(line.split()) == 2 and line.split()[1] == ARCHIVE]
@@ -157,6 +175,7 @@ def get_release(work, version):
     with archive.open('rb') as stream:
         if hashlib.file_digest(stream, 'sha256').hexdigest() != matches[0]:
             raise ValueError('release archive checksum mismatch')
+    verify_attestation(archive, attestation, version)
     directory = work / 'bundle'
     directory.mkdir()
     unpack(archive, directory)
@@ -172,6 +191,7 @@ def main():
     parser.add_argument('--cache', type=Path)
     parser.add_argument('--offline', action='store_true')
     parser.add_argument('--apply', action='store_true')
+    parser.add_argument('--allow-downgrade', action='store_true')
     args = parser.parse_args()
     if args.version and args.bundle:
         parser.error('--version and --bundle cannot be combined')
@@ -185,6 +205,8 @@ def main():
         command = [str(cli), 'setup', '--bundle', str(directory), '--operator', args.operator, '--python', sys.executable]
         if args.cache:
             command += ['--cache', str(args.cache)]
+        if args.allow_downgrade:
+            command += ['--allow-downgrade']
         if args.offline:
             command += ['--offline']
         subprocess.run(command, check=True)
@@ -201,7 +223,7 @@ def main():
 if __name__ == '__main__':
     try:
         main()
-    except (OSError, ValueError, KeyError, tarfile.TarError, subprocess.CalledProcessError) as error:
+    except (OSError, ValueError, KeyError, tarfile.TarError, subprocess.SubprocessError) as error:
         print('install: ' + str(error), file=sys.stderr)
         sys.exit(1)
 PYINSTALLER

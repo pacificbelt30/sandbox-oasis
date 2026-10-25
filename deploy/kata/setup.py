@@ -392,6 +392,67 @@ def start_and_check(release):
     raise ValueError('new services failed readiness; inspect journalctl -u codex-dock-node -u codex-dock-buildkit; rolling back')
 
 
+def release_version(value):
+    """Parse precedence without build metadata; non-release developer IDs stay separate."""
+    if not isinstance(value, str):
+        return None
+    match = re.fullmatch(r'v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?', value or '')
+    if not match:
+        return None
+    pre = match[4]
+    if pre and any(not item or item.isdigit() and len(item) > 1 and item[0] == '0' for item in pre.split('.')):
+        return None
+    return tuple(int(match[i]) for i in [1, 2, 3]), pre
+
+
+def version_less(left, right):
+    a, b = release_version(left), release_version(right)
+    if a is None or b is None:
+        raise ValueError('invalid release precedence')
+    if a[0] != b[0]:
+        return a[0] < b[0]
+    if a[1] is None or b[1] is None:
+        return a[1] is not None and b[1] is None
+    first, second = a[1].split('.'), b[1].split('.')
+    for x, y in zip(first, second):
+        if x == y:
+            continue
+        if x.isdigit() and y.isdigit():
+            return int(x) < int(y)
+        if x.isdigit() != y.isdigit():
+            return x.isdigit()
+        return x < y
+    return len(first) < len(second)
+
+
+def release_floor(current):
+    path = STATE / 'release-floor.json'
+    trusted(path)
+    floor = current.get('bundle', {}).get('version') if current else None
+    if not release_version(floor):
+        floor = None
+    if path.exists():
+        if path.stat().st_size > 1024:
+            raise ValueError('invalid release floor')
+        saved = json.loads(path.read_text())
+        value = saved.get('version')
+        if saved.get('schema') != 1 or not release_version(value):
+            raise ValueError('invalid release floor')
+        if floor is None or version_less(floor, value):
+            floor = value
+    return floor
+
+
+def check_release_floor(record, current, allowed=False):
+    floor = release_floor(current)
+    version = record.get('version')
+    if isinstance(version, str) and version.startswith('v') and not release_version(version):
+        raise ValueError('release version must use canonical semantic versioning')
+    if release_version(version) and floor and version_less(version, floor) and not allowed:
+        raise ValueError(f'refusing release downgrade below {floor}; explicitly use --allow-downgrade after reviewing compatibility')
+    return floor
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--bundle', type=Path)
@@ -400,6 +461,7 @@ def main():
     parser.add_argument('--apply', action='store_true')
     parser.add_argument('--offline', action='store_true')
     parser.add_argument('--rollback', action='store_true')
+    parser.add_argument('--allow-downgrade', action='store_true')
     args = parser.parse_args()
     record = None if args.rollback else bundle_info(args.bundle.resolve())
     if not args.rollback:
@@ -409,6 +471,11 @@ def main():
         print(f'Bundle: {args.bundle.resolve()} (version {record.get("version", "unknown")}); operator: {args.operator}; cache: {args.cache.resolve()}; offline: {"yes" if args.offline else "no"}', flush=True)
     print(f'Python: {sys.executable} (version {platform.python_version()})', flush=True)
     print('Stop admission/builds; require empty containers, tasks and VM allocations; keep images and projects. Install into a new root-owned release; switch only codex-dock services; verify readiness; restore previous files/services on failure.', flush=True)
+    if not args.apply and not args.rollback:
+        current_path = STATE / 'installed.json'
+        trusted(current_path)
+        current = json.loads(current_path.read_text()) if current_path.exists() else None
+        check_release_floor(record, current, args.allow_downgrade)
     if not args.apply:
         print('No host changes. Add --apply as root. Operator access is root-equivalent. Runtime downloads are pinned in assets.lock.json.', flush=True)
         return
@@ -457,6 +524,9 @@ def apply(args, record):
     current_path = STATE / 'installed.json'
     trusted(current_path)
     current = json.loads(current_path.read_text()) if current_path.exists() else None
+    floor = release_floor(current)
+    if not args.rollback:
+        check_release_floor(record, current, getattr(args, 'allow_downgrade', False))
     legacy_files = [] if args.rollback else legacy_files_to_remove(current)
     targets = [*ACTIVE_MANAGED, *legacy_files]
     if not args.rollback:
@@ -538,6 +608,9 @@ def apply(args, record):
         run(['sysctl', '-q', '-w', 'net.ipv4.ip_forward=1'])
         start_and_check(release['release'])
         run(['systemctl', 'enable', *SERVICES])
+        version = record.get('version')
+        if release_version(version) and (floor is None or version_less(floor, version)):
+            atomic(STATE / 'release-floor.json', json.dumps({'schema': 1, 'version': version}).encode())
         release['rollback'] = str(journal)
         release['oaiso_cli'] = True
         release['legacy_cli_removed'] = True
