@@ -271,7 +271,7 @@ func writeEncrypted(ctx context.Context, dir *os.File, record encryptedRecord) e
 
 // CreateWithPassphrase creates only a new encrypted connection; it does not
 // replace plaintext or encrypted profiles and never writes plaintext to disk.
-func (s *EncryptedStore) CreateWithPassphrase(ctx context.Context, name string, passphrase []byte, credentials Credentials) error {
+func (s *EncryptedStore) auditCreateWithPassphrase(ctx context.Context, name string, passphrase []byte, credentials Credentials) error {
 	if name != s.name || len(passphrase) < 12 || len(passphrase) > 4096 {
 		return fmt.Errorf("choose a passphrase of 12..4096 bytes for this profile")
 	}
@@ -363,7 +363,7 @@ func (s *EncryptedStore) Load(ctx context.Context, name string) (Credentials, er
 	return value, err
 }
 
-func (s *EncryptedStore) SaveRefresh(ctx context.Context, name, expected, provider string, next Credentials) (string, error) {
+func (s *EncryptedStore) auditSaveRefresh(ctx context.Context, name, expected, provider string, next Credentials) (string, error) {
 	if name != s.name {
 		return "", ErrNotFound
 	}

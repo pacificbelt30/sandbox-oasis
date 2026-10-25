@@ -21,4 +21,7 @@ func (p *Proxy) recordDenial(w http.ResponseWriter, r *http.Request, err error) 
 	}
 	// Never infer a run identity from untrusted headers on the shared egress proxy.
 	p.events.Add(event)
+	if finish, err := p.auditBegin("denial", code); err == nil {
+		_ = finish(nil)
+	}
 }

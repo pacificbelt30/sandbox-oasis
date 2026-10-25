@@ -41,6 +41,8 @@ func (p *Proxy) credentialScope() string {
 }
 
 func (p *Proxy) revokeCaseTokens() {
+	finish := p.auditRestrictive("revoke", p.credentialScope())
+	defer finish(nil)
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.caseRevoked = true

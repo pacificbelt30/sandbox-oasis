@@ -823,7 +823,7 @@ func decode(r *http.Request, v any) error {
 
 // ServeHTTP deliberately implements only the operations used by this product.
 // All objects are confined to one containerd namespace and an ownership label.
-func (b *Backend) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (b *Backend) serveHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := namespaces.WithNamespace(r.Context(), Namespace)
 	path := r.URL.Path
 	if strings.HasPrefix(path, "/v1.") {

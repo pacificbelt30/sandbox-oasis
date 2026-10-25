@@ -47,6 +47,7 @@ var (
 	proxyBlockPrivate     bool
 	proxyOAuthStateDir    string
 	proxyUsageStateDir    string
+	proxyAuditDirectory   string
 	proxyCredentialSocket string
 	proxyCaseID           string
 	proxyAllowedModels    []string
@@ -169,6 +170,7 @@ var proxyServeCmd = &cobra.Command{
 			BlockPrivate:         proxyBlockPrivate,
 			OAuthStateDir:        proxyOAuthStateDir,
 			UsageStateDir:        proxyUsageStateDir,
+			AuditDirectory:       proxyAuditDirectory,
 		})
 		if err != nil {
 			return err
@@ -580,6 +582,7 @@ func init() {
 	proxyServeCmd.Flags().StringVar(&proxyBrokerFile, "credential-routes", "", "Private JSON file of fixed credential routes")
 	proxyServeCmd.Flags().BoolVar(&proxyBlockPrivate, "block-private", false, "Refuse outbound connections to private/LAN/link-local addresses (RFC1918, 127/8, 169.254/16, ULA, CGNAT)")
 	proxyServeCmd.Flags().StringVar(&proxyOAuthStateDir, "oauth-state-dir", "", "Writable private directory for rotated OAuth credentials")
+	proxyServeCmd.Flags().StringVar(&proxyAuditDirectory, "audit-dir", "", "Private durable audit directory (default: usage-state-dir/audit)")
 	proxyServeCmd.Flags().StringVar(&proxyUsageStateDir, "usage-state-dir", "", "Exclusive owner-private directory for durable execution usage limits")
 	proxyServeCmd.Flags().StringVar(&proxyCredentialSocket, "credential-store-socket", "", "Private Unix socket for a host-managed credential store")
 	proxyServeCmd.Flags().StringVar(&proxyCaseID, "case-id", "", "Credential case selected for this auth proxy instance")

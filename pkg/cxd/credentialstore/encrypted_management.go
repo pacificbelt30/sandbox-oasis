@@ -96,7 +96,7 @@ func keyringRecordKey(ctx context.Context, r encryptedRecord, ring Keyring) ([]b
 	}
 	return key, nil
 }
-func (s *EncryptedStore) CreateWithKeyring(ctx context.Context, name string, ring Keyring, credentials Credentials) error {
+func (s *EncryptedStore) auditCreateWithKeyring(ctx context.Context, name string, ring Keyring, credentials Credentials) error {
 	if name != s.name || ring == nil {
 		return fmt.Errorf("invalid keyring profile")
 	}
@@ -198,7 +198,7 @@ func persistVerifiedAge(ctx context.Context, dir *os.File, header encryptedHeade
 // leaves both records and fails closed; repeat it with the same passphrase to
 // compare credentials before removing plaintext. Old interrupted schema-1
 // migrations are upgraded only through this explicit operation.
-func (s *EncryptedStore) EncryptPlaintext(ctx context.Context, pass []byte) error {
+func (s *EncryptedStore) auditEncryptPlaintext(ctx context.Context, pass []byte) error {
 	return s.base.locked(ctx, s.name, func(dir *os.File) error {
 		plain, err := readProfile(dir, s.name)
 		if err != nil {
@@ -259,7 +259,7 @@ func (s *EncryptedStore) EncryptPlaintext(ctx context.Context, pass []byte) erro
 // MigrateToAge explicitly replaces a schema-1 encrypted record, rotates its
 // connection generation, and retains a private encrypted recovery backup. It
 // never writes plaintext. Callers must drain workers and remove old proxies.
-func (s *EncryptedStore) MigrateToAge(ctx context.Context, pass []byte, ring Keyring) error {
+func (s *EncryptedStore) auditMigrateToAge(ctx context.Context, pass []byte, ring Keyring) error {
 	return s.base.locked(ctx, s.name, func(dir *os.File) error {
 		if f, err := openProfileFile(dir, s.name+".json", unix.O_RDONLY); err == nil {
 			_ = f.Close()
@@ -349,7 +349,7 @@ func backupLegacyRecord(ctx context.Context, dir *os.File, name string, record e
 
 // ChangePassphrase rewraps the same age identity/authentication-key bundle.
 // Existing proxy processes must be removed by the caller before changing it.
-func (s *EncryptedStore) ChangePassphrase(ctx context.Context, pass []byte) error {
+func (s *EncryptedStore) auditChangePassphrase(ctx context.Context, pass []byte) error {
 	return s.base.locked(ctx, s.name, func(dir *os.File) error {
 		value, err := s.load(dir)
 		if err != nil {

@@ -21,6 +21,8 @@ const (
 
 // Config configures the Auth Proxy.
 type Config struct {
+	// AuditDirectory stores bounded operation evidence. Managed proxies default to UsageStateDir/audit.
+	AuditDirectory string
 	// UsageStateDir is an exclusive owner-private durable execution ledger.
 	// Limits are unavailable without it; never place this directory in workers.
 	UsageStateDir string

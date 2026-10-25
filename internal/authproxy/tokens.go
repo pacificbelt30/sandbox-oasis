@@ -46,7 +46,22 @@ func (p *Proxy) IssueTokenWithPolicy(containerName string, ttlSec int, id identi
 	return p.IssueTokenWithUsage(containerName, ttlSec, id, policy, nil)
 }
 
-func (p *Proxy) IssueTokenWithUsage(containerName string, ttlSec int, id identity.Identity, policy *identity.ModelPolicy, limits *identity.UsagePolicy) (string, error) {
+func (p *Proxy) IssueTokenWithUsage(containerName string, ttlSec int, id identity.Identity, policy *identity.ModelPolicy, limits *identity.UsagePolicy) (tokenValue string, resultErr error) {
+	action := "issue"
+	if policy != nil || limits != nil {
+		action = "permission_change"
+	}
+	finish, auditErr := p.auditBegin(action, containerName)
+	if auditErr != nil {
+		return "", auditErr
+	}
+	defer func() {
+		auditResult(finish, &resultErr)
+		if resultErr != nil && tokenValue != "" {
+			p.RevokeToken(containerName)
+			tokenValue = ""
+		}
+	}()
 	if err := policy.Validate(); err != nil {
 		return "", err
 	}
@@ -103,6 +118,8 @@ func (p *Proxy) checkTokenIdentity(id identity.Identity) error {
 
 // RevokeToken immediately revokes the token for a container.
 func (p *Proxy) RevokeToken(containerName string) {
+	finish := p.auditRestrictive("revoke", containerName)
+	defer finish(nil)
 	p.mu.Lock()
 	p.removeTokenLocked(containerName)
 	p.mu.Unlock()
@@ -209,7 +226,9 @@ func generateToken() (string, error) {
 }
 
 // RevokeRun invalidates the matching identity and cancels all active streams.
-func (p *Proxy) RevokeRun(ctx context.Context, in identity.Identity) error {
+func (p *Proxy) RevokeRun(ctx context.Context, in identity.Identity) (resultErr error) {
+	finish := p.auditRestrictive("revoke", in.RunID)
+	defer func() { finish(resultErr) }()
 	if err := ctx.Err(); err != nil {
 		return err
 	}

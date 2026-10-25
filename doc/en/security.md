@@ -133,3 +133,7 @@
 | Ongoing maintenance | Host kernel, KVM, Kata and guest kernel updates |
 
 [Claude Code](claude-code.md) · [Acceptance record](../testing.md#claude-codeの受入) (Japanese)
+
+## Operation audit
+
+- Unreleased (main): [Persistence, gap detection, capacity and failure behavior](guides/audit.md). Local root-resistant integrity is not guaranteed.

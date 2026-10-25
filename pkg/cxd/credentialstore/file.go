@@ -216,7 +216,7 @@ func writeProfileData(ctx context.Context, dir *os.File, filename string, data [
 
 // Create never replaces an existing profile. Versions are newly generated,
 // independent of imported OAuth data, and cannot be supplied by an importer.
-func (s *FileStore) Create(ctx context.Context, name string, credentials Credentials) error {
+func (s *FileStore) auditCreate(ctx context.Context, name string, credentials Credentials) error {
 	if err := ValidateProfileName(name); err != nil {
 		return err
 	}
@@ -262,7 +262,7 @@ func (s *FileStore) Load(ctx context.Context, name string) (Credentials, error) 
 	return credentials, err
 }
 
-func (s *FileStore) SaveRefresh(ctx context.Context, name, expected, provider string, next Credentials) (string, error) {
+func (s *FileStore) auditSaveRefresh(ctx context.Context, name, expected, provider string, next Credentials) (string, error) {
 	if err := ValidateProfileName(name); err != nil {
 		return "", err
 	}

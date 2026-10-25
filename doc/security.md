@@ -195,3 +195,7 @@
 | 継続的な更新が必要 | host kernel・KVM・Kata・guest kernel |
 
 [Claude Code](claude-code.md)・[受入試験の記録](testing.md#claude-codeの受入)
+
+## 操作の監査記録
+
+- 未リリース（main）：[保存・欠損検知・容量・障害時の扱い](guides/audit.md)。ローカルrootに耐える改ざん防止は保証しません。

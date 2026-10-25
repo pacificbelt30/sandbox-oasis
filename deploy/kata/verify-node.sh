@@ -187,6 +187,10 @@ PYAFTER
   sleep .2
  done
  wait "$test_pid"
+ if [[ -d /var/lib/codex-dock-node/engine/audit ]]; then
+  /usr/local/bin/oaiso audit --directory /var/lib/codex-dock-node/engine/audit > /evidence/node-audit.json
+  proof "node operation audit chain verified without pending results"
+ fi
  proof "native Kata acceptance on newly installed node: ${CODEX_DOCK_KATA_ACCEPTANCE_RUN:-all}"
 fi
 # Case proxies intentionally retain their shared egress network for reuse.

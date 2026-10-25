@@ -25,7 +25,18 @@ func (p *Proxy) RestoreTokenWithPolicy(name, token string, ttl int, id identity.
 	return p.RestoreTokenWithUsage(name, token, ttl, id, policy, nil)
 }
 
-func (p *Proxy) RestoreTokenWithUsage(name, token string, ttl int, id identity.Identity, policy *identity.ModelPolicy, limits *identity.UsagePolicy) error {
+func (p *Proxy) RestoreTokenWithUsage(name, token string, ttl int, id identity.Identity, policy *identity.ModelPolicy, limits *identity.UsagePolicy) (resultErr error) {
+	finish, auditErr := p.auditBegin("restore", name)
+	if auditErr != nil {
+		return auditErr
+	}
+	activated := false
+	defer func() {
+		auditResult(finish, &resultErr)
+		if activated && resultErr != nil {
+			p.RevokeToken(name)
+		}
+	}()
 	if err := policy.Validate(); err != nil {
 		return err
 	}
@@ -76,6 +87,7 @@ func (p *Proxy) RestoreTokenWithUsage(name, token string, ttl int, id identity.I
 		return fmt.Errorf("placeholder already belongs to another worker")
 	}
 	p.replaceTokenLocked(rec)
+	activated = true
 	if rec.UsagePolicy != nil {
 		if p.usageBindings == nil {
 			p.usageBindings = make(map[string]string)
