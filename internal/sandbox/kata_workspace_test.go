@@ -81,7 +81,7 @@ func TestKataWorkspaceSharing(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	write(t, config, fmt.Sprintf("proxy_image = %s\n[proxy]\nadmin_url = %s\ncontainer_url = %s\nadmin_secret = \"sharing-fixture\"\nforward_default_deny = false\n", strconv.Quote(proxyImage), strconv.Quote(fmt.Sprintf("http://127.0.0.1:%d", port)), strconv.Quote("http://"+authName+":18080")), 0600)
+	write(t, config, fmt.Sprintf("proxy_image = %s\n[proxy]\nadmin_url = %s\ncontainer_url = %s\nadmin_secret = \"sharing-fixture-private-admin-at-least-32-bytes\"\nforward_default_deny = false\n", strconv.Quote(proxyImage), strconv.Quote(fmt.Sprintf("http://127.0.0.1:%d", port)), strconv.Quote("http://"+authName+":18080")), 0600)
 	t.Setenv("OPENAI_API_KEY", "sk-sharing-fixture-never-valid")
 	t.Setenv("ANTHROPIC_API_KEY", "")
 	t.Setenv("CLAUDE_CODE_OAUTH_TOKEN", "")
@@ -111,7 +111,7 @@ func TestKataWorkspaceSharing(t *testing.T) {
 			t.Error("egress lookup:", err)
 		}
 	})
-	cli(t, root, "proxy", "run", "--name", authName, "--http-name", httpName, "--network", netName, "--admin-port", strconv.Itoa(port), "--admin-secret", "sharing-fixture")
+	cli(t, root, "proxy", "run", "--name", authName, "--http-name", httpName, "--network", netName, "--admin-port", strconv.Itoa(port), "--admin-secret", "sharing-fixture-private-admin-at-least-32-bytes")
 	checks := filepath.Join(root, "checks")
 	if err := os.Mkdir(checks, 0755); err != nil {
 		t.Fatal(err)

@@ -35,6 +35,9 @@ func (*Guard) ReserveProfile(context.Context, string, string) (string, error) {
 }
 func (*Guard) Verify(context.Context, string, string) error { return fmt.Errorf("Kata requires Linux") }
 func (*Guard) Retire(context.Context, string, string) error { return fmt.Errorf("Kata requires Linux") }
+func (*Guard) ConfirmStopped(context.Context, string, string) error {
+	return fmt.Errorf("Kata requires Linux")
+}
 func (*Guard) AbortCreate(context.Context, string, string) error {
 	return fmt.Errorf("Kata requires Linux")
 }

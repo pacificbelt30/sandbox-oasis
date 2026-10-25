@@ -39,7 +39,7 @@ if not major or not Path(f'/sys/dev/block/{major}:{minor}').exists():
     raise SystemExit('real block device required for I/O resource acceptance')
 workspace = Path('/evidence/resource-workspaces')
 workspace.mkdir(mode=0o700); os.chown(workspace,1000,1000)
-profile = dict(name='resource-test',cpu_cores=1,guest_memory_bytes=512<<20,host_memory_bytes=768<<20,pid_limit=512,file_descriptor_limit=512,
+profile = dict(name='resource-test',cpu_cores=1,guest_memory_bytes=512<<20,host_memory_bytes=768<<20,pid_limit=256,file_descriptor_limit=512,
                block_io=[dict(major=major,minor=minor,write_bytes_per_second=8<<20,read_bytes_per_second=64<<20,read_iops=4096,write_iops=1024)])
 path=Path('/etc/codex-dock/resource-test.json')
 path.parent.mkdir(parents=True,exist_ok=True)

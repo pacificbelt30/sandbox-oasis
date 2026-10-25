@@ -367,7 +367,7 @@ func (p *Proxy) Start() error {
 	// The egress (forward-only) instance serves no reverse routes, no token
 	// endpoints, and no admin: just /health plus the forward proxy below.
 	if p.cfg.isEgress() {
-		p.server = &http.Server{Handler: p.workerFacingHandler(mux), ReadHeaderTimeout: 10 * time.Second, MaxHeaderBytes: 64 << 10}
+		p.server = &http.Server{Handler: p.workerFacingHandler(mux), ConnContext: p.workerConnectionContext, ReadHeaderTimeout: 10 * time.Second, MaxHeaderBytes: 64 << 10}
 		go func() {
 			if err := p.server.Serve(ln); err != nil && err != http.ErrServerClosed {
 				log.Printf("egress proxy error: %v", err)
@@ -447,7 +447,7 @@ func (p *Proxy) Start() error {
 
 	// Worker-facing handler: CONNECT/absolute-form requests are handled by the
 	// forward proxy (router); everything else falls through to the data-plane mux.
-	p.server = &http.Server{Handler: p.workerFacingHandler(mux), ReadHeaderTimeout: 10 * time.Second, MaxHeaderBytes: 64 << 10}
+	p.server = &http.Server{Handler: p.workerFacingHandler(mux), ConnContext: p.workerConnectionContext, ReadHeaderTimeout: 10 * time.Second, MaxHeaderBytes: 64 << 10}
 	go func() {
 		if err := p.server.Serve(ln); err != nil && err != http.ErrServerClosed {
 			log.Printf("auth proxy error: %v", err)

@@ -2,10 +2,14 @@ package authproxy
 
 import (
 	"context"
-	"github.com/pacificbelt30/codex-dock/pkg/cxd/identity"
+	"crypto/tls"
+	"errors"
+	"net"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/pacificbelt30/codex-dock/pkg/cxd/identity"
 )
 
 // workerRequest authenticates before any upstream dial or credential injection.
@@ -59,7 +63,8 @@ func (p *Proxy) workerRequest(r *http.Request, allowAPIKey bool) (*http.Request,
 	}
 	ctx, cancel := context.WithCancel(parent)
 	stop := context.AfterFunc(lease, cancel)
-	return r.WithContext(ctx), func() { stop(); cancel() }, true
+	stopConnection := closeThrottledConnectionOnLeaseEnd(ctx, lease)
+	return r.WithContext(ctx), func() { stop(); stopConnection(); cancel() }, true
 }
 
 func providerRouteAllowed(provider, path string) bool {
@@ -72,5 +77,42 @@ func providerRouteAllowed(provider, path string) bool {
 		return strings.HasPrefix(path, "/anthropic/")
 	default:
 		return false
+	}
+}
+
+// The bandwidth limiter runs below TLS. Closing the raw socket interrupts its
+// wait without taking tls.Conn's write lock, which the blocked writer owns.
+type workerConnectionKey struct{}
+
+func (p *Proxy) workerConnectionContext(ctx context.Context, conn net.Conn) context.Context {
+	if p.cfg.NetworkResources.BytesPerSecond == 0 {
+		return ctx
+	}
+	if secure, ok := conn.(*tls.Conn); ok {
+		conn = secure.NetConn()
+	}
+	return context.WithValue(ctx, workerConnectionKey{}, conn)
+}
+
+func closeThrottledConnectionOnLeaseEnd(ctx, lease context.Context) func() {
+	conn, ok := ctx.Value(workerConnectionKey{}).(net.Conn)
+	if !ok {
+		return func() {}
+	}
+	finished := make(chan struct{})
+	stop := context.AfterFunc(ctx, func() {
+		defer close(finished)
+		// An ordinary request finishing or one HTTP/2 stream being canceled must
+		// not tear down another valid request on the same connection.
+		if lease.Err() != nil || errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			_ = conn.Close()
+		}
+	})
+	return func() {
+		// Finish any running callback before HTTP/1 can reuse this connection for
+		// a subsequent request. Unregister before the normal request cancel.
+		if !stop() {
+			<-finished
+		}
 	}
 }

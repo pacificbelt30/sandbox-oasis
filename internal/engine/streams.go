@@ -31,6 +31,7 @@ type hub struct {
 	mu     sync.Mutex
 	io     cio.IO
 	closed bool
+	exit   *taskExit
 }
 
 func newHub() (*hub, error) { return &hub{}, nil }

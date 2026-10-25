@@ -94,7 +94,7 @@ func Serve(ctx context.Context, cfg Config, socket string, gid int) error {
 	for _, name := range []string{"ip", "nft", "sysctl", "runc", "runc-shim"} {
 		tools[name] = g.manifest.Assets[name].Path
 	}
-	backend, err := engine.Open(engine.Options{Address: daemon.GRPC.Address, State: filepath.Join(cfg.StateDir, "engine"), Runtime: g.manifest.Assets["runtime"].Path, KataConfig: g.manifest.Assets["config"].Path, Retire: g.Retire, AbortCreate: g.AbortCreate, Tools: tools, Logger: g.manifest.Assets["logger"].Path, DNS: cfg.DNS, TemporaryStorage: g.temporaryStorage})
+	backend, err := engine.Open(engine.Options{Address: daemon.GRPC.Address, State: filepath.Join(cfg.StateDir, "engine"), Runtime: g.manifest.Assets["runtime"].Path, KataConfig: g.manifest.Assets["config"].Path, Retire: g.Retire, AbortCreate: g.AbortCreate, ConfirmStopped: g.ConfirmStopped, Tools: tools, Logger: g.manifest.Assets["logger"].Path, DNS: cfg.DNS, TemporaryStorage: g.temporaryStorage})
 	if err != nil {
 		return err
 	}

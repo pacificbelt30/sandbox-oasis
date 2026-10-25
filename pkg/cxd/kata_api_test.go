@@ -103,7 +103,7 @@ func TestKataAPIIntegration(t *testing.T) {
 	if os.Getenv("CODEX_DOCK_KATA_API_E2E") != "1" {
 		t.Skip("set CODEX_DOCK_KATA_API_E2E=1 on an isolated matching node with the fixture proxy image")
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Minute)
 	defer cancel()
 	workerImage := os.Getenv("CODEX_DOCK_KATA_TEST_IMAGE")
 	if workerImage == "" {
@@ -129,7 +129,7 @@ func TestKataAPIIntegration(t *testing.T) {
 			}
 		}()
 	}
-	modes := []string{"codex-http", "claude-api", "claude-oauth", "claude-direct-api", "claude-direct-oauth", "compact", "lifecycle", "save-failure", "conflict", "restart", "temporary-storage", "embedding-example", "egress-zero-value", "egress-default-deny", "egress-exact", "quarantine"}
+	modes := []string{"codex-http", "claude-api", "claude-oauth", "claude-direct-api", "claude-direct-oauth", "compact", "lifecycle", "bandwidth-revoke", "save-failure", "conflict", "restart", "temporary-storage", "embedding-example", "egress-zero-value", "egress-default-deny", "egress-exact", "quarantine"}
 	if os.Getenv("CODEX_DOCK_KATA_CUSTOM_PROFILE") != "" {
 		modes = append(modes, "custom-profile")
 	}
@@ -171,6 +171,9 @@ func TestKataAPIIntegration(t *testing.T) {
 			port := ln.Addr().(*net.TCPAddr).Port
 			_ = ln.Close()
 			proxyOpts := CaseProxyOptions{NodeSocket: engine.Socket(), Name: fmt.Sprintf("cxd-api-%x", time.Now().UnixNano()), CaseID: "fixture-case", StoreSocket: socket, AdminPort: port, AdminSecret: strings.Repeat("fixture-", 5), Image: proxyImage, AllowedModels: []string{"allowed", "costly"}}
+			if mode == "bandwidth-revoke" {
+				proxyOpts.NetworkResources = ProxyResourceLimits{BytesPerSecond: 1024}
+			}
 			if claude {
 				proxyOpts.AllowedModels = append(proxyOpts.AllowedModels, "claude-sonnet-4-6")
 			}
@@ -298,7 +301,7 @@ func TestKataAPIIntegration(t *testing.T) {
 			if mode == "custom-profile" {
 				req.Profile = os.Getenv("CODEX_DOCK_KATA_CUSTOM_PROFILE")
 			}
-			if mode == "compact" {
+			if mode == "compact" || mode == "bandwidth-revoke" {
 				req.Profile = "compact"
 			}
 			if mode == "lifecycle" {
@@ -414,10 +417,47 @@ for line in ['CONNECT sub.example.com:443 HTTP/1.1', 'GET http://sub.example.com
 				verifyClaudeAPI(t, ctx, c, w.ID, project, mode == "claude-oauth", store)
 				return
 			}
-			request := func(path, body string) string {
+			if mode == "bandwidth-revoke" {
+				streamCtx, cancelStream := context.WithCancel(ctx)
+				defer cancelStream()
+				streamDone := make(chan error, 1)
+				probe := strings.Replace(apiHTTPStream, `"stream":true`, `"stream":true,"input":"bandwidth-hold"`, 1)
+				go func() {
+					var output bytes.Buffer
+					code, err := c.Exec(streamCtx, w.ID, ExecRequest{Argv: []string{"python3", "-c", probe}, Stdout: &output, Stderr: &output})
+					if err == nil && code != 0 {
+						err = fmt.Errorf("throttled stream exit %d: %s", code, output.String())
+					}
+					streamDone <- err
+				}()
+				awaitAPI(t, ctx, func() bool { _, err := os.Stat(filepath.Join(project, "stream-started")); return err == nil })
+				// Exhaust the TCP burst so revocation happens during a rate wait.
+				time.Sleep(300 * time.Millisecond)
+				select {
+				case err := <-streamDone:
+					t.Fatalf("throttled stream ended before revocation: %v", err)
+				default:
+				}
+				started := time.Now()
+				if err := c.RevokeRun(ctx, runIdentity); err != nil {
+					t.Fatal(err)
+				}
+				select {
+				case err := <-streamDone:
+					if err != nil {
+						t.Fatal(err)
+					}
+				case <-time.After(3 * time.Second):
+					t.Fatal("revocation did not interrupt the guest stream's bandwidth wait")
+				}
+				t.Logf("verified guest stream closure at 1 KiB/s after revocation in %s", time.Since(started))
+				return
+			}
+			request := func(path, body string, expectedErrorBody ...string) string {
 				t.Helper()
 				var out, stderr bytes.Buffer
-				code, err := c.Exec(ctx, w.ID, ExecRequest{Argv: []string{"python3", "-c", apiHTTPRequest, path, body}, Stdout: &out, Stderr: &stderr})
+				args := append([]string{"python3", "-c", apiHTTPRequest, path, body}, expectedErrorBody...)
+				code, err := c.Exec(ctx, w.ID, ExecRequest{Argv: args, Stdout: &out, Stderr: &stderr})
 				if err != nil || code != 0 {
 					t.Fatalf("guest HTTP: code=%d err=%v stderr=%s", code, err, stderr.String())
 				}
@@ -783,8 +823,10 @@ for line in ['CONNECT sub.example.com:443 HTTP/1.1', 'GET http://sub.example.com
 			if !reloaded {
 				t.Fatal("proxy did not reload durable credentials")
 			}
-			if got := request("/v1/responses", `{"model":"allowed"}`); got != "401" {
-				t.Fatalf("proxy restart retained old token: %s", got)
+			// Restart creates a new TLS authority. The guest relay must reject the
+			// stale certificate before its token can reach the new proxy.
+			if got := request("/v1/responses", `{"model":"allowed"}`, "worker TLS connection unavailable"); got != "502" {
+				t.Fatalf("proxy restart accepted stale TLS credentials: %s", got)
 			}
 			if err := c.Stop(ctx, w.ID, 5*time.Second); err != nil {
 				t.Fatal(err)
@@ -828,7 +870,9 @@ if path.endswith('?cdx='): path+=os.environ['CODEX_TOKEN']
 req=urllib.request.Request(os.environ['CODEX_AUTH_PROXY_URL']+path,data=sys.argv[2].encode(),headers={'Authorization':'Bearer '+os.environ['CODEX_TOKEN'],'Content-Type':'application/json'})
 try:
  with urllib.request.urlopen(req,timeout=15) as resp: print(resp.status)
-except urllib.error.HTTPError as e: print(e.code)
+except urllib.error.HTTPError as e:
+ if len(sys.argv)>3: assert e.read().decode().strip()==sys.argv[3]
+ print(e.code)
 `
 
 const apiHTTPStream = `import os,urllib.request,http.client

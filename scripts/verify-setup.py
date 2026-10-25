@@ -137,7 +137,9 @@ def main():
         else:
             raise RuntimeError('disposable systemd did not start')
         with (evidence / 'controller.log').open('w') as log:
-            call(['exec', name, '/bin/bash', '/verification/verify-node.sh'], stdout=log, stderr=subprocess.STDOUT, timeout=2400)
+            # Full VM/API acceptance plus install/upgrade/recovery can exceed
+            # forty minutes. Individual suites retain their own shorter limits.
+            call(['exec', name, '/bin/bash', '/verification/verify-node.sh'], stdout=log, stderr=subprocess.STDOUT, timeout=3600)
         print('PASS: fresh setup, real Kata, upgrade and recovery. Evidence:', evidence)
     finally:
         if started:

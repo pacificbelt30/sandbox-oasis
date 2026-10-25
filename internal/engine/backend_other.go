@@ -15,6 +15,7 @@ type Options struct {
 	TemporaryStorage                                 bool
 	Retire                                           func(context.Context, string, string) error
 	AbortCreate                                      func(context.Context, string, string) error
+	ConfirmStopped                                   func(context.Context, string, string) error
 	Tools                                            map[string]string
 }
 type Backend struct{}

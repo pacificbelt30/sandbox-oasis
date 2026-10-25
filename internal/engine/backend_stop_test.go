@@ -34,6 +34,8 @@ type stopExitTask struct {
 	deleted    bool
 	beforeKill func() error
 	beforeWait func() error
+	signals    []syscall.Signal
+	killAll    bool
 }
 
 func (t *stopExitTask) Wait(context.Context) (<-chan cd.ExitStatus, error) {
@@ -50,7 +52,18 @@ func (t *stopExitTask) Status(context.Context) (cd.Status, error) {
 	}
 	return cd.Status{Status: cd.Running}, nil
 }
-func (t *stopExitTask) Kill(context.Context, syscall.Signal, ...cd.KillOpts) error {
+func (t *stopExitTask) Kill(ctx context.Context, sig syscall.Signal, opts ...cd.KillOpts) error {
+	t.signals = append(t.signals, sig)
+	info := &cd.KillInfo{}
+	for _, opt := range opts {
+		if err := opt(ctx, info); err != nil {
+			return err
+		}
+	}
+	t.killAll = info.All
+	if t.terminated {
+		return errdefs.ErrNotFound
+	}
 	if t.beforeKill != nil {
 		if err := t.beforeKill(); err != nil {
 			return err
@@ -62,6 +75,66 @@ func (t *stopExitTask) Kill(context.Context, syscall.Signal, ...cd.KillOpts) err
 	}
 	close(t.wait)
 	return nil
+}
+
+func TestForceStopSendsOnlyKillAll(t *testing.T) {
+	task := &stopExitTask{wait: make(chan cd.ExitStatus, 1), exit: cd.NewExitStatus(137, time.Now().UTC(), nil)}
+	b := &Backend{opts: Options{State: t.TempDir()}}
+	r := &record{ID: strings.Repeat("e", 64), Config: container.Config{StopSignal: "SIGUSR1"}, Host: container.HostConfig{Runtime: "runc"}}
+	if err := b.stop(context.Background(), r, stopContainer{task: task}, 0); err != nil {
+		t.Fatal(err)
+	}
+	if len(task.signals) != 1 || task.signals[0] != syscall.SIGKILL || !task.killAll || r.ExitCode != 137 {
+		t.Fatalf("force stop must send one kill-all and retain exit evidence: signals=%v all=%t exit=%d", task.signals, task.killAll, r.ExitCode)
+	}
+}
+
+func TestStopReusesWatchedExitWithoutAnotherRuntimeWait(t *testing.T) {
+	for _, mode := range []string{"exit-result", "wait-failure", "closed-channel"} {
+		t.Run(mode, func(t *testing.T) {
+			cause := errors.New("runtime wait failed")
+			at := time.Now().UTC()
+			var exitErr error
+			if mode == "wait-failure" {
+				exitErr = cause
+			}
+			task := &stopExitTask{wait: make(chan cd.ExitStatus, 1), exit: cd.NewExitStatus(37, at, exitErr)}
+			if mode == "closed-channel" {
+				task.exit = nil
+			}
+			calls := 0
+			task.beforeWait = func() error {
+				calls++
+				if calls > 1 {
+					return errors.New("duplicate Wait races Kata teardown")
+				}
+				return nil
+			}
+			wait, err := task.Wait(context.Background())
+			if err != nil {
+				t.Fatal(err)
+			}
+			h := &hub{exit: newTaskExit()}
+			go h.exit.capture(wait)
+			r := &record{ID: strings.Repeat("f", 64), Host: container.HostConfig{Runtime: "runc"}}
+			b := &Backend{opts: Options{State: t.TempDir()}, hubs: map[string]*hub{r.ID: h}}
+			// Capture must publish without this lock: normal lifecycle calls hold
+			// it while waiting, and the background cleanup takes it afterward.
+			b.mu.Lock()
+			err = b.stop(t.Context(), r, stopContainer{task: task}, 1)
+			b.mu.Unlock()
+			if mode != "exit-result" {
+				if err == nil || mode == "wait-failure" && !errors.Is(err, cause) || r.FinishedAt != "" || task.deleted {
+					t.Fatalf("unconfirmed shared result accepted: %v %+v", err, r)
+				}
+			} else if err != nil || r.ExitCode != 37 || r.FinishedAt != at.Format(time.RFC3339Nano) {
+				t.Fatalf("authoritative shared exit lost: %v %+v", err, r)
+			}
+			if calls != 1 {
+				t.Fatalf("runtime Wait called %d times", calls)
+			}
+		})
+	}
 }
 
 func TestKataStopPreparesSupervisorBeforeSignalingGuest(t *testing.T) {

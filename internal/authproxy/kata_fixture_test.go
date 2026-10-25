@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -114,6 +115,15 @@ func runKataFixtureProxy() int {
 		if string(body.Input) == `"usage-budget"` {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `{"usage":{"input_tokens":2,"output_tokens":3,"total_tokens":5}}`)
+			return
+		}
+		if body.Stream && string(body.Input) == `"bandwidth-hold"` {
+			w.Header().Set("Content-Type", "text/event-stream")
+			_, _ = io.WriteString(w, "data: ready\n\n")
+			w.(http.Flusher).Flush()
+			_, _ = io.WriteString(w, strings.Repeat("x", 128<<10))
+			w.(http.Flusher).Flush()
+			<-r.Context().Done()
 			return
 		}
 		if body.Stream && len(body.Input) > 0 {

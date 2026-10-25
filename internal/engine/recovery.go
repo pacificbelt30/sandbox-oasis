@@ -85,12 +85,14 @@ func (b *Backend) recover(ctx context.Context) error {
 				return err
 			}
 		}
+		h.exit = newTaskExit()
 		go b.watch(r.ID, h, task, wait)
 	}
 	return nil
 }
 func (b *Backend) watch(cid string, h *hub, task cd.Task, wait <-chan cd.ExitStatus) {
-	status := <-wait
+	h.exit.capture(wait)
+	status := h.exit.status
 	code, at, waitErr := status.Result()
 	b.mu.Lock()
 	if b.closed || b.hubs[cid] != h {

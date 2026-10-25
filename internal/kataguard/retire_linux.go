@@ -13,6 +13,50 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+// ConfirmStopped only reads the attested allocation. Do not take admissionLock:
+// engine callers hold its mutex while inventory can hold the admission lock.
+func (g *Guard) ConfirmStopped(ctx context.Context, allocation, worker string) error {
+	if err := g.Validate(ctx, g.manifest.Runtime); err != nil {
+		return err
+	}
+	r, err := g.readRecord(allocation)
+	if err != nil {
+		return err
+	}
+	if r.Worker != worker || worker == "" {
+		return fmt.Errorf("stopped allocation ownership mismatch")
+	}
+	processes, err := g.scanProcesses(ctx, allocation, worker, false)
+	if err != nil {
+		return err
+	}
+	if len(processes) != 0 {
+		return fmt.Errorf("kata envelope still has processes")
+	}
+	path, err := g.group(allocation)
+	if err != nil {
+		return err
+	}
+	data, err := os.ReadFile(filepath.Join(path, "cgroup.events"))
+	if err != nil {
+		return err
+	}
+	confirmed := false
+	for _, line := range strings.Split(string(data), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) > 0 && fields[0] == "populated" {
+			if confirmed || len(fields) != 2 || fields[1] != "0" {
+				return fmt.Errorf("kata envelope is not confirmed empty")
+			}
+			confirmed = true
+		}
+	}
+	if !confirmed {
+		return fmt.Errorf("kata envelope is not confirmed empty")
+	}
+	return nil
+}
+
 // Retire prepares the supervisor before user code is released or stop is sent,
 // and is safe to repeat after exit. Kata 4.2 may destroy its own sandbox cgroup
 // while serving Wait, before reporting the guest's exit. A sibling leaf

@@ -60,7 +60,10 @@ type Options struct {
 	// the same bounded envelope before its self-owned cgroup is deleted.
 	Retire      func(context.Context, string, string) error
 	AbortCreate func(context.Context, string, string) error
-	Tools       map[string]string
+	// ConfirmStopped independently attests an empty, owned Kata envelope when
+	// a runtime exit event arrives after its Wait RPC disconnects.
+	ConfirmStopped func(context.Context, string, string) error
+	Tools          map[string]string
 }
 type Backend struct {
 	client        *cd.Client
@@ -694,6 +697,7 @@ func (b *Backend) start(ctx context.Context, r *record, c cd.Container) error {
 		return b.failedStart(ctx, r, c, err)
 	}
 
+	h.exit = newTaskExit()
 	go b.watch(r.ID, h, t, wait)
 	return nil
 }
@@ -739,14 +743,28 @@ func (b *Backend) stop(ctx context.Context, r *record, c cd.Container, timeout i
 	if err != nil {
 		return fmt.Errorf("loading task to stop: %w", err)
 	}
+	observer := b.observeStopExit(ctx, r, t)
+	if observer != nil {
+		defer observer.cancel()
+	}
 	// Wait can trigger Kata's cgroup cleanup itself. Preparing only after exit
 	// is too late, especially after reconnecting to a live VM.
 	if err = b.prepareSupervisor(ctx, r); err != nil {
 		return fmt.Errorf("preparing Dragonball supervisor for stop: %w", err)
 	}
-	wait, err := t.Wait(ctx)
-	if err != nil {
-		return fmt.Errorf("subscribing to task exit for stop: %w", err)
+	var result *taskExit
+	if h := b.hubs[r.ID]; h != nil {
+		result = h.exit
+	}
+	if result == nil {
+		// Recovered quarantine and tasks without an attached hub have no
+		// existing watcher. Normal and reattached tasks share their first Wait.
+		wait, err := t.Wait(ctx)
+		if err != nil {
+			return fmt.Errorf("subscribing to task exit for stop: %w", err)
+		}
+		result = newTaskExit()
+		go result.capture(wait)
 	}
 	status, err := t.Status(ctx)
 	if err != nil {
@@ -754,33 +772,41 @@ func (b *Backend) stop(ctx context.Context, r *record, c cd.Container, timeout i
 	}
 	if status.Status != cd.Stopped {
 		stopSignal := syscall.SIGTERM
-		if r.Config.StopSignal != "" {
+		var killOpts []cd.KillOpts
+		if timeout == 0 {
+			// Immediate stop has no graceful phase. Sending TERM followed by
+			// KILL can race Kata tearing down its shim while serving Wait.
+			stopSignal = syscall.SIGKILL
+			killOpts = []cd.KillOpts{cd.WithKillAll}
+		} else if r.Config.StopSignal != "" {
 			parsed, e := signal.ParseSignal(r.Config.StopSignal)
 			if e != nil {
 				return e
 			}
 			stopSignal = parsed
 		}
-		if err = t.Kill(ctx, stopSignal); err != nil && !errdefs.IsNotFound(err) {
+		if err = t.Kill(ctx, stopSignal, killOpts...); err != nil && !errdefs.IsNotFound(err) {
 			return err
 		}
 		timer := time.NewTimer(time.Duration(max(timeout, 0)) * time.Second)
 		defer timer.Stop()
 		deadline := timer.C
-		if timeout < 0 {
+		if timeout <= 0 {
 			timer.Stop()
 			deadline = nil
 		}
 		var exit cd.ExitStatus
 		var received bool
 		select {
-		case exit, received = <-wait:
+		case <-result.ready:
+			exit, received = result.status, result.received
 		case <-deadline:
 			if err = t.Kill(ctx, syscall.SIGKILL, cd.WithKillAll); err != nil && !errdefs.IsNotFound(err) {
 				return err
 			}
 			select {
-			case exit, received = <-wait:
+			case <-result.ready:
+				exit, received = result.status, result.received
 			case <-ctx.Done():
 				return ctx.Err()
 			}
@@ -792,7 +818,11 @@ func (b *Backend) stop(ctx context.Context, r *record, c cd.Container, timeout i
 		}
 		code, at, err := exit.Result()
 		if err != nil {
-			return fmt.Errorf("waiting for task exit during stop: %w", err)
+			confirmed, confirmErr := b.confirmStopExit(ctx, r, c, observer)
+			if confirmErr != nil {
+				return fmt.Errorf("waiting for task exit during stop: %w", errors.Join(err, confirmErr))
+			}
+			code, at = confirmed.ExitStatus, confirmed.ExitTime
 		}
 		// Wait already supplied authoritative exit evidence. A second Status
 		// RPC can race the runtime forgetting the exited task and lose both the
