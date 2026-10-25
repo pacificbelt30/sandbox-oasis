@@ -359,3 +359,5 @@ Dockerfile、テンプレート、カスタムイメージの例は[build](comma
 
 - `oaiso profile define compact-256 --pids-limit 256` で登録用JSONを生成でき、`oaiso profile --node --json` で実際に有効なPID上限を確認できます。
 - PIDはhost・guestの両方で制限します。
+
+- `proxy.credential_routes`: 未リリースmain。[認証broker設定ファイル](guides/credential-broker.md)の絶対パス。ホスト設定だけで指定します。

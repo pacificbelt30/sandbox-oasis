@@ -1,13 +1,14 @@
 package authproxy
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/pacificbelt30/codex-dock/internal/privatefile"
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"path"
 	"regexp"
 	"strings"
@@ -192,29 +193,28 @@ func cloneRoutes(routes []CredentialRoute) []CredentialRoute {
 // LoadCredentialRoutes reads an owner-private host/proxy file. Its secret
 // values remain inside the auth proxy, never in labels, argv or worker mounts.
 func LoadCredentialRoutes(path string) ([]CredentialRoute, error) {
-	info, err := os.Lstat(path)
+	data, err := privatefile.Read(path)
 	if err != nil {
 		return nil, err
 	}
-	if !info.Mode().IsRegular() || info.Mode().Perm()&0077 != 0 || info.Size() > 1<<20 {
-		return nil, fmt.Errorf("credential routes file must be a private regular file (0600)")
-	}
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = file.Close() }()
 	var records []struct {
 		Name, Upstream, Header, Prefix, Provider, Secret string
 		Paths, Methods                                   []string
 	}
-	decoder := json.NewDecoder(io.LimitReader(file, 1<<20))
+	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
 	if err = decoder.Decode(&records); err != nil {
 		return nil, fmt.Errorf("invalid credential route configuration")
 	}
+	var extra any
+	if decoder.Decode(&extra) != io.EOF {
+		return nil, fmt.Errorf("invalid credential route configuration")
+	}
 	var routes []CredentialRoute
 	for _, r := range records {
+		if r.Secret == "" || strings.ContainsAny(r.Secret, "\r\n") {
+			return nil, fmt.Errorf("credential route secret is missing or invalid")
+		}
 		secret := r.Secret
 		routes = append(routes, CredentialRoute{Name: r.Name, Upstream: r.Upstream, Header: r.Header, Prefix: r.Prefix, Provider: r.Provider, Paths: r.Paths, Methods: r.Methods, Secret: func(context.Context) (string, error) { return secret, nil }})
 	}
@@ -223,3 +223,6 @@ func LoadCredentialRoutes(path string) ([]CredentialRoute, error) {
 	}
 	return routes, nil
 }
+
+// ValidateCredentialRoutes validates trusted scopes without connecting or resolving secrets.
+func ValidateCredentialRoutes(routes []CredentialRoute) error { return validateRoutes(routes) }

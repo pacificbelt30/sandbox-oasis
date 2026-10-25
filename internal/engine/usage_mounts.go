@@ -39,7 +39,7 @@ func usageMountPaths(r *record) []string {
 	}
 	var paths []string
 	for _, m := range r.Host.Mounts {
-		if m.Type == mount.TypeBind && m.Target == "/run/cxd-usage" {
+		if m.Type == mount.TypeBind && (m.Target == "/run/cxd-usage" || m.Target == "/run/cxd-broker.json") {
 			paths = append(paths, m.Source)
 		}
 	}
@@ -51,7 +51,7 @@ func checkUsageShares(candidate *record, records []*record) error {
 		for _, path := range private {
 			secret, err := filepath.EvalSymlinks(path)
 			if err != nil {
-				return fmt.Errorf("usage state path cannot be verified")
+				return fmt.Errorf("proxy private state path cannot be verified")
 			}
 			for _, m := range worker.Host.Mounts {
 				if m.Type != mount.TypeBind {
@@ -62,7 +62,7 @@ func checkUsageShares(candidate *record, records []*record) error {
 					return fmt.Errorf("worker share cannot be verified")
 				}
 				if workerpolicy.PathsOverlap(source, secret) {
-					return fmt.Errorf("worker share overlaps protected execution usage state")
+					return fmt.Errorf("worker share overlaps protected proxy credentials or execution usage state")
 				}
 			}
 		}

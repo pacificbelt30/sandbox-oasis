@@ -34,6 +34,7 @@ func runKataFixtureProxy() int {
 	f.StringVar(&cfg.AdminListenAddr, "admin-listen", "", "")
 	f.StringVar(&cfg.AdminSecret, "admin-secret", "", "")
 	f.StringVar(&cfg.CaseID, "case-id", "", "")
+	f.StringVar(&cfg.CredentialRoutesFile, "credential-routes", "", "")
 	f.StringVar(&cfg.UsageStateDir, "usage-state-dir", "", "")
 	f.StringVar(&socket, "credential-store-socket", "", "")
 	f.StringVar(&role, "role", "auth", "")
@@ -138,6 +139,20 @@ func runKataFixtureProxy() int {
 		w.WriteHeader(http.StatusNoContent)
 	}))
 	defer up.Close()
+	brokerUp := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer fixture-broker-secret" {
+			http.Error(w, "credential missing", http.StatusUnauthorized)
+			return
+		}
+		_, _ = io.WriteString(w, "BROKER_SCOPE_OK")
+	}))
+	defer brokerUp.Close()
+	for i := range p.cfg.CredentialRoutes {
+		if p.cfg.CredentialRoutes[i].Upstream == "https://broker.fixture" {
+			p.cfg.CredentialRoutes[i].Upstream = brokerUp.URL
+		}
+	}
+	p.httpClient.Transport = brokerUp.Client().Transport
 	p.oauthTokenURL = up.URL + "/oauth/token"
 	p.anthropicOAuthTokenURL = up.URL + "/anthropic/oauth/token"
 	p.apiUpstreamURL, p.chatgptURL, p.anthropicUpstreamURL = up.URL, up.URL, up.URL

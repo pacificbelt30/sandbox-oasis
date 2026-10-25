@@ -26,7 +26,7 @@
 | P1 | Per-run usage limits | **Completed (Unreleased main)**. [Request/concurrency/body-byte/observed-token limits](../guides/usage-limits.md) | Separate estimated spending from exact cutoff. Revocation cannot undo already-billed upstream work |
 | P1 | Avoid reaping active main jobs | **Completed (Unreleased main)**. `--protect-main` and CLI/Go activity renewals | [Contract](../sandbox-features.md#primary-process-protection-and-activity-leases). Leases expire within five minutes; maximum lifetime independent. Real Kata renewal/release/idle-stop checks pass |
 | P1 | Aggregate diagnostics/observability | **Completed (Unreleased main)**. [Local diagnostics/JSONL export](../guides/observability.md), CLI/Go launch timing retention | Exclude secrets, bound retention, require no external permanent service |
-| P1 | Credential-broker configuration | Fixed-origin/path/method templates, preflight and TUI support | Reuse existing broker; no secret display or unapproved-host injection |
+| P1 | Credential-broker configuration | **Completed (Unreleased main)**. [Templates, preflight and existing TUI](../guides/credential-broker.md), hidden saved secrets and stale-write detection | Reuse existing broker; no secret display or unapproved-host injection |
 | P1 | Candidate updates | Connect existing static drift detection to pinned-CLI/runtime acceptance | No adoption from static diffs alone; preserve current pins and rollback on failure |
 | P2 | Startup/Exec/concurrency | Measure phase timings, waits, CPU, memory and I/O; optimize dominant costs | Comparable before/after measurements, credible ≥20% opportunity, no skipped isolation checks |
 

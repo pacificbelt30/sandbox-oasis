@@ -4,6 +4,7 @@
 
 | 項目 | 結果・範囲 |
 |---|---|
+| broker設定支援（10月25日） | CLI／TUIの秘密非表示・空欄維持・保存競合・権限／symlink／不正JSONの自動試験が成功。実Kataで設定作成→許可GETへの注入→path／method拒否→秘密ファイル共有拒否を確認 |
 | 診断の保存・出力（10月25日） | 全Go race・build・vet・lintとMkDocs strictが成功。実Kataでstatus・拒否コード・hostメモリ・起動時間の保存とCLI export、秘密・workspace値の非出力を確認 |
 | 実行ごとの利用上限（10月25日） | build・全Go race・vet・lint・MkDocs strictが成功。実Kata通信スイート54.78秒。要求上限・token加算・超過拒否・ProxyとVMの再起動後の維持・台帳共有の拒否を確認 |
 | メイン処理・活動通知 | 未リリースmain。全Go race・build・vet・lint、MkDocs strictが成功。実Kataの追加制御スイートが59.93秒で成功 |

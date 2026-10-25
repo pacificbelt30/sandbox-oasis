@@ -61,6 +61,16 @@ func TestKataNetworkRevocation(t *testing.T) {
 		}
 	})
 	observerPort, adminPort := nat.Port("18083/tcp"), nat.Port("18081/tcp")
+	brokerDirectory := t.TempDir()
+	if err := os.Chmod(brokerDirectory, 0700); err != nil {
+		t.Fatal(err)
+	}
+	brokerFile := filepath.Join(brokerDirectory, "routes.json")
+	createRoute := exec.CommandContext(ctx, binary, "broker", "--file", brokerFile, "set", "service", "--origin", "https://broker.fixture", "--path", "/v1/read", "--secret-stdin")
+	createRoute.Stdin = strings.NewReader("fixture-broker-secret\n")
+	if output, err := createRoute.CombinedOutput(); err != nil {
+		t.Fatalf("broker settings: %s %v", output, err)
+	}
 	usageDirectory := t.TempDir()
 	if err := os.Chmod(usageDirectory, 0700); err != nil {
 		t.Fatal(err)
@@ -75,8 +85,9 @@ func TestKataNetworkRevocation(t *testing.T) {
 			ports[adminPort] = struct{}{}
 			bindings[adminPort] = []nat.PortBinding{{HostIP: "127.0.0.1"}}
 			args = append(args, "--usage-state-dir", "/run/cxd-usage")
-			env = append(env, "OPENAI_API_KEY=sk-network-fixture-invalid", "ANTHROPIC_API_KEY=sk-ant-network-fixture-invalid")
-			host.Mounts = []mount.Mount{{Type: mount.TypeBind, Source: usageDirectory, Target: "/run/cxd-usage"}}
+			args = append(args, "--credential-routes", "/run/cxd-broker.json")
+			env = append(env, "OPENAI_API_KEY=sk-network-fixture-invalid", "ANTHROPIC_API_KEY=fixture-anthropic-key")
+			host.Mounts = []mount.Mount{{Type: mount.TypeBind, Source: usageDirectory, Target: "/run/cxd-usage"}, {Type: mount.TypeBind, Source: brokerFile, Target: "/run/cxd-broker.json", ReadOnly: true}}
 		}
 		labels := map[string]string{"io.codex-dock.proxy-layout": "network-acceptance"}
 		if !auth {
@@ -190,6 +201,7 @@ func TestKataNetworkRevocation(t *testing.T) {
 	waitConnections(authObserver, 2)
 	waitConnections(egressObserver, 3)
 	t.Log("verified: guest HTTP/CONNECT reject private IPv4/IPv6, mapped metadata and forbidden port; redirect to metadata rejected; public IPv4/IPv6 CONNECT echo and streams established")
+
 	t.Run("diagnostic-capture-export", func(t *testing.T) {
 		directory := t.TempDir()
 		if err := os.Chmod(directory, 0700); err != nil {
@@ -268,6 +280,42 @@ func TestKataNetworkRevocation(t *testing.T) {
 		t.Fatal("quarantine lost workspace:", err)
 	}
 	t.Log("PASS: real Kata token revocation and quarantine close upstream peers, preserve workspace, forbid restart and report confirmed stop correctly")
+
+	t.Run("broker-configuration-scope-and-private-file", func(t *testing.T) {
+		opts := RunOptions{Name: prefix + "-broker", ProjectDir: t.TempDir(), Image: os.Getenv("CODEX_DOCK_KATA_TEST_IMAGE"), Runtime: RuntimeKata, ContainerUser: strconv.Itoa(os.Getuid()) + ":" + strconv.Itoa(os.Getgid()), NoInternet: true, Detach: true, ExecCmd: "exec sleep infinity"}
+		worker, err := m.RunContext(ctx, opts)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() {
+			if err := m.RemoveContext(context.Background(), worker, true); err != nil {
+				t.Error(err)
+			}
+		})
+		script := `import os,urllib.request,urllib.error
+assert not os.path.exists('/run/cxd-broker.json')
+for method,path,expected in [('GET','/v1/read/item',200),('POST','/v1/read/item',403),('GET','/private',403)]:
+ req=urllib.request.Request(os.environ['CODEX_AUTH_PROXY_URL']+'/broker/service'+path,method=method,headers={'Authorization':'Bearer '+os.environ['CODEX_TOKEN']})
+ try:
+  with urllib.request.urlopen(req,timeout=10) as r: status=r.status; body=r.read(); assert b'fixture-broker-secret' not in body
+ except urllib.error.HTTPError as e: status=e.code; e.close()
+ assert status==expected,(status,expected)
+print('BROKER_SCOPE_PASS')`
+		var out bytes.Buffer
+		code, err := m.Exec(ctx, worker, []string{"python3", "-c", script}, nil, &out, &out)
+		if err != nil || code != 0 || !strings.Contains(out.String(), "BROKER_SCOPE_PASS") {
+			t.Fatalf("broker scope: %s %d %v", &out, code, err)
+		}
+		opts.Name += "-forbidden"
+		opts.ProjectDir = brokerDirectory
+		if forbidden, err := m.RunContext(ctx, opts); err == nil {
+			_ = m.RemoveContext(context.Background(), forbidden, true)
+			t.Fatal("broker secrets shared into VM")
+		} else if !strings.Contains(err.Error(), "protected proxy") {
+			t.Fatalf("share denied for unrelated reason: %v", err)
+		}
+		t.Log("PASS: configured broker injects host-only secret on scoped GET, rejects method/path widening and credential-file sharing")
+	})
 
 	t.Run("execution-usage-persistence", func(t *testing.T) {
 		limits := &identity.UsagePolicy{MaxRequests: 2, MaxConcurrent: 1, MaxBytes: 1 << 20, MaxTokens: 20}

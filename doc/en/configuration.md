@@ -350,3 +350,5 @@ Runtime overrides take precedence over config, below explicit flags.
 
 - Generate registration JSON with `oaiso profile define compact-256 --pids-limit 256` and inspect active PID ceilings with `oaiso profile --node --json`.
 - Limits apply on both host and guest.
+
+- `proxy.credential_routes`: Unreleased main. Absolute [broker configuration file](guides/credential-broker.md) path; trusted host configuration only.

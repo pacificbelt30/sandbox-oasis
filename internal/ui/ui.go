@@ -3,6 +3,7 @@ package ui
 import (
 	"context"
 	"fmt"
+	"github.com/pacificbelt30/codex-dock/internal/brokersettings"
 	"github.com/pacificbelt30/codex-dock/internal/engine"
 	"github.com/pacificbelt30/codex-dock/internal/policyevents"
 	"github.com/pacificbelt30/codex-dock/internal/workeregress"
@@ -57,7 +58,7 @@ func RunWithOptions(cfg sandbox.ManagerConfig, configPath string) error {
 	// Footer / help
 	footer := tview.NewTextView().
 		SetDynamicColors(true).
-		SetText("[yellow][↑↓][white] Select  [yellow][Enter][white] Logs  [yellow][S][white] Stop  [yellow][D][white] Delete  [yellow][R][white] Restart  [yellow][A][white] Stop All  [yellow][E][white] Denials  [yellow][P][white] Proxy settings  [yellow][Q][white] Quit")
+		SetText("[yellow][↑↓][white] Select  [yellow][Enter][white] Logs  [yellow][S][white] Stop  [yellow][D][white] Delete  [yellow][R][white] Restart  [yellow][A][white] Stop All  [yellow][E][white] Denials  [yellow][P][white] Proxy settings  [yellow][B][white] Broker  [yellow][Q][white] Quit")
 	reportError := func(err error) {
 		if err != nil {
 			app.QueueUpdateDraw(func() { footer.SetText("[red]" + tview.Escape(err.Error()) + "[-]") })
@@ -86,6 +87,10 @@ func RunWithOptions(cfg sandbox.ManagerConfig, configPath string) error {
 
 	if configPath != "" {
 		pages.AddPage("proxy", proxySettingsPage(configPath, func() { pages.SwitchToPage("main") }), true, false)
+	}
+
+	if brokerPath, err := brokersettings.DefaultPath(); err == nil {
+		pages.AddPage("broker", brokerSettingsPage(brokerPath, func() { pages.SwitchToPage("main") }), true, false)
 	}
 
 	var workers []sandbox.Worker
@@ -178,6 +183,8 @@ func RunWithOptions(cfg sandbox.ManagerConfig, configPath string) error {
 			if configPath != "" {
 				pages.SwitchToPage("proxy")
 			}
+		case 'b', 'B':
+			pages.SwitchToPage("broker")
 		case 'q', 'Q':
 			app.Stop()
 

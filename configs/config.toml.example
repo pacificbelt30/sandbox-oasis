@@ -157,7 +157,10 @@ approval_mode = "suggest"
 
 
 # -----------------------------------------------------------------------------
-# [proxy] — defaults for the auth proxy / router
+# [proxy]
+# Unreleased main: private fixed-origin broker routes; outside worker shares.
+# credential_routes = "/home/alice/.config/codex-dock/broker/routes.json"
+ — defaults for the auth proxy / router
 #
 # The node service enforces worker network isolation. The auth proxy handles
 # fixed AI routes with real credentials; a separate credential-free egress

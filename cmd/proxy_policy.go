@@ -47,6 +47,9 @@ func bindForwardPolicyFlags(cmd *cobra.Command) {
 }
 
 func applyForwardPolicyDefaults(cmd *cobra.Command) {
+	if !cmd.Flags().Changed("credential-routes") {
+		proxyBrokerFile = viper.GetString("proxy.credential_routes")
+	}
 	if !cmd.Flags().Changed("forward-default-deny") {
 		proxyForwardRules.DefaultDeny = configuredPolicy().DefaultDeny
 	}
