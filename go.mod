@@ -13,6 +13,7 @@ require (
 	github.com/distribution/reference v0.6.0
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/docker/go-connections v0.6.0
+	github.com/docker/go-units v0.5.0
 	github.com/gdamore/tcell/v2 v2.13.8
 	github.com/moby/docker-image-spec v1.3.1
 	github.com/moby/sys/signal v0.7.1
@@ -42,7 +43,6 @@ require (
 	github.com/containerd/ttrpc v1.2.7 // indirect
 	github.com/containerd/typeurl/v2 v2.2.3 // indirect
 	github.com/cyphar/filepath-securejoin v0.5.1 // indirect
-	github.com/docker/go-units v0.5.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/gdamore/encoding v1.0.1 // indirect

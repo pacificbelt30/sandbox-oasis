@@ -15,6 +15,7 @@
 | Go API | 制限付きCase Proxy、異なる上限への無断再利用の拒否、FD/I/O付きprofileの起動・契約照会、再送・取消・ケース間認証分離が成功 |
 | 導入・回収 | 使い捨てノード`19fca9150a96`でResourceControls（119.61秒）・GoAPI（75.04秒）が成功。更新・旧版拒否・失敗時の自動復旧・rollback・空の資源一覧まで成功。ノード・volumeを回収 |
 
+- CIでFD設定に使う既存の`go-units`の直接依存への分類漏れを検出。版・`go.sum`を変えず修正し、`go mod tidy -diff`・`go vet`で確認。
 - 修正した境界：帯域待ち中の一時的な読み取り中断では、消費済みのTCPデータを保持して再開。CONNECT／WebSocketのbuffer済みデータも転送。設定の誤記・桁あふれを無制限に読み替えないことを確認。
 - 途中の失敗も保持：試験用設定ディレクトリ・node待機を修正。tmpfsではI/O速度を検証できないため実ディスクへ変更。実行中のshellが作業ツリーの編集を読んだ失敗は、検証スクリプトのコピーを固定することで防止。
 - 証跡：`.kata-verification/p2-resources-20261025/`と`.kata-verification/setup-e2e/19fca9150a96/`。試験用の固定版`v0.0.0-resources-verified-a/b`を使用。実アカウント・外部AI推論・実課金は使用していません。
