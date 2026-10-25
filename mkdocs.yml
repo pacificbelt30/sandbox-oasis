@@ -107,6 +107,7 @@ nav:
       - 通信・失効の受け入れ検査: development/network-acceptance.md
       - 今後の対応: future-work.md
       - 機能と安全性の改善候補: development/improvements.md
+      - 更新候補の確認: development/candidate-qualification.md
       - ドキュメントの追加・修正: development/documentation.md
       - リリースの作成: development/releases.md
       - 廃止機能:
@@ -169,6 +170,7 @@ nav:
           - Upstream compatibility: en/upstream-compatibility.md
           - Future work: en/future-work.md
           - Feature and security improvements: en/development/improvements.md
+          - Candidate qualification: en/development/candidate-qualification.md
           - Development tools: en/development/toolchain.md
           - Local credential store specification: en/development/local-credential-store.md
           - Dependency findings: en/development/dependency-security.md

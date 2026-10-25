@@ -50,7 +50,7 @@ func TestCodexCLIWorkerCredentialPrivacy(t *testing.T) {
 				}
 				return output
 			}
-			if version := string(run(binary, "--version")); !strings.HasSuffix(strings.TrimSpace(version), "codex-cli 0.163.0") {
+			if version := string(run(binary, "--version")); !strings.HasSuffix(strings.TrimSpace(version), "codex-cli "+pinnedAgentVersion(t, "CODEX_CLI_VERSION")) {
 				t.Fatalf("test requires the worker CLI pin, got %q", version)
 			}
 			id := privacyIDToken(t)

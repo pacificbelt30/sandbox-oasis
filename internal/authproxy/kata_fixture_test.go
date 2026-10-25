@@ -113,7 +113,7 @@ func runKataFixtureProxy() int {
 			return
 		}
 		if body.Stream && len(body.Input) > 0 {
-			if r.Method != http.MethodPost || r.URL.Path != "/codex/responses" || r.Header.Get("Authorization") != "Bearer fixture-access-initial" {
+			if r.Method != http.MethodPost || (r.URL.Path != "/codex/responses" || r.Header.Get("Authorization") != "Bearer fixture-access-initial") && (r.URL.Path != "/v1/responses" || r.Header.Get("Authorization") != "Bearer sk-network-fixture-invalid") {
 				http.Error(w, "fixture transport/auth mismatch", 400)
 				return
 			}
@@ -155,7 +155,7 @@ func runKataFixtureProxy() int {
 	p.httpClient.Transport = brokerUp.Client().Transport
 	p.oauthTokenURL = up.URL + "/oauth/token"
 	p.anthropicOAuthTokenURL = up.URL + "/anthropic/oauth/token"
-	p.apiUpstreamURL, p.chatgptURL, p.anthropicUpstreamURL = up.URL, up.URL, up.URL
+	p.apiUpstreamURL, p.chatgptURL, p.anthropicUpstreamURL = up.URL+"/v1", up.URL, up.URL
 	if err := p.Start(); err != nil {
 		return 1
 	}

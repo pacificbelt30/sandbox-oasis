@@ -85,15 +85,17 @@ make contracts-check
 - 候補版を調べるときはnpmの版指定を変更してください。
 
 ```bash
-python3 -m pip install -r requirements-contracts.txt
 npm install --prefix .kata-verification/contracts-tools --ignore-scripts --no-audit --no-fund \
   @openai/codex@0.163.0 @anthropic-ai/claude-code@2.1.306
-node .kata-verification/contracts-tools/node_modules/@anthropic-ai/claude-code/install.cjs
-python3 scripts/upstream-contracts.py capture \
+claude_installer=.kata-verification/contracts-tools/node_modules/@anthropic-ai/claude-code/install.cjs
+if [ -f "$claude_installer" ]; then node "$claude_installer"; fi
+uv run --no-project --no-config --managed-python --python 3.12 \
+  --with-requirements requirements-contracts.txt python scripts/upstream-contracts.py capture \
   --codex .kata-verification/contracts-tools/node_modules/.bin/codex \
   --claude .kata-verification/contracts-tools/node_modules/.bin/claude \
   --out .kata-verification/contracts/candidate.json
-python3 scripts/upstream-contracts.py compare \
+uv run --no-project --no-config --managed-python --python 3.12 \
+  --with-requirements requirements-contracts.txt python scripts/upstream-contracts.py compare \
   --candidate .kata-verification/contracts/candidate.json \
   --json .kata-verification/contracts/report.json \
   --markdown .kata-verification/contracts/report.md
@@ -129,7 +131,8 @@ python3 scripts/upstream-contracts.py compare \
 - 候補JSON全体を基準ファイルへコピーする必要はありません。
 
 ```bash
-python3 scripts/upstream-contracts.py compact \
+uv run --no-project --no-config --managed-python --python 3.12 \
+  --with-requirements requirements-contracts.txt python scripts/upstream-contracts.py compact \
   --snapshot .kata-verification/contracts/candidate.json \
   --out compat/upstream/baseline.json
 make contracts-check
@@ -157,3 +160,6 @@ make contracts-check
 | Codexスキーマ生成 | [Codexスキーマ生成](https://learn.chatgpt.com/docs/app-server) |
 | Claude CLI | [Claude CLI](https://code.claude.com/docs/en/cli-reference) |
 | Anthropic SDK | [Anthropic SDK](https://platform.claude.com/docs/en/cli-sdks-libraries/overview) |
+## 実動作まで確認する
+
+- 未リリースmain：[更新候補の互換性確認](development/candidate-qualification.md)で、静的検査を隔離CLI・実Kataの試験へつなげます。定期CIでは計画まで作成し、固定版を自動採用しません。

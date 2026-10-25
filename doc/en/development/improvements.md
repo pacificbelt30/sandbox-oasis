@@ -3,7 +3,7 @@
 [日本語](../../development/improvements.md) | **English**
 
 - Baseline: published v0.0.3. This page tracks proposals, additional verification and work completed on main.
-- P0 establishes guarantees; P1 improves daily use/security; P2 requires measured benefit. Adoption, effort and release dates are undecided.
+- P0 establishes guarantees; P1 improves daily use/security; P2 requires measured benefit. Unimplemented proposals have undecided effort and release dates.
 - No named-product evaluation or ranking is published here.
 - Preserve convenient local operation, the authentication proxy, isolation, revocation and cleanup.
 
@@ -27,7 +27,7 @@
 | P1 | Avoid reaping active main jobs | **Completed (Unreleased main)**. `--protect-main` and CLI/Go activity renewals | [Contract](../sandbox-features.md#primary-process-protection-and-activity-leases). Leases expire within five minutes; maximum lifetime independent. Real Kata renewal/release/idle-stop checks pass |
 | P1 | Aggregate diagnostics/observability | **Completed (Unreleased main)**. [Local diagnostics/JSONL export](../guides/observability.md), CLI/Go launch timing retention | Exclude secrets, bound retention, require no external permanent service |
 | P1 | Credential-broker configuration | **Completed (Unreleased main)**. [Templates, preflight and existing TUI](../guides/credential-broker.md), hidden saved secrets and stale-write detection | Reuse existing broker; no secret display or unapproved-host injection |
-| P1 | Candidate updates | Connect existing static drift detection to pinned-CLI/runtime acceptance | No adoption from static diffs alone; preserve current pins and rollback on failure |
+| P1 | Candidate updates | **Completed (Unreleased main)**. [Plan, isolated CLI and real-Kata qualification](candidate-qualification.md), retained results/artifact hashes | No adoption from static diffs alone; preserve current pins and rollback on failure |
 | P2 | Startup/Exec/concurrency | Measure phase timings, waits, CPU, memory and I/O; optimize dominant costs | Comparable before/after measurements, credible ≥20% opportunity, no skipped isolation checks |
 
 ## Additional features

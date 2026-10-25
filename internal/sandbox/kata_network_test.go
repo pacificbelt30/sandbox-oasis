@@ -306,6 +306,7 @@ print('BROKER_SCOPE_PASS')`
 		if err != nil || code != 0 || !strings.Contains(out.String(), "BROKER_SCOPE_PASS") {
 			t.Fatalf("broker scope: %s %d %v", &out, code, err)
 		}
+		t.Run("candidate-agent-clis", func(t *testing.T) { checkCandidateAgentCLIs(t, ctx, m, worker) })
 		opts.Name += "-forbidden"
 		opts.ProjectDir = brokerDirectory
 		if forbidden, err := m.RunContext(ctx, opts); err == nil {

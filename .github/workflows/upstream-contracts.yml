@@ -28,9 +28,12 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
-          python-version: "3.12"
+          version: "0.13.5"
+
+      - name: Prepare managed Python
+        run: uv python install 3.12
 
       - uses: actions/setup-node@v4
         with:
@@ -38,9 +41,10 @@ jobs:
 
       - name: Install schema reader and test static rules
         run: |
-          python3 -m pip install -r requirements-contracts.txt
-          python3 -m unittest discover -s scripts -p 'test_upstream_contracts.py'
-          python3 scripts/upstream-contracts.py validate-baseline
+          uv run --no-project --no-config --managed-python --python 3.12 \
+            --with-requirements requirements-contracts.txt python -m unittest discover -s scripts -p 'test_*upstream*.py'
+          uv run --no-project --no-config --managed-python --python 3.12 \
+            --with-requirements requirements-contracts.txt python scripts/upstream-contracts.py validate-baseline
 
       - name: Stage official candidate CLIs without lifecycle scripts
         env:
@@ -58,7 +62,8 @@ jobs:
         id: capture
         continue-on-error: true
         run: |
-          python3 scripts/upstream-contracts.py capture \
+          uv run --no-project --no-config --managed-python --python 3.12 \
+            --with-requirements requirements-contracts.txt python scripts/upstream-contracts.py capture \
             --codex "$RUNNER_TEMP/agent-cli/node_modules/.bin/codex" \
             --claude "$RUNNER_TEMP/agent-cli/node_modules/.bin/claude" \
             --out "$RUNNER_TEMP/contracts/candidate.json"
@@ -74,10 +79,20 @@ jobs:
         id: compare
         if: always() && steps.capture.outcome != 'skipped'
         run: |
-          python3 scripts/upstream-contracts.py compare \
+          uv run --no-project --no-config --managed-python --python 3.12 \
+            --with-requirements requirements-contracts.txt python scripts/upstream-contracts.py compare \
             --candidate "$RUNNER_TEMP/contracts/candidate.json" \
             --json "$RUNNER_TEMP/contracts/report.json" \
             --markdown "$RUNNER_TEMP/contracts/report.md"
+
+      - name: Prepare candidate runtime qualification plan
+        if: always() && steps.capture.outcome == 'success'
+        continue-on-error: true
+        run: |
+          uv run --no-project --no-config --managed-python --python 3.12 \
+            --with-requirements requirements-contracts.txt python scripts/qualify-upstream.py plan \
+            --candidate "$RUNNER_TEMP/contracts/candidate.json" \
+            --out .kata-verification/upstream-qualification-plan
 
       - name: Publish run summary
         if: always()
@@ -99,6 +114,8 @@ jobs:
         if: always()
         with:
           name: upstream-static-contracts
-          path: ${{ runner.temp }}/contracts/
+          path: |
+            ${{ runner.temp }}/contracts/
+            .kata-verification/upstream-qualification-plan/
           if-no-files-found: warn
           retention-days: 30
