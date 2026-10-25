@@ -77,10 +77,13 @@ func TestWorkerAPIRoutesRejectInvalidCredentialsBeforeUpstream(t *testing.T) {
 		t.Fatal(err)
 	}
 	p.RevokeToken("revoked")
-	expired, err := p.IssueToken("expired", -1)
+	expired, err := p.IssueToken("expired", 60)
 	if err != nil {
 		t.Fatal(err)
 	}
+	p.mu.Lock()
+	p.tokens["expired"].ExpiresAt = time.Now().Add(-time.Second)
+	p.mu.Unlock()
 	for _, path := range []string{"/v1/models", "/chatgpt/codex/models", "/anthropic/v1/messages"} {
 		for _, upgrade := range []bool{false, true} {
 			for _, tc := range []struct {

@@ -3,7 +3,7 @@
 **日本語** | [English](../en/guides/audit.md)
 
 - 利用可能：未リリース（main）。
-- 用途：誰の値を使ったかではなく、操作対象のID・操作・成否を後から確認する。
+- 用途：誰の値を使ったかではなく、操作対象のID・理由・操作・成否を後から確認する。
 
 ## 保存する操作と場所
 
@@ -15,10 +15,12 @@
 | 組み込みAuth Proxy | 上記Proxy操作 | `Config.AuditDirectory`を指定。省略時は`UsageStateDir/audit/`。両方空なら保存しない |
 
 - `proxy serve --audit-dir /絶対パス`で保存先を指定できます。
+- Go APIのケースProxyは`CaseProxyOptions.UsageStateDir`を指定すると、その下の`audit/`へ保存します。独自Storeを使ったOAuth更新もProxy側で記録します。
 - 作業VMへ監査領域を共有しないでください。
 - 上流資格情報、placeholder、鍵、本文、URL、任意のエラー本文は保存しません。
 - 対象IDはSHA-256で記録します。推測しやすいIDの匿名性を保証するものではありません。
-- 各操作に`intent`と結果`ok`／`error`を記録します。結果のない操作は未確定です。
+- 理由は`completed`・`failed`・`canceled`・`storage_full`・通信拒否コードなどの固定値です。任意のエラー本文は残しません。
+- 各操作に`intent`と結果`ok`／`error`を記録します。結果のない操作は未確定です。`error`は失敗応答の記録で、変更がなかったことの保証ではありません。
 - 同一VM内の任意コマンドや上流の処理内容をすべて記録する機能ではありません。
 
 ## 検証・出力する

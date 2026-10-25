@@ -16,6 +16,7 @@ description: "Oaisoのコード・設定・配置スクリプトの変更後やC
 | Go | 影響パッケージのテスト後、build・race付き全件テスト・vet・lint |
 | `scripts/` | 対応するPythonテスト。配布処理ならバンドル整合性も確認 |
 | `deploy/kata/` | 配置・設定生成のPythonテスト。実行経路に影響する場合は実Kataも確認 |
+| 認証・管理JSON・URL/path・通信規則の境界 | `make security-fuzz`も実行。[探索範囲と失敗入力の扱い](../../../doc/development/security-tests.md) |
 | CLI名・引数 | `scripts/verify-cli-names.py`と通常サブコマンドのhelpを照合 |
 | 上流CLI版・監視manifest | [上流互換性](../oaiso-upstream-check/SKILL.md) |
 | 文書のみ | [ドキュメント編集](../oaiso-docs/SKILL.md) |

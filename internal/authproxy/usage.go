@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/pacificbelt30/codex-dock/internal/strictjson"
 	"io"
 	"net/http"
 	"net/url"
@@ -91,7 +92,7 @@ func (p *Proxy) handleAdminPrepareUsage(w http.ResponseWriter, r *http.Request) 
 		Identity    identity.Identity     `json:"identity"`
 		UsagePolicy *identity.UsagePolicy `json:"usage_policy"`
 	}
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 16<<10)).Decode(&req); err != nil {
+	if err := strictjson.Decode(r.Body, 16<<10, &req); err != nil {
 		http.Error(w, "invalid usage preparation", http.StatusBadRequest)
 		return
 	}

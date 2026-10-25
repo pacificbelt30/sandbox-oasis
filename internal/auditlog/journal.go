@@ -5,6 +5,7 @@ package auditlog
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
@@ -14,6 +15,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"syscall"
 	"time"
 
 	"golang.org/x/sys/unix"
@@ -33,6 +35,7 @@ type Record struct {
 	Action      string    `json:"action"`
 	Subject     string    `json:"subject_hash"`
 	Result      string    `json:"result"`
+	Reason      string    `json:"reason,omitempty"`
 	Previous    string    `json:"previous"`
 	Hash        string    `json:"hash"`
 }
@@ -40,6 +43,8 @@ type Report struct {
 	Records []Record `json:"records"`
 	Pending []string `json:"pending"`
 }
+
+var reasons = map[string]bool{"requested": true, "completed": true, "failed": true, "canceled": true, "timeout": true, "storage_full": true, "permission_denied": true, "policy_denied": true, "domain_denied": true, "port_denied": true, "default_denied": true, "domain_not_allowed": true, "port_not_allowed": true, "invalid_address": true, "private_address": true, "address_denied": true, "address_not_allowed": true}
 
 var actions = map[string]bool{"create": true, "start": true, "stop": true, "delete": true, "checkpoint": true, "auth_change": true, "permission_change": true, "issue": true, "restore": true, "revoke": true, "denial": true}
 
@@ -136,7 +141,7 @@ func verify(data, head []byte) (Report, error) {
 		if e := dec.Decode(&r); e != nil {
 			return out, errors.New("invalid audit record")
 		}
-		if r.Schema != 1 || r.Sequence != seq+1 || r.Previous != previous || r.Hash != hash(r) || !actions[r.Action] || len(r.Subject) != 64 || len(r.Transaction) != 32 || r.Time.IsZero() {
+		if r.Schema != 1 || r.Sequence != seq+1 || r.Previous != previous || r.Hash != hash(r) || !actions[r.Action] || len(r.Subject) != 64 || len(r.Transaction) != 32 || r.Time.IsZero() || r.Reason != "" && !reasons[r.Reason] {
 			return out, errors.New("audit chain mismatch")
 		}
 		switch r.Result {
@@ -183,7 +188,7 @@ func (j Journal) Read() (out Report, err error) {
 	})
 	return
 }
-func (j Journal) append(action, subject, tx, result string) error {
+func (j Journal) append(action, subject, tx, result, reason string) error {
 	return j.locked(func(d *os.File, limit int64) error {
 		data, e := read(d, "events.jsonl", limit)
 		if e != nil {
@@ -197,7 +202,7 @@ func (j Journal) append(action, subject, tx, result string) error {
 		if e != nil {
 			return e
 		}
-		r := Record{Schema: 1, Sequence: uint64(len(report.Records)) + 1, Time: time.Now().UTC(), Transaction: tx, Action: action, Subject: Digest(subject), Result: result, Previous: string(head)}
+		r := Record{Schema: 1, Sequence: uint64(len(report.Records)) + 1, Time: time.Now().UTC(), Transaction: tx, Action: action, Subject: Digest(subject), Result: result, Reason: reason, Previous: string(head)}
 		r.Hash = hash(r)
 		line, _ := json.Marshal(r)
 		line = append(line, '\n')
@@ -252,7 +257,7 @@ func (j Journal) Begin(action, subject string) (func(error) error, error) {
 		return nil, e
 	}
 	tx := hex.EncodeToString(b[:])
-	if e := j.append(action, subject, tx, "intent"); e != nil {
+	if e := j.append(action, subject, tx, "intent", "requested"); e != nil {
 		return nil, e
 	}
 	return func(result error) error {
@@ -260,6 +265,36 @@ func (j Journal) Begin(action, subject string) (func(error) error, error) {
 		if result != nil {
 			status = "error"
 		}
-		return j.append(action, subject, tx, status)
+		reason := "completed"
+		if result != nil {
+			reason = "failed"
+		}
+		switch {
+		case errors.Is(result, context.Canceled):
+			reason = "canceled"
+		case errors.Is(result, context.DeadlineExceeded):
+			reason = "timeout"
+		case errors.Is(result, syscall.ENOSPC):
+			reason = "storage_full"
+		case errors.Is(result, os.ErrPermission):
+			reason = "permission_denied"
+		}
+		return j.append(action, subject, tx, status, reason)
 	}, nil
+}
+
+// Denial retains a fixed diagnostic code, never a destination/header/error text.
+func (j Journal) Denial(subject, reason string) error {
+	if !reasons[reason] {
+		reason = "policy_denied"
+	}
+	var b [16]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		return err
+	}
+	tx := hex.EncodeToString(b[:])
+	if err := j.append("denial", subject, tx, "intent", reason); err != nil {
+		return err
+	}
+	return j.append("denial", subject, tx, "error", reason)
 }

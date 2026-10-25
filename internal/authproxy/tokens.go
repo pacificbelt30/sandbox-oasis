@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/pacificbelt30/codex-dock/pkg/cxd/identity"
@@ -48,6 +49,12 @@ func (p *Proxy) IssueTokenWithPolicy(containerName string, ttlSec int, id identi
 }
 
 func (p *Proxy) IssueTokenWithUsage(containerName string, ttlSec int, id identity.Identity, policy *identity.ModelPolicy, limits *identity.UsagePolicy) (tokenValue string, resultErr error) {
+	if containerName == "" || len(containerName) > 255 || strings.ContainsAny(containerName, "\r\n\x00") {
+		return "", fmt.Errorf("invalid worker name")
+	}
+	if err := p.validateLeaseTTL(ttlSec); err != nil {
+		return "", err
+	}
 	action := "issue"
 	if policy != nil || limits != nil {
 		action = "permission_change"
@@ -86,7 +93,7 @@ func (p *Proxy) IssueTokenWithUsage(containerName string, ttlSec int, id identit
 	}
 
 	p.mu.Lock()
-	if p.caseRevoked || p.revokedRuns[id] {
+	if p.stopped || p.caseRevoked || p.revokedRuns[id] {
 		p.mu.Unlock()
 		rec.cancel()
 		return "", fmt.Errorf("credential case or run was revoked")
@@ -213,8 +220,13 @@ func (p *Proxy) handleRevoke(w http.ResponseWriter, r *http.Request) {
 func (p *Proxy) expireLoop() {
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
-	for range ticker.C {
-		p.expireTokens(time.Now())
+	for {
+		select {
+		case <-p.done:
+			return
+		case now := <-ticker.C:
+			p.expireTokens(now)
+		}
 	}
 }
 

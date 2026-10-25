@@ -2,6 +2,7 @@ package auditlog
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -86,5 +87,39 @@ func TestUnsafeOrBrokenStorage(t *testing.T) {
 				t.Fatal("broken evidence allowed authority")
 			}
 		})
+	}
+}
+
+func TestLegacyAuditRecordsRemainVerifiableWithReasonCodes(t *testing.T) {
+	j := Journal{Directory: filepath.Join(t.TempDir(), "audit")}
+	if err := os.Mkdir(j.Directory, 0700); err != nil {
+		t.Fatal(err)
+	}
+	const legacy = `{"schema":1,"sequence":1,"time":"2026-10-25T00:00:00Z","transaction":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","action":"create","subject_hash":"f16d05ec6b29248d2c61adb1e9263f78e4f7bace1b955014a2d17872cfe4064d","result":"intent","previous":"","hash":"66bd7e51d1b0eeceab63be24be688ba69d3ce4265aa0490a8d0d818898c99306"}
+{"schema":1,"sequence":2,"time":"2026-10-25T00:00:00Z","transaction":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","action":"create","subject_hash":"f16d05ec6b29248d2c61adb1e9263f78e4f7bace1b955014a2d17872cfe4064d","result":"ok","previous":"66bd7e51d1b0eeceab63be24be688ba69d3ce4265aa0490a8d0d818898c99306","hash":"18e02733709765e755b1d3ac0490d244f42c02a858dd7609edd46319cfa62ddc"}
+`
+	if err := os.WriteFile(filepath.Join(j.Directory, "events.jsonl"), []byte(legacy), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(j.Directory, "head"), []byte("18e02733709765e755b1d3ac0490d244f42c02a858dd7609edd46319cfa62ddc"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	finish, err := j.Begin("stop", "fixture")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = finish(context.Canceled); err != nil {
+		t.Fatal(err)
+	}
+	if err = j.Denial("policy", "private-secret-not-a-reason"); err != nil {
+		t.Fatal(err)
+	}
+	report, err := j.Read()
+	if err != nil || len(report.Records) != 6 || report.Records[3].Reason != "canceled" || report.Records[5].Reason != "policy_denied" {
+		t.Fatalf("legacy/typed reason record failed: %v %+v", err, report)
+	}
+	data, _ := os.ReadFile(filepath.Join(j.Directory, "events.jsonl"))
+	if bytes.Contains(data, []byte("private-secret-not-a-reason")) {
+		t.Fatal("unrecognized reason value leaked")
 	}
 }

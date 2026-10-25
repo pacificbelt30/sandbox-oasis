@@ -1,5 +1,17 @@
 # テストと動作確認
 
+## 不正入力・競合・障害の追加検査（2026-10-25）
+
+- 対象：未リリース（main）。[対象・再実行・限界](development/security-tests.md)。
+- 最終検査：`make build test vet lint`、5系統の`make security-fuzz`、文書strictビルドが成功。通常の全件試験はrace付き、探索は各5秒・2 worker。
+- 追加の境界：未知／重複／Unicode別表記／末尾JSON、broker URL/path、未発行認証、モデル指定、DNS・private宛先、過大TTL、64並行のENOSPC後の利用拒否、96 SSEの失効、停止と発行の競合を確認。
+- 修正：停止済みProxyからの発行・復元を拒否し、期限監視goroutineを終了。OAuth更新の監査失敗時はtokenを失効し、新資格情報を採用しない。監査理由は固定コードに限定し、理由欄がない旧記録も検証可能。
+- 実Kata最終確認：`e727d76aaec3`でTLS・固定CLI・SSE/WS・broker・再起動（115.84秒）、Go API・別ケースtokenの401拒否・Proxy監査の検証（74.38秒）が成功。新規導入・更新・旧版拒否・自動復旧・rollback後の版下限維持・残留資源なしも確認。
+- 署名基盤のCI：commit `10e020a`の[CI 40158560900](https://github.com/pacificbelt30/sandbox-oasis/actions/runs/40158560900)で、実署名の生成・検証、改変・別workflow・別タグの拒否が成功。
+- 初回の期限試験は負数TTLで期限切れを作っていました。不正TTLを拒否する実装に合わせ、期限切れfixtureを明示した時刻で作る形へ修正して再試験。
+- ENOSPCは保存境界への注入。実diskを満杯にしていません。実アカウント・外部AI推論、公開した署名付き配布版の導入は今回の確認に含みません。
+- 既存の共有containerd・BuildKit・nodeの起動時刻は不変。試験が作ったノード・volumeはcontrollerが回収しました。
+
 ## 配布物の署名・作成元・依存一覧（2026-10-25）
 
 - 対象：未リリース（main）。[署名・SBOM・巻戻し防止](guides/signed-releases.md)。公開済みv0.0.3には署名を後付けしていません。

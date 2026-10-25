@@ -8,16 +8,29 @@ import (
 	"github.com/pacificbelt30/codex-dock/internal/auditlog"
 )
 
-func (p *Proxy) auditBegin(action, subject string) (func(error) error, error) {
+func (p *Proxy) auditJournal() *auditlog.Journal {
 	dir := p.cfg.AuditDirectory
 	if dir == "" && p.cfg.UsageStateDir != "" {
 		dir = filepath.Join(p.cfg.UsageStateDir, "audit")
 	}
 	if dir == "" {
+		return nil
+	}
+	return &auditlog.Journal{Directory: dir}
+}
+func (p *Proxy) auditBegin(action, subject string) (func(error) error, error) {
+	j := p.auditJournal()
+	if j == nil {
 		return func(error) error { return nil }, nil
 	}
-	return (auditlog.Journal{Directory: dir}).Begin(action, subject)
+	return j.Begin(action, subject)
 }
+func (p *Proxy) auditDenial(code string) {
+	if j := p.auditJournal(); j != nil {
+		_ = j.Denial(p.cfg.PolicyID, code)
+	}
+}
+
 func (p *Proxy) auditRestrictive(action, subject string) func(error) {
 	finish, err := p.auditBegin(action, subject)
 	if err != nil {

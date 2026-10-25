@@ -137,6 +137,9 @@ jobs:
         run: |
           make test
 
+      - name: Fuzz security boundaries (offline, bounded)
+        run: make security-fuzz
+
       - name: Show coverage summary
         run: go tool cover -func=coverage.out
 

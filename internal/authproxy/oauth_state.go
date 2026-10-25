@@ -72,7 +72,18 @@ func secureStateDir(path string) error {
 
 // persistOAuthState is called before publishing a refreshed credential in memory.
 // Callers hold refreshMu. An atomic rename ensures restart sees either generation.
-func (p *Proxy) persistOAuthState(provider string, credentials any) error {
+func (p *Proxy) persistOAuthState(provider string, credentials any) (resultErr error) {
+	finish, auditErr := p.auditBegin("auth_change", p.credentialScope()+"/"+provider)
+	if auditErr != nil {
+		p.revokeCaseTokens()
+		return auditErr
+	}
+	defer func() {
+		if finish(resultErr) != nil {
+			p.revokeCaseTokens()
+			resultErr = fmt.Errorf("OAuth audit result unavailable; reconcile credentials before reconnecting")
+		}
+	}()
 	if store := p.cfg.CredentialStore; store != nil {
 		next := p.storeCreds
 		switch provider {

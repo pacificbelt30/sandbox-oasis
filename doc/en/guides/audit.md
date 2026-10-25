@@ -3,7 +3,7 @@
 [日本語](../../guides/audit.md) | **English**
 
 - Available: Unreleased (main).
-- Records contain hashed subject IDs, fixed operation names, intent and success/failure. No credentials, placeholders, keys, bodies, URLs or arbitrary error messages.
+- Records contain hashed subject IDs, fixed reason/operation codes, intent and success/failure. No credentials, placeholders, keys, bodies, URLs or arbitrary error messages.
 
 | Component | Recorded operations | Directory |
 |---|---|---|
@@ -12,7 +12,7 @@
 | Independent profiles | Create, OAuth refresh, encryption migration, key method changes | Profile root, `audit/` |
 | Embedded auth proxy | Proxy operations above | `Config.AuditDirectory`, otherwise `UsageStateDir/audit/`; no persistence when both are empty |
 
-`proxy serve --audit-dir /absolute/path` explicitly selects a directory. Never share audit storage with workers. Hashing predictable IDs does not guarantee anonymity. Arbitrary guest commands and upstream processing are outside this audit's scope.
+`proxy serve --audit-dir /absolute/path` explicitly selects a directory. Case proxies persist under `CaseProxyOptions.UsageStateDir/audit/`; OAuth refreshes through custom Stores are also recorded at the proxy boundary. Never share audit storage with workers. Hashing predictable IDs does not guarantee anonymity. Arbitrary guest commands and upstream processing are outside this audit's scope. Reasons are fixed codes such as `completed`, `failed`, `canceled`, `storage_full` and network denial codes. An `error` outcome is a failure response, not a guarantee of no state change.
 
 ## Verify and export
 

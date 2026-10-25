@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/pacificbelt30/codex-dock/internal/strictjson"
 	"io"
 	"net"
 	"net/http"
@@ -122,15 +123,8 @@ func Serve(ctx context.Context, path, caseID string, store Store) error {
 }
 
 func decodeRequest(w http.ResponseWriter, r *http.Request, target any) bool {
-	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(target); err != nil {
+	if err := strictjson.Decode(r.Body, 1<<20, target); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
-		return false
-	}
-	var extra any
-	if err := decoder.Decode(&extra); err != io.EOF {
-		http.Error(w, "trailing request", http.StatusBadRequest)
 		return false
 	}
 	return true

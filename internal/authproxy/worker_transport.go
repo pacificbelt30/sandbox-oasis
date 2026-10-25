@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"github.com/pacificbelt30/codex-dock/internal/strictjson"
 	"net/http"
 	"time"
 
@@ -72,7 +73,7 @@ func (p *Proxy) handleAdminTransport(w http.ResponseWriter, r *http.Request) {
 		Token string `json:"token"`
 		TTL   int    `json:"ttl"`
 	}
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&in); err != nil {
+	if err := strictjson.Decode(r.Body, 4096, &in); err != nil {
 		http.Error(w, "invalid request", 400)
 		return
 	}
@@ -108,4 +109,15 @@ func (r *RemoteProxy) WorkerTransport(ctx context.Context, token string, ttl int
 	var c workertransport.Config
 	err = json.NewDecoder(http.MaxBytesReader(nil, resp.Body, 64<<10)).Decode(&c)
 	return c, err
+}
+
+func (p *Proxy) validateLeaseTTL(ttl int) error {
+	maximum := 365 * 24 * 3600
+	if p.WorkerTransportEnabled() {
+		maximum = workertransport.MaxTTL
+	}
+	if ttl < 1 || ttl > maximum {
+		return fmt.Errorf("invalid worker token TTL (maximum %d seconds)", maximum)
+	}
+	return nil
 }

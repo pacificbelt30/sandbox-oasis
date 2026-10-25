@@ -23,6 +23,9 @@ import (
 
 // Proxy is the Auth Proxy server that issues short-lived tokens to containers.
 type Proxy struct {
+	lifecycleMu           sync.Mutex
+	stopped               bool
+	done                  chan struct{}
 	transportCA           *workertransport.Authority
 	usageLedger           *usage.Ledger
 	usageBindings         map[string]string
@@ -144,6 +147,7 @@ func NewProxy(cfg Config) (result *Proxy, initErr error) {
 	}
 	p := &Proxy{
 		cfg:                    cfg,
+		done:                   make(chan struct{}),
 		oauthSource:            make(map[string]string),
 		tokens:                 make(map[string]*tokenRecord),
 		tokensByValue:          make(map[string]*tokenRecord),
@@ -316,6 +320,20 @@ func (p *Proxy) IsOAuthMode() bool {
 // Binding to all interfaces allows worker containers to reach the proxy
 // via host.docker.internal (resolves to the Docker bridge gateway IP).
 func (p *Proxy) Start() error {
+	p.lifecycleMu.Lock()
+	defer p.lifecycleMu.Unlock()
+	p.mu.RLock()
+	stopped := p.stopped
+	p.mu.RUnlock()
+	if stopped {
+		return fmt.Errorf("proxy has stopped; create a new instance")
+	}
+	if p.server != nil || p.listener != nil {
+		return fmt.Errorf("proxy already started; create a new instance")
+	}
+	if p.done == nil {
+		p.done = make(chan struct{})
+	}
 	addr := p.cfg.ListenAddr
 	if addr == "" {
 		addr = "0.0.0.0:0"
@@ -485,9 +503,19 @@ func primaryNonLoopbackIPv4() string {
 
 // Stop shuts down the proxy and revokes all tokens.
 func (p *Proxy) Stop() {
+	p.lifecycleMu.Lock()
+	defer p.lifecycleMu.Unlock()
 	// Hijacked WebSockets are not closed by http.Server.Shutdown. Cancel each
 	// worker lease first, including active HTTP streams and upgraded sockets.
 	p.mu.Lock()
+	if p.stopped {
+		p.mu.Unlock()
+		return
+	}
+	p.stopped = true
+	if p.done != nil {
+		close(p.done)
+	}
 	for _, rec := range p.tokens {
 		if rec.cancel != nil {
 			rec.cancel()
@@ -499,10 +527,14 @@ func (p *Proxy) Stop() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if p.server != nil {
-		_ = p.server.Shutdown(ctx)
+		if p.server.Shutdown(ctx) != nil {
+			_ = p.server.Close()
+		}
 	}
 	if p.adminServer != nil {
-		_ = p.adminServer.Shutdown(ctx)
+		if p.adminServer.Shutdown(ctx) != nil {
+			_ = p.adminServer.Close()
+		}
 	}
 	if p.usageLedger != nil {
 		_ = p.usageLedger.Close()

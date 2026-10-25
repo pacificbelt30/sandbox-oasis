@@ -19,7 +19,7 @@ TEMPLATES_DIR := $(CONFIG_DIR)/templates
 VERSION     ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 LDFLAGS     := -ldflags "-X $(MODULE)/internal/buildinfo.Version=$(VERSION)"
 
-.PHONY: all build node-bundle worker-guard io-logger install install-config install-templates install-all image proxy-image docker proxy-docker uninstall clean test contracts-check kata-e2e kata-api-e2e lint vet tidy help
+.PHONY: all build node-bundle worker-guard io-logger install install-config install-templates install-all image proxy-image docker proxy-docker uninstall clean test security-fuzz contracts-check kata-e2e kata-api-e2e lint vet tidy help
 
 ## all: build binary and OCI images
 all: build image proxy-image
@@ -174,3 +174,11 @@ build-all: build build-darwin-arm64 build-darwin-amd64 build-linux-arm64
 ## help: show this help
 help:
 	@grep -E '^## ' Makefile | sed 's/^## //'
+
+## security-fuzz: bounded offline fuzzing of management/auth/model/network boundaries
+security-fuzz:
+	go test ./internal/strictjson -run '^$$' -fuzz '^FuzzManagementJSON$$' -fuzztime=5s -parallel=2
+	go test ./internal/authproxy -run '^$$' -fuzz '^FuzzUnissuedWorkerAuthorization$$' -fuzztime=5s -parallel=2
+	go test ./internal/authproxy -run '^$$' -fuzz '^FuzzModelAuthorization$$' -fuzztime=5s -parallel=2
+	go test ./internal/authproxy -run '^$$' -fuzz '^FuzzBrokerURLScope$$' -fuzztime=5s -parallel=2
+	go test ./internal/networkpolicy -run '^$$' -fuzz '^FuzzDestinationCannotBypassPrivateDeny$$' -fuzztime=5s -parallel=2

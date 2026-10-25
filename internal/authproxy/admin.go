@@ -2,6 +2,7 @@ package authproxy
 
 import (
 	"encoding/json"
+	"github.com/pacificbelt30/codex-dock/internal/strictjson"
 	"net/http"
 
 	"github.com/pacificbelt30/codex-dock/pkg/cxd/identity"
@@ -33,7 +34,7 @@ func (p *Proxy) handleAdminIssue(w http.ResponseWriter, r *http.Request) {
 		ModelPolicy *identity.ModelPolicy `json:"model_policy,omitempty"`
 		UsagePolicy *identity.UsagePolicy `json:"usage_policy,omitempty"`
 	}
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 96<<10)).Decode(&req); err != nil {
+	if err := strictjson.Decode(r.Body, 96<<10, &req); err != nil {
 		http.Error(w, "invalid json", http.StatusBadRequest)
 		return
 	}
@@ -41,8 +42,12 @@ func (p *Proxy) handleAdminIssue(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "missing container", http.StatusBadRequest)
 		return
 	}
-	if req.TTL <= 0 {
+	if req.TTL == 0 {
 		req.TTL = p.cfg.TokenTTL
+	}
+	if err := p.validateLeaseTTL(req.TTL); err != nil {
+		http.Error(w, "invalid token TTL", http.StatusBadRequest)
+		return
 	}
 	t, err := p.IssueTokenWithUsage(req.Container, req.TTL, req.Identity, req.ModelPolicy, req.UsagePolicy)
 	if err != nil {
@@ -79,7 +84,7 @@ func (p *Proxy) handleAdminRevokeRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var in identity.Identity
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 8192)).Decode(&in); err != nil || in.Validate() != nil || p.cfg.CaseID != "" && in.CaseID != p.cfg.CaseID {
+	if err := strictjson.Decode(r.Body, 8192, &in); err != nil || in.Validate() != nil || p.cfg.CaseID != "" && in.CaseID != p.cfg.CaseID {
 		http.Error(w, "invalid run identity", http.StatusBadRequest)
 		return
 	}

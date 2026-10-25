@@ -34,6 +34,7 @@ CODEX_DOCK_DISPOSABLE_SETUP=1 uv run --no-project --no-config --managed-python -
 | 配布インストーラー | `--release-installer`・`--setup-python`・`--uv`を組で指定し、パイプ経由の計画・適用を確認 |
 | キャッシュ利用 | `--cache PATH --offline`。初回ワーカーのオンラインビルドとは別の指定 |
 | 独自の試験イメージ | `--worker-image`・`--proxy-image`・`--image`を実物に合わせる |
+| VM―認証ProxyのTLS・失効 | `--acceptance-run '^TestKataWorkerMTLS$'`。固定CLI・SSE/WS・再起動・broker・利用上限を確認 |
 | Go API障害系 | [公開Go APIの受入](../../../doc/testing.md#公開go-apiの障害系受入)に従い、専用ノードで`make kata-api-e2e`も実行 |
 
 ## 確認する範囲

@@ -17,6 +17,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	dockernetwork "github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/pacificbelt30/codex-dock/internal/auditlog"
 	"github.com/pacificbelt30/codex-dock/internal/engine"
 	"github.com/pacificbelt30/codex-dock/internal/kataguard"
 	"github.com/pacificbelt30/codex-dock/internal/network"
@@ -77,6 +78,7 @@ func TestKataGoAPI(t *testing.T) {
 		worker   cxd.Worker
 		req      cxd.LaunchRequest
 		token    string
+		usage    string
 	}
 	cases := make([]fixture, 2)
 	secrets := []string{}
@@ -131,7 +133,7 @@ func TestKataGoAPI(t *testing.T) {
 				t.Error(err)
 			}
 		})
-		proxy, err := cxd.EnsureCaseProxy(ctx, cxd.CaseProxyOptions{Image: proxyImage, Name: caseID, CaseID: caseID, StoreSocket: socket, AdminPort: port, AdminSecret: prefix + "-private-admin-secret"})
+		proxy, err := cxd.EnsureCaseProxy(ctx, cxd.CaseProxyOptions{Image: proxyImage, Name: caseID, CaseID: caseID, StoreSocket: socket, UsageStateDir: filepath.Join(dir, "usage"), AdminPort: port, AdminSecret: prefix + "-private-admin-secret"})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -225,7 +227,7 @@ func TestKataGoAPI(t *testing.T) {
 		if token == "" || endpoint == "" {
 			t.Fatal("worker has no issued proxy token or guest endpoint")
 		}
-		cases[i] = fixture{api: api, endpoint: endpoint, id: id, worker: worker, req: req, token: token}
+		cases[i] = fixture{api: api, endpoint: endpoint, id: id, worker: worker, req: req, token: token, usage: filepath.Join(dir, "usage")}
 		var output bytes.Buffer
 		code, err := api.Exec(ctx, worker.ID, cxd.ExecRequest{Argv: []string{"cat", "/proc/sys/kernel/random/boot_id"}, Stdout: &output})
 		if err != nil || code != 0 || strings.TrimSpace(output.String()) == strings.TrimSpace(string(hostBoot)) {
@@ -278,7 +280,7 @@ def status(url, token):
 assert status(v['url'],v['token'])==200, 'own token rejected'
 try: result=status(v['url'],v['other_token'])
 except (OSError,urllib.error.URLError): result=0
-assert result in (0,401,403), 'cross-case token accepted'
+assert result==401, ('cross-case token rejection was not authenticated',result)
 print('guest credential and case isolation PASS')`
 		var output bytes.Buffer
 		code, err := f.api.Exec(ctx, f.worker.ID, cxd.ExecRequest{Argv: []string{"python3", "-c", script}, Stdin: bytes.NewReader(input), Stdout: &output, Stderr: &output})
@@ -319,6 +321,10 @@ except urllib.error.HTTPError as e: assert e.code==401, e.code`
 		}
 		if _, err := f.api.Launch(ctx, f.req); !errors.Is(err, cxd.ErrRequestGone) {
 			t.Fatalf("removed request resurrected: %v", err)
+		}
+		report, err := (auditlog.Journal{Directory: filepath.Join(f.usage, "audit")}).Read()
+		if err != nil || len(report.Records) == 0 || len(report.Pending) != 0 {
+			t.Fatalf("case operation audit incomplete: %v", err)
 		}
 		t.Log("verified: guest credentials absent, case token isolation, run revocation, Stop and RemoveRequest")
 	}
