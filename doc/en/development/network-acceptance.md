@@ -2,7 +2,7 @@
 
 [日本語](../../development/network-acceptance.md) | **English**
 
-- Additional checks: **Unreleased (main)**.
+- Additional checks: **v0.0.4**.
 - Reuses existing tests and local synthetic upstreams; no live accounts.
 - Automated tests, real Kata evidence and unverified conditions are recorded separately.
 

@@ -93,7 +93,7 @@
 | network | 専用bridge・namespace・静的Proxy hosts。直接外向き・ホスト・peer通信を遮断 |
 | management | containerd/node/BuildKit socket・資産・台帳・host kernel操作用パスを渡さない |
 
-- 未リリースmain：[TCP接続数・接続元別帯域・guestのプロセス別FD・ホストblock I/Oの上限](guides/resource-limits.md)。任意設定です。IPによる集計は実行元の認証とは別、FDはプロセス単位、cached read・tmpfsはblock I/O制限の対象外です。
+- v0.0.4：[TCP接続数・接続元別帯域・guestのプロセス別FD・ホストblock I/Oの上限](guides/resource-limits.md)。任意設定です。IPによる集計は実行元の認証とは別、FDはプロセス単位、cached read・tmpfsはblock I/O制限の対象外です。
 
 ### ユーザーコードを解放する順序
 
@@ -162,13 +162,13 @@
 
 | 項目 | 制限・既定動作 |
 |---|---|
-| ワーカー―Auth Proxy間 | 未リリースmainの標準管理ProxyはTLS 1.3＋実行別クライアント証明書。[使い方・更新](guides/worker-tls.md)。一般egressは従来のHTTP proxy |
+| ワーカー―Auth Proxy間 | v0.0.4の標準管理ProxyはTLS 1.3＋実行別クライアント証明書。[使い方・更新](guides/worker-tls.md)。一般egressは従来のHTTP proxy |
 | 管理API・data port | 公開networkへ直接公開しない |
 | 短命トークン | 標準TLS経路ではtoken＋その実行の公開鍵を照合。コピーしたtokenだけでは利用不可。侵害されたVM内の権限使用は防げない。独自の旧HTTP Proxyは従来どおり |
 | 一般通信 | 既定拒否。宛先許可が空なら一般egressを接続しない |
 | ワーカー別許可 | ポリシー別Proxyで強制。同じ規則のワーカーは共有可 |
 | 公開宛て通信を広く許可 | ホストが明示的に選択 |
-| 通信規則の変更 | 未リリースmainでは[Proxy単位の明示的な即時変更](guides/live-policy.md)。世代照合・既存接続の終了確認・保存失敗時の拒否。設定ファイルの自動再読込なし |
+| 通信規則の変更 | v0.0.4では[Proxy単位の明示的な即時変更](guides/live-policy.md)。世代照合・既存接続の終了確認・保存失敗時の拒否。設定ファイルの自動再読込なし |
 | モデル制限 | ホストがAuth Proxyへ明示設定した場合だけ有効。起動CLIのモデル指定だけでは認可しない |
 
 - モデル制限の対応経路・WebSocket拒否：[追加制御](sandbox-features.md#モデル認可と段階的な起動)。
@@ -190,7 +190,7 @@
 | 区分 | 範囲 |
 |---|---|
 | [実機・実AI試験](testing.md)の記録あり | 隔離・権限・資源・機能、既存auth.jsonによるWebSocket/HTTP SSE推論 |
-| [通信・失効の追加検査](development/network-acceptance.md)（未リリースmain） | DNS・停止失敗の自動検査、実Kataからの拒否、既存SSE/WSの失効、隔離停止による一般通信の切断。接続先はfixture |
+| [通信・失効の追加検査](development/network-acceptance.md)（v0.0.4） | DNS・停止失敗の自動検査、実Kataからの拒否、既存SSE/WSの失効、隔離停止による一般通信の切断。接続先はfixture |
 | 別途確認 | 長期間の実OAuth更新・対話キーボード操作・任意のカスタムイメージ |
 | Claudeのfixture試験 | APIキー／サブスクのplaceholder変数を分離。実access/refresh tokenをworkerへ保存しない |
 | Claudeで未検証 | 実Anthropic推論・サブスク利用枠 |
@@ -200,8 +200,8 @@
 
 ## 操作の監査記録
 
-- 未リリース（main）：[保存・欠損検知・容量・障害時の扱い](guides/audit.md)。ローカルrootに耐える改ざん防止は保証しません。
+- v0.0.4：[保存・欠損検知・容量・障害時の扱い](guides/audit.md)。ローカルrootに耐える改ざん防止は保証しません。
 
 ## 配布物の署名
 
-- 未リリースmain：[署名・作成元・SBOM・巻戻し防止](guides/signed-releases.md)。公開v0.0.3はchecksum方式です。
+- v0.0.4以降：[署名・作成元・SBOM・巻戻し防止](guides/signed-releases.md)。

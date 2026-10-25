@@ -2,7 +2,7 @@
 
 **日本語** | [English](../en/guides/disk-checkpoint.md)
 
-- 利用可能：**未リリース（main）**。対応するCLI・node・Proxyが必要です。
+- 利用可能：**v0.0.4**。対応するCLI・node・Proxyが必要です。
 - 停止済みKata VMのroot filesystemを保存し、**同じnode上の新しいVM**へ復元します。
 - メモリ上の処理、接続、実行位置を保存する機能ではありません。
 
@@ -109,7 +109,7 @@ oaiso checkpoint rm "$checkpoint_id"
 
 ## 保存期限・容量を確認して回収する
 
-- 利用可能：**未リリース（main）**。
+- 利用可能：**v0.0.4**。
 - nodeの合計上限は従来どおり16GiB。`--keep-bytes`は回収後の目標容量です。将来の作成を指定容量で止める設定ではありません。
 - 容量は論理的なtarのバイト数。containerdの共有content・展開先・ホスト全体の使用量とは異なります。
 

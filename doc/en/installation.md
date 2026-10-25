@@ -11,7 +11,7 @@
 
 ## Installed version
 
-- v0.0.3 includes `login`, keyring and age storage in the prebuilt distribution.
+- These instructions install the signed prebuilt distribution (v0.0.4).
 - For the complete flow, follow [installation through first startup](guides/first-run.md).
 - The `releases/latest` commands below install the published release.
 
@@ -71,7 +71,7 @@ curl -fsSL https://github.com/pacificbelt30/sandbox-oasis/releases/latest/downlo
 
 ```text
 Plan: verified Ubuntu 26.04 amd64 node; Kata 4.2.0 / Dragonball / containerd 2.4.2 / BuildKit 0.34.0 / runc 1.4.3
-Bundle: /tmp/oaiso-release-<id>/bundle (version v0.0.3); operator: user; cache: /var/cache/codex-dock-setup; offline: no
+Bundle: /tmp/oaiso-release-<id>/bundle (version v0.0.4); operator: user; cache: /var/cache/codex-dock-setup; offline: no
 ```
 
 - Versions, paths and account names are examples and vary by installation and release.
@@ -82,7 +82,7 @@ Bundle: /tmp/oaiso-release-<id>/bundle (version v0.0.3); operator: user; cache: 
 | Command or option | Behavior |
 |---|---|
 | No options | Download and verify the matching release binaries, then display the plan |
-| `--version v0.0.3` | Download a specific release |
+| `--version v0.0.4` | Download a specific release |
 | `--apply` | Apply through `sudo` after the plan succeeds, forwarding the selected Python’s absolute path |
 | No operator option | Register the invoking normal user |
 | `--operator USER` | Register another existing normal user; required when invoking the script as root |
@@ -100,13 +100,13 @@ Bundle: /tmp/oaiso-release-<id>/bundle (version v0.0.3); operator: user; cache: 
 
 ### Download and review a pinned release
 
-**Example for v0.0.3. Inspect the saved script, then use the same file for planning and installation.**
+**Example for v0.0.4. Inspect the saved script, then use the same file for planning and installation.**
 
 ```bash
-curl -fsSL -o install.sh https://github.com/pacificbelt30/sandbox-oasis/releases/download/v0.0.3/install.sh
+curl -fsSL -o install.sh https://github.com/pacificbelt30/sandbox-oasis/releases/download/v0.0.4/install.sh
 less install.sh
-bash install.sh --version v0.0.3
-bash install.sh --version v0.0.3 --apply
+bash install.sh --version v0.0.4
+bash install.sh --version v0.0.4 --apply
 ```
 
 ## 4. Log in again and verify
@@ -191,6 +191,7 @@ user sudo codex-dock
 
 - Go is needed in environments that build Oaiso or a product embedding its Go API. See the [official Go Linux procedure](https://go.dev/doc/install) and our [command examples](development/toolchain.md#2-install-go-using-the-official-linux-procedure).
 
-## Signed distributions (Unreleased main)
+## Distribution verification
 
-- [Signatures, provenance, SBOM and rollback protection](guides/signed-releases.md). The next signed distribution also requires GitHub CLI; published v0.0.3 is unchanged.
+- The installer verifies signatures, source identity, the selected tag and SHA-256 before placement.
+- [Verify the script before execution, inspect the SBOM and prevent rollback](guides/signed-releases.md).

@@ -2,9 +2,8 @@
 
 [日本語](../../guides/signed-releases.md) | **English**
 
-- Available: Unreleased (main), starting with the next signed distribution.
-- Published v0.0.3 has checksums only; existing assets are not overwritten or retroactively signed.
-- The new main installer/`upgrade` refuses unsigned online releases.
+- Available: v0.0.4 or later.
+- The installer and `upgrade` reject unsigned online releases.
 
 | Evidence | Policy |
 |---|---|
@@ -29,9 +28,10 @@ Checksums detect corruption; they do not replace signatures. CI obtains short-li
 
 ## Verify the installer before executing it
 
-Run as a normal user, after exporting `RELEASE_TAG` to an actual signed release tag. This is unavailable for unsigned v0.0.3.
+Run as a normal user. This block verifies v0.0.4 and displays the installation plan.
 
 ```bash
+export RELEASE_TAG=v0.0.4
 bash <<'SH'
 set -euo pipefail
 : "${RELEASE_TAG:?Export the signed release tag first}"

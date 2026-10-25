@@ -2,7 +2,7 @@
 
 [日本語](../local-api-sdk.md) | **English**
 
-- Available: **unreleased (main)**. Packages are not published to public registries yet.
+- Available: **v0.0.4**. Packages are not published to public registries yet.
 - Manage workers on the same Linux execution host through private pipes: SDK → `oaiso api stdio` → [public Go API](go-api.md) → existing node Unix socket.
 - No TCP listener or management-socket forwarding is added. Existing socket permissions remain required and grant host authority, including arbitrary mounts. Use trusted callers only.
 
@@ -214,7 +214,7 @@ uv run --no-project --no-config --managed-python --python 3.12 python scripts/ve
 
 ## Files, jobs and checkpoints
 
-- Available: **unreleased (main)**; additive methods within local API v1.
+- Available: **v0.0.4**; additive methods within local API v1.
 
 | Operation | Python | TypeScript |
 |---|---|---|

@@ -2,7 +2,7 @@
 
 **日本語** | [English](../en/guides/worker-tls.md)
 
-- 利用可能：未リリース（main）。
+- 利用可能：v0.0.4。
 - 標準の`proxy run`とGo APIの`EnsureCaseProxy`で作る認証Proxyに適用します。
 
 ## 通信と認証

@@ -84,7 +84,7 @@ oaiso proxy run \
 | path指定 | なし | 配下を含む `Paths`、完全一致の `ExactPaths` |
 | query・body | 検査しない | 内容を検査しない。上流API自身の権限も必要 |
 
-- brokerの完全一致pathとCLIのmethod指定は**未リリース（main）**です。[設定・具体例](guides/credential-broker.md)を参照してください。
+- brokerの完全一致pathとCLIのmethod指定は**v0.0.4**です。[設定・具体例](guides/credential-broker.md)を参照してください。
 - SNIの照合だけでは、暗号化されたHTTP Hostやpathを制限できません。
 - brokerだけを通したい場合は、一般egressを止めるか、そのoriginへの一般HTTP/CONNECTを許可しないでください。
 - 固定AI経路の認可は独立しています。brokerの規則で、他の経路の権限が変わることはありません。
@@ -104,7 +104,7 @@ oaiso proxy run \
 
 - 起動時に規則を検証する。設定ファイルの自動再読込は行わない。
 - 未知のロール、誤ったドメイン/CIDR/ポートは起動エラー。
-- 未リリースmainでは、[確認・承認付きの即時変更](guides/live-policy.md)を利用可能。既存接続を閉じ、規則の世代と完了状態を確認する。
+- v0.0.4では、[確認・承認付きの即時変更](guides/live-policy.md)を利用可能。既存接続を閉じ、規則の世代と完了状態を確認する。
 - 通常のワーカーは共有egress proxyを使用する。
 - `oaiso run --egress-allow-domain api.example.com` を指定したワーカーは、ポリシーの識別子を持つ専用egress proxyに接続する。
 - 異なる許可リストのワーカーはproxyを共有しない。

@@ -208,9 +208,9 @@ forward_allow_ports = [80, 443]
 | `policy_preset` | 未指定 | `--policy-preset` |
 | `deny_read` / `deny_write` | 空配列 | `--deny-read` / `--deny-write` |
 | `max_lifetime` / `idle_timeout` / `retention` | `"0s"` | 同名ハイフン形式。例：`"30m"` / `"2h"`。`reap` が必要 |
-| `protect_main` | `false` | 未リリースmain。`--protect-main`。メイン処理をidle回収から保護 |
-| `max_requests` / `max_concurrent` | `0` | 未リリースmain。`--max-requests` / `--max-concurrent` |
-| `max_transfer_bytes` / `max_observed_tokens` | `0` | 未リリースmain。`--max-transfer-bytes` / `--max-observed-tokens`。[上限の条件](guides/usage-limits.md) |
+| `protect_main` | `false` | v0.0.4。`--protect-main`。メイン処理をidle回収から保護 |
+| `max_requests` / `max_concurrent` | `0` | v0.0.4。`--max-requests` / `--max-concurrent` |
+| `max_transfer_bytes` / `max_observed_tokens` | `0` | v0.0.4。`--max-transfer-bytes` / `--max-observed-tokens`。[上限の条件](guides/usage-limits.md) |
 | `environment_lock` | 未指定 | `--environment-lock` |
 | `image_id` | 未指定 | `--image-id` |
 | `start_hooks` | 空配列 | `--start-hook` |
@@ -258,8 +258,8 @@ Dockerfile、テンプレート、カスタムイメージの例は[build](comma
 
 | キー | 既定値 | 対応箇所 |
 |---|---|---|
-| `max_connections` / `max_connections_per_source` | `0` | 未リリースmain。`proxy run --max-connections` / `--max-connections-per-source` |
-| `network_bytes_per_second` | `0` | 未リリースmain。`--network-bytes-per-second`。[対象と動作](guides/resource-limits.md) |
+| `max_connections` / `max_connections_per_source` | `0` | v0.0.4。`proxy run --max-connections` / `--max-connections-per-source` |
+| `network_bytes_per_second` | `0` | v0.0.4。`--network-bytes-per-second`。[対象と動作](guides/resource-limits.md) |
 | `container_url` | `http://codex-auth-proxy:18080` | `run --proxy-container-url` |
 | `admin_url` | `http://127.0.0.1:18081` | `run --proxy-admin-url`、ワーカー管理 |
 | `admin_secret` | 未設定 | 管理クライアントの認証。サーバー起動には `proxy run --admin-secret` も指定する |
@@ -354,7 +354,7 @@ Dockerfile、テンプレート、カスタムイメージの例は[build](comma
 
 ## ノード管理者の資源プロファイル
 
-- [FD・block I/Oの追加プロファイル設定](guides/resource-limits.md)：未リリースmain。組み込みプロファイルの既定値は維持します。
+- [FD・block I/Oの追加プロファイル設定](guides/resource-limits.md)：v0.0.4。組み込みプロファイルの既定値は維持します。
 
 - `run.profile_size` は組み込みまたはnodeに登録された名前を選びます。
 - 追加の予算は、rootのnode管理者が `node serve --resource-profiles /etc/codex-dock/resource-profiles.json` で登録します。
@@ -364,4 +364,4 @@ Dockerfile、テンプレート、カスタムイメージの例は[build](comma
 - `oaiso profile define compact-256 --pids-limit 256` で登録用JSONを生成でき、`oaiso profile --node --json` で実際に有効なPID上限を確認できます。
 - PIDはhost・guestの両方で制限します。
 
-- `proxy.credential_routes`: 未リリースmain。[認証broker設定ファイル](guides/credential-broker.md)の絶対パス。ホスト設定だけで指定します。
+- `proxy.credential_routes`: v0.0.4。[認証broker設定ファイル](guides/credential-broker.md)の絶対パス。ホスト設定だけで指定します。

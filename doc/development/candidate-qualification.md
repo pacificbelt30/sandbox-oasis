@@ -2,7 +2,7 @@
 
 **日本語** | [English](../en/development/candidate-qualification.md)
 
-- 利用可能：**未リリース（main）**。
+- 利用可能：**v0.0.4**。
 - 対象：Codex・Claude Codeの候補版。通常環境と分離した作業ツリー・試験用イメージで検査します。
 - 固定版・baseline・公開配布物は自動変更しません。
 

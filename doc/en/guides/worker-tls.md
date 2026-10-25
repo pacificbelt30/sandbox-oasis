@@ -2,7 +2,7 @@
 
 [日本語](../../guides/worker-tls.md) | **English**
 
-- Available: Unreleased (main).
+- Available: v0.0.4.
 - Enabled for auth proxies created by standard `proxy run` and Go `EnsureCaseProxy`.
 
 | Hop or credential | Behavior |

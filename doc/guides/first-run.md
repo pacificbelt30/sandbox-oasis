@@ -2,7 +2,7 @@
 
 **日本語** | [English](../en/guides/first-run.md)
 
-- このページはv0.0.3以降の手順です。`oaiso --version`で導入した版を確認してください。
+- このページはv0.0.4以降の手順です。`oaiso --version`で導入した版を確認してください。
 - 以下はUbuntu 26.04・x86_64・systemd・KVM・cgroup v2があるホスト向けです。[前提条件](../installation.md#1-前提条件)。
 
 ## 1. ビルド済み版をインストールする
@@ -16,7 +16,7 @@ curl -fsSL https://github.com/pacificbelt30/sandbox-oasis/releases/latest/downlo
 
 - Go・Make・ソース取得は不要。uv・Pythonはスクリプトが準備します。
 - 不足するD-Bus・GNOME Keyring・`secret-tool`もsetupが導入します。
-- 版を固定する場合：[v0.0.3を指定して導入](../installation.md#版を固定して取得実行する)。
+- 版を固定する場合：[v0.0.4を指定して導入](../installation.md#版を固定して取得実行する)。
 - mainをソースから導入する場合：[開発ツール](../development/toolchain.md)と[ソースからの配置手順](../setup.md)を参照してください。
 
 ## 2. 再ログインして基盤を確認する

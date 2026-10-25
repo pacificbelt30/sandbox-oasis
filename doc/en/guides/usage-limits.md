@@ -2,7 +2,7 @@
 
 [日本語](../../guides/usage-limits.md) | **English**
 
-- Available: **Unreleased (main)**; use matching CLI, node and authentication proxy.
+- Available: **v0.0.4**; use matching CLI, node and authentication proxy.
 - Both API and subscription authentication are enforced at the credential-holding proxy. No ledger/admin authority enters VMs.
 - Defaults preserve existing behavior. Unsupported proxies reject limited executions rather than omitting enforcement.
 

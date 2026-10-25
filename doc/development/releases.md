@@ -7,8 +7,8 @@
 | `oaiso-linux-amd64.tar.gz` | 静的CLI・起動検証／ログ用プログラム・版とSHA-256・ライセンス／notice |
 | `install.sh` | そのリリースの版を埋め込んだ単独インストーラー |
 | `SHA256SUMS` | 配布アーカイブ・インストーラー・SBOMのSHA-256 |
-| `sbom.cdx.json` | 未リリースmain：実バイナリのGo依存・固定runtimeの一覧 |
-| `provenance.json` | 未リリースmain：GitHub OIDC／Sigstoreの署名付き作成元証跡 |
+| `sbom.cdx.json` | v0.0.4：実バイナリのGo依存・固定runtimeの一覧 |
+| `provenance.json` | v0.0.4：GitHub OIDC／Sigstoreの署名付き作成元証跡 |
 
 - 対象ホストはUbuntu 26.04 x86_64です。
 - `go.mod` のGo版、uv 0.13.5、uv管理Python 3.12で生成します。
@@ -52,13 +52,13 @@ git push origin "$release_tag"
 
 ## 公開後に確認する
 
-- 署名付き版は5ファイルを取得し、署名・作成元・SHA-256を確認します。公開v0.0.3は従来の3ファイルです。
+- 署名付き版は5ファイルを取得し、署名・作成元・SHA-256を確認します。
 - 署名付き版は`install.sh`自体を実行前に検証し、通常ユーザーで選択版の配置計画を表示できること。パイプ実行はHTTPS bootstrapを信頼する手順として区別します。
 - 完全な配置・更新・復旧は、[使い捨てKataノードの試験](../testing.md#新規導入更新復旧を検証する)で確認します。
 
-## 署名付き配布（未リリースmain）
+## 署名付き配布（v0.0.4）
 
-- [利用者の検証・信頼範囲・巻戻し防止](../guides/signed-releases.md)。公開v0.0.3の配布物は変更しません。
+- [利用者の検証・信頼範囲・巻戻し防止](../guides/signed-releases.md)。
 - Release workflowが対象タグをcheckoutし、ビルド後にarchive・installer・checksum・SBOMへ署名付き作成元証跡を付けます。
 - workflow内でrepo・workflow・tag・commit・runnerを検証してから、5つのアセットを下書きへ添付し、最後に公開します。
 - 手動起動でもworkflowのrefと入力tagを一致させます。main上のworkflowで別タグを署名する操作は拒否します。

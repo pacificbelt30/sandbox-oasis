@@ -197,9 +197,9 @@ Under `[run]`:
 | `policy_preset` | Unset | `--policy-preset` |
 | `deny_read` / `deny_write` | Empty | `--deny-read` / `--deny-write` |
 | `max_lifetime` / `idle_timeout` / `retention` | `"0s"` | Matching hyphenated flags; `"30m"`, `"2h"`; requires `reap` |
-| `protect_main` | `false` | Unreleased main. `--protect-main`; protect the primary process from idle collection |
-| `max_requests` / `max_concurrent` | `0` | Unreleased main. `--max-requests` / `--max-concurrent` |
-| `max_transfer_bytes` / `max_observed_tokens` | `0` | Unreleased main. `--max-transfer-bytes` / `--max-observed-tokens`. [Limits](guides/usage-limits.md) |
+| `protect_main` | `false` | v0.0.4. `--protect-main`; protect the primary process from idle collection |
+| `max_requests` / `max_concurrent` | `0` | v0.0.4. `--max-requests` / `--max-concurrent` |
+| `max_transfer_bytes` / `max_observed_tokens` | `0` | v0.0.4. `--max-transfer-bytes` / `--max-observed-tokens`. [Limits](guides/usage-limits.md) |
 | `environment_lock` | Unset | `--environment-lock` |
 | `image_id` | Unset | `--image-id` |
 | `start_hooks` | Empty | `--start-hook` |
@@ -252,8 +252,8 @@ Under `[proxy]`:
 
 | Key | Default | Used by |
 |---|---|---|
-| `max_connections` / `max_connections_per_source` | `0` | Unreleased main. `proxy run --max-connections` / `--max-connections-per-source` |
-| `network_bytes_per_second` | `0` | Unreleased main. `--network-bytes-per-second`. [Scope and behavior](guides/resource-limits.md) |
+| `max_connections` / `max_connections_per_source` | `0` | v0.0.4. `proxy run --max-connections` / `--max-connections-per-source` |
+| `network_bytes_per_second` | `0` | v0.0.4. `--network-bytes-per-second`. [Scope and behavior](guides/resource-limits.md) |
 | `container_url` | `http://codex-auth-proxy:18080` | `run --proxy-container-url` |
 | `admin_url` | `http://127.0.0.1:18081` | `run --proxy-admin-url`, worker management |
 | `admin_secret` | Unset | Admin client; also supply the server secret with `proxy run --admin-secret` |
@@ -343,7 +343,7 @@ Runtime overrides take precedence over config, below explicit flags.
 
 ## Operator resource profiles
 
-- [Additional FD and block I/O profile fields](guides/resource-limits.md): unreleased main. Existing built-in profiles retain their defaults.
+- [Additional FD and block I/O profile fields](guides/resource-limits.md): v0.0.4. Existing built-in profiles retain their defaults.
 
 - `run.profile_size` selects a built-in or node-registered name.
 - The root node operator registers additional budgets through `node serve --resource-profiles /etc/codex-dock/resource-profiles.json`, independently of user TOML.
@@ -355,4 +355,4 @@ Runtime overrides take precedence over config, below explicit flags.
 - Generate registration JSON with `oaiso profile define compact-256 --pids-limit 256` and inspect active PID ceilings with `oaiso profile --node --json`.
 - Limits apply on both host and guest.
 
-- `proxy.credential_routes`: Unreleased main. Absolute [broker configuration file](guides/credential-broker.md) path; trusted host configuration only.
+- `proxy.credential_routes`: v0.0.4. Absolute [broker configuration file](guides/credential-broker.md) path; trusted host configuration only.

@@ -45,7 +45,7 @@ bash -n dist/release/install.sh
 ## 公開物を確認する
 
 - リリースAPIでタグ、draft/prerelease、latest、対象コミット、5つのアセット（archive・install.sh・SHA256SUMS・sbom.cdx.json・provenance.json）を確認する。
-- 未リリースmain以降の署名付き版は[署名・作成元の検証](../../../doc/guides/signed-releases.md)を先に行う。repo・release workflow・対象タグ・runner種別を照合し、不足や不一致をchecksumだけで代用しない。旧公開版には署名を後付けしない。
+- 署名付き版は[署名・作成元の検証](../../../doc/guides/signed-releases.md)を先に行う。repo・release workflow・対象タグ・runner種別を照合し、不足や不一致をchecksumだけで代用しない。旧公開版には署名を後付けしない。
 - 実ファイルを取得し、`SHA256SUMS`・bundle manifest・SBOM・版表示を照合する。Go build情報が含まれる場合はソースコミットとクリーンなビルドも確認する。
 - 署名付き版はインストーラー自体を実行前に検証する。パイプ実行はHTTPS bootstrapを信頼する手順として区別する。
 - 公開インストーラーを通常ユーザーで実行し、`--apply`なしの計画を確認する。Goが不要という説明はGoをPATHから外して確認する。

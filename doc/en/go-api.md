@@ -6,7 +6,7 @@
 - It does not expose a new network service.
 - Access to the root managed socket permits arbitrary images, commands, and host mounts, so grant it only to trusted host processes.
 
-- Python, TypeScript and the machine-readable contract: [Local API and SDKs](local-api-sdk.md) (unreleased).
+- Python, TypeScript and the machine-readable contract: [Local API and SDKs](local-api-sdk.md) (v0.0.4).
 
 ## Before connecting
 
@@ -189,7 +189,7 @@ func main() {
 - See [operating conditions](sandbox-features.md#model-authorization-and-staged-startup).
 
 - Use `LaunchWithTimings(ctx, req)` for sequential startup measurements.
-- `ExecWithTimings(ctx, workerID, request)` returns the exit code, `ExecTimings` and error for Exec (unreleased main).
+- `ExecWithTimings(ctx, workerID, request)` returns the exit code, `ExecTimings` and error for Exec (v0.0.4).
 - It returns `Worker`, `LaunchTimings` and `error` with the same contract as `Launch`.
 - See [measurement scope and reproduction](performance.md#locate-startup-costs).
 
@@ -314,25 +314,25 @@ go build -o /var/tmp/oaiso-embedding ./examples/embedding
 - `Policy.Quarantined` means the prohibition was persisted; `QuarantinePending` means its stop is unconfirmed.
 - Never treat an error from `Quarantine` as success.
 
-- Unreleased main: `LaunchRequest.UsagePolicy` specifies request/concurrency/body-byte/observed-token caps; query with `Usage(ctx, workerID)`. Set `CaseProxyOptions.UsageStateDir` to a 0700 directory outside workspaces. [Usage limits](guides/usage-limits.md).
+- v0.0.4: `LaunchRequest.UsagePolicy` specifies request/concurrency/body-byte/observed-token caps; query with `Usage(ctx, workerID)`. Set `CaseProxyOptions.UsageStateDir` to a 0700 directory outside workspaces. [Usage limits](guides/usage-limits.md).
 
-- Unreleased main: `LaunchRequest.Lifecycle.ProtectMain` protects the primary process from idle reaping. `Heartbeat(ctx, workerID, ttl)` renews/releases a 0–5 minute activity lease without extending maximum lifetime. [Contract and examples](sandbox-features.md#primary-process-protection-and-activity-leases).
+- v0.0.4: `LaunchRequest.Lifecycle.ProtectMain` protects the primary process from idle reaping. `Heartbeat(ctx, workerID, ttl)` renews/releases a 0–5 minute activity lease without extending maximum lifetime. [Contract and examples](sandbox-features.md#primary-process-protection-and-activity-leases).
 
 ## Retaining diagnostic results
 
-- Unreleased main: `SaveLaunchObservation` and `ReadObservations` save/read launch timings. See [format and limits](guides/observability.md). Handle storage failure separately from the launch result.
+- v0.0.4: `SaveLaunchObservation` and `ReadObservations` save/read launch timings. See [format and limits](guides/observability.md). Handle storage failure separately from the launch result.
 
 ## Disk checkpoints
 
-- Unreleased main: `Checkpoint`, `Checkpoints`, `InspectCheckpoint`, `RestoreCheckpoint`, `RemoveCheckpoint`. See [saved state, capacity and restore conditions](guides/disk-checkpoint.md).
+- v0.0.4: `Checkpoint`, `Checkpoints`, `InspectCheckpoint`, `RestoreCheckpoint`, `RemoveCheckpoint`. See [saved state, capacity and restore conditions](guides/disk-checkpoint.md).
 
 ## Worker TLS
 
-- Available: Unreleased (main). `EnsureCaseProxy` enables TLS; query `ProxyCapabilities().WorkerMTLS`.
+- Available: v0.0.4. `EnsureCaseProxy` enables TLS; query `ProxyCapabilities().WorkerMTLS`.
 - [Expiry, restart and legacy worker recreation](guides/worker-tls.md).
 
 - TLS worker connection URLs refer to that guest’s loopback relay. Do not reuse them on the host/another VM or use URLs as execution IDs; use worker/run IDs.
 
 ## Resource controls
 
-- Unreleased main: [connection, bandwidth, FD and block I/O limits](guides/resource-limits.md). `ResourcePolicies(ctx)` exposes complete profiles; `ResourceUsage.Policy` reports the running contract. Proxy TCP limits are separate from AI request budgets.
+- v0.0.4: [connection, bandwidth, FD and block I/O limits](guides/resource-limits.md). `ResourcePolicies(ctx)` exposes complete profiles; `ResourceUsage.Policy` reports the running contract. Proxy TCP limits are separate from AI request budgets.

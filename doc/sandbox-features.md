@@ -101,7 +101,7 @@ oaiso policy show --worker WORKER --json
 - 保存済みでも停止未確認なら `quarantine_pending` がtrueとなり、宛先説明は遮断完了と断定しません。
 
 - 再開には新しいワーカーと新しいRequestIDを使い、新しい通信設定を適用します。
-- 隔離停止の解除はできません。一般通信だけの規則変更は、未リリースmainの[通信規則の即時変更](guides/live-policy.md)を使います。
+- 隔離停止の解除はできません。一般通信だけの規則変更は、v0.0.4の[通信規則の即時変更](guides/live-policy.md)を使います。
 - 隔離はゲストからの追加通信をVM停止で止める方式です。
 - 相手側ですでに受理された処理を取り消したり、共有egress Proxyの全上流socketが閉じるまで待つ操作ではありません。
 - 必要な成果物を保全してから、保持したワーカーを通常の `rm` / `RemoveRequest` で回収します。
@@ -195,7 +195,7 @@ oaiso run --start-hook 'npm ci' --readiness 'test -f node_modules/.package-lock.
 [{"Name":"service","Upstream":"https://api.example.com","Paths":["/v1"],"Methods":["GET","POST"],"Header":"X-Service-Key","Prefix":"","Provider":"openai","Secret":"HOST_SECRET"}]
 ```
 
-- 完全一致の `ExactPaths` も利用できます（未リリースmain）。`Paths`は従来どおり配下を含み、両方の許可を合わせます。[設定例](guides/credential-broker.md)。
+- 完全一致の `ExactPaths` も利用できます（v0.0.4）。`Paths`は従来どおり配下を含み、両方の許可を合わせます。[設定例](guides/credential-broker.md)。
 - guestは `http://AUTH_PROXY/broker/service/v1/...` に、発行済みplaceholderのBearer認証を付けて要求します。
 - 固定HTTPS origin・許可パス境界・メソッド・providerを検証してから秘密を注入します。
 - encoded path、WebSocket、上流redirectの追跡は拒否します。
@@ -292,7 +292,7 @@ go test ./internal/networkpolicy -run '^$' -bench . -benchmem -count=3
 
 ## 管理者定義の資源プロファイル
 
-- 未リリースmain：[接続・帯域・FD・block I/Oの上限](guides/resource-limits.md)。`ResourcePolicies(ctx)`で全プロファイル項目、`ResourceUsage.Policy`で稼働VMの契約を確認できます。ProxyのTCP数はAIの同時要求数とは別です。
+- v0.0.4：[接続・帯域・FD・block I/Oの上限](guides/resource-limits.md)。`ResourcePolicies(ctx)`で全プロファイル項目、`ResourceUsage.Policy`で稼働VMの契約を確認できます。ProxyのTCP数はAIの同時要求数とは別です。
 
 - PID上限はプロファイルごとに指定できます。
 - たとえば、`oaiso profile define compact-256 --base compact --pids-limit 256` は、compactのCPU・メモリ予算を維持した256 PIDのJSON配列を標準出力へ生成します。
@@ -342,7 +342,7 @@ go test ./internal/networkpolicy -run '^$' -bench . -benchmem -count=3
 
 ## メイン処理と活動通知によるidle回収の防止
 
-- 利用可能：**未リリース（main）**。対応するCLI・nodeが必要です。
+- 利用可能：**v0.0.4**。対応するCLI・nodeが必要です。
 - 既定のidle判定は維持します。必要なワーカーで保護を明示してください。
 
 | 指定 | 保護する期間 | 通知停止・終了時 |

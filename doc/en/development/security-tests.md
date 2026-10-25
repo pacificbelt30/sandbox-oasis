@@ -2,7 +2,7 @@
 
 [日本語](../../development/security-tests.md) | **English**
 
-- Additional fuzz/load/stop-race coverage: Unreleased (main); existing CAS and cleanup tests are reused.
+- Additional fuzz/load/stop-race coverage: v0.0.4; existing CAS and cleanup tests are reused.
 - Synthetic credentials and local fixtures only. No real accounts or external AI inference.
 
 | Boundary | Inputs/faults | Required behavior |

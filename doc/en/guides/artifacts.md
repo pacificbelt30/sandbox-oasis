@@ -2,7 +2,7 @@
 
 [日本語](../../guides/artifacts.md) | **English**
 
-- Available: **unreleased (main)**.
+- Available: **v0.0.4**.
 - Run on the host against a running worker whose workspace is a Git repository with HEAD and accessible Git metadata.
 - Select explicit regular workspace files. Export their contents, their Git diff against HEAD, and a manifest containing worker/image/runtime IDs, HEAD, sizes and SHA-256 hashes. Add `--job JOB_ID` to include selected job IDs, running state and exit codes.
 

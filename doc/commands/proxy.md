@@ -27,8 +27,8 @@ oaiso proxy run
 | `--allow-model` | 空（制限なし） | 正確な上流モデルID。繰り返し可。対応AI HTTP経路だけを許可しWebSocket拒否 |
 | `--upstream-proxy` | 未指定 | 宛先を検証済みIPで接続する上流HTTP(S) Proxy |
 | `--ca-bundle` | 未指定 | Proxy側の追加PEM CA |
-| `--max-connections` / `--max-connections-per-source` | `0` | 未リリースmain。Proxy全体／接続元IPごとのTCP数 |
-| `--network-bytes-per-second` | `0` | 未リリースmain。接続元IPごとの双方向byte/秒。[対象と動作](../guides/resource-limits.md) |
+| `--max-connections` / `--max-connections-per-source` | `0` | v0.0.4。Proxy全体／接続元IPごとのTCP数 |
+| `--network-bytes-per-second` | `0` | v0.0.4。接続元IPごとの双方向byte/秒。[対象と動作](../guides/resource-limits.md) |
 | `--credential-routes` | 未指定 | 認証broker用のホスト0600 JSON。Auth Proxyだけへmount |
 | `--credential-store-socket` / `--case-id` | 未指定 | ケース専用Store接続。組み込み向け。独立プロファイルとの併用不可 |
 

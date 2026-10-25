@@ -37,7 +37,7 @@ oaiso proxy run
 | VM内中継 → 認証Proxy | 検証済みProxy IPの18080／HTTPS | TLS 1.3＋mTLSでトークン取得・AI API・brokerを転送 |
 | ワーカー | `http://codex-http-proxy:18082` | 一般通信 |
 
-- 上記のmTLSは**未リリース（main）**の標準構成です。`proxy run`・Go APIの`EnsureCaseProxy`で有効になります。
+- 上記のmTLSは**v0.0.4**の標準構成です。`proxy run`・Go APIの`EnsureCaseProxy`で有効になります。
 - 設定にループバックのHTTP URLが見えても、VM外への認証通信はHTTPSです。
 - [適用される起動方法・証明書・移行手順](guides/worker-tls.md)を確認してください。
 - Kataワーカーの接続URLは検証済みの専用ネットワーク上のProxy IPへ固定します。ゲストのhosts書き換えには依存しません。

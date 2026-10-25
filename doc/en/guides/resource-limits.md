@@ -2,7 +2,7 @@
 
 [日本語](../../guides/resource-limits.md) | **English**
 
-- Available: **unreleased (main)**, with matching CLI, node, guard and proxy.
+- Available: **v0.0.4**, with matching CLI, node, guard and proxy.
 - Optional. Unset settings retain existing behavior.
 - Separate from CPU, memory, PIDs, request-body size and [per-execution AI usage limits](usage-limits.md).
 

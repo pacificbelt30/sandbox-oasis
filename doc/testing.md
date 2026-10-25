@@ -1,8 +1,10 @@
 # テストと動作確認
 
+- v0.0.4の各機能は、公開前の試験版で検証しています。試験版・基点commit・条件は各記録を参照してください。
+
 ## P1の作業支援・通信規則の即時変更（2026-10-25）
 
-- 対象：**未リリース（main）**。`d9c0419`を基に追加。
+- 対象：**v0.0.4**。`d9c0419`を基に追加。
 - 認証情報は架空値、上流はローカルfixtureを使用。外部AIへの認証・推論は行っていません。
 
 | 対象 | 確認した内容・結果 |
@@ -28,7 +30,7 @@
 
 ## ローカルAPI・Python／TypeScript SDK（2026-10-25）
 
-- 対象：**未リリース（main）**。[仕様・導入・使い方](local-api-sdk.md)。`7d17212`を基に追加。
+- 対象：**v0.0.4**。[仕様・導入・使い方](local-api-sdk.md)。`7d17212`を基に追加。
 - 接続は専用stdin/stdoutパイプ。管理socketのnetwork待受は追加せず、公開Go APIへ委譲。
 
 | 検査 | 結果 |
@@ -50,7 +52,7 @@
 
 ## 追加機能の通し検証（2026-10-25）
 
-- 対象：**未リリース（main）**。`1d4fdc1`を基に、今回の修正を加えて検証。
+- 対象：**v0.0.4**。`1d4fdc1`を基に、今回の修正を加えて検証。
 - 共有ホストから分離した使い捨てノードで、Kata 4.2／Dragonballを使用。
 - 固定CLI：Codex 0.163.0、Claude Code 2.1.306。資格情報・上流APIは試験用の架空値とローカルfixture。
 
@@ -80,7 +82,7 @@
 
 ## 接続・帯域・FD・block I/O（2026-10-25）
 
-- 対象：**未リリース（main）**。[設定・単位・対象外](guides/resource-limits.md)。追加設定なしでは従来の動作を維持します。
+- 対象：**v0.0.4**。[設定・単位・対象外](guides/resource-limits.md)。追加設定なしでは従来の動作を維持します。
 
 | 検査 | 結果 |
 |---|---|
@@ -107,7 +109,7 @@
 
 ## 不正入力・競合・障害の追加検査（2026-10-25）
 
-- 対象：未リリース（main）。[対象・再実行・限界](development/security-tests.md)。
+- 対象：v0.0.4。[対象・再実行・限界](development/security-tests.md)。
 - 最終検査：`make build test vet lint`、5系統の`make security-fuzz`、文書strictビルドが成功。通常の全件試験はrace付き、探索は各5秒・2 worker。
 - 追加の境界：未知／重複／Unicode別表記／末尾JSON、broker URL/path、未発行認証、モデル指定、DNS・private宛先、過大TTL、64並行のENOSPC後の利用拒否、96 SSEの失効、停止と発行の競合を確認。
 - 修正：停止済みProxyからの発行・復元を拒否し、期限監視goroutineを終了。OAuth更新の監査失敗時はtokenを失効し、新資格情報を採用しない。監査理由は固定コードに限定し、理由欄がない旧記録も検証可能。
@@ -119,7 +121,7 @@
 
 ## 配布物の署名・作成元・依存一覧（2026-10-25）
 
-- 対象：未リリース（main）。[署名・SBOM・巻戻し防止](guides/signed-releases.md)。公開済みv0.0.3には署名を後付けしていません。
+- 対象：v0.0.4。[署名・SBOM・巻戻し防止](guides/signed-releases.md)。公開済みv0.0.3には署名を後付けしていません。
 - ローカル：静的配布候補`v0.0.0-security-a`を生成。archive・installer・SBOMのSHA-256一致を確認。SBOMは約30 KiBで、生成物はGitへ追加していません。
 - 自動試験：配布・スクリプトPython 65件、配置Python 24件が成功。署名失敗時の展開拒否、固定repo／workflow／タグ／issuer、古い版・壊れた版下限の拒否、古い／変更済みのビルド元情報の拒否を確認。
 - 署名の呼出し単体試験はverifier fixtureを使用。実署名・改変・別workflow・別タグの拒否はmain CIの署名stepで確認します。fixtureだけの成功を暗号検証の成功とは数えません。
@@ -129,7 +131,7 @@
 
 ## VM―認証ProxyのTLS（2026-10-25）
 
-- 対象：未リリース（main）。[方式・期限・更新手順・一般egressとの区別](guides/worker-tls.md)。
+- 対象：v0.0.4。[方式・期限・更新手順・一般egressとの区別](guides/worker-tls.md)。
 - 単体：コピーtoken＋別の鍵、再開前の旧鍵、client証明書なし、平文接続を拒否。tokenが有効でも短命証明書の期限でstreamを終了。暗黙の管理secretを外部URLへ送らないことも確認。
 - 実Kata：`4d24f1854b94`の`TestKataWorkerMTLS`が成功（164.24秒）。固定Codex 0.163.0／Claude Code 2.1.306のSSE・ツール実行、SSE/WS失効、broker、Proxy＋VM再起動後の利用上限維持を確認。
 - 全Go raceテスト・Vet・Lint成功。架空の認証情報・ローカル上流fixtureを使用。実アカウントでの認証・課金を伴う推論は未実施。
@@ -137,7 +139,7 @@
 
 ## 保存できる監査記録（2026-10-25）
 
-- 対象：未リリース（main）。[保存項目・容量・障害時の扱い](guides/audit.md)。
+- 対象：v0.0.4。[保存項目・容量・障害時の扱い](guides/audit.md)。
 - 自動試験：全Go raceテスト・Vet・Lint、CLI検査、配置Python 22件、文書strictビルドが成功。
 - 境界：並行追記、未確定操作、容量超過、切断された末尾、head不一致、symlink、監査破損時の発行・復元拒否と失効継続を確認。
 - 実Kata：使い捨てノード`0aa47aba4318`でcheckpoint受入が成功（133.95秒）。nodeの操作記録を検証し、連鎖の一致・未確定操作なしを確認。
@@ -148,7 +150,7 @@
 
 | 項目 | 結果・範囲 |
 |---|---|
-| 対象 | 未リリースmain。同じnodeの停止済みKata rootfsを保存、新規VMへ復元 |
+| 対象 | v0.0.4。同じnodeの停止済みKata rootfsを保存、新規VMへ復元 |
 | 自動検査 | 除外パスとsymlink先、認証ファイルへのhard link、特殊ファイル、容量超過・取消、旧nodeへの変更拒否、runc／不適合entrypointの拒否、公開前のmetadata検査を確認 |
 | 実Kata | `TestKataDiskCheckpoint`が99.57秒で成功。稼働中の保存拒否、容量超過で未公開、node再起動後の保持、保存元の再起動・変更、新規VMのSDK／CLI復元、使用中checkpointの削除拒否を確認 |
 | 保存範囲 | `/opt`内の内容・symlinkを保持。workspace・追加共有・home・一時領域・追加除外・そのhard linkは復元されず、イメージ設定へ元の認証値をコピーしない |
@@ -175,7 +177,7 @@
 | broker設定支援（10月25日） | CLI／TUIの秘密非表示・空欄維持・保存競合・権限／symlink／不正JSONの自動試験が成功。実Kataで設定作成→許可GETへの注入→path／method拒否→秘密ファイル共有拒否を確認 |
 | 診断の保存・出力（10月25日） | 全Go race・build・vet・lintとMkDocs strictが成功。実Kataでstatus・拒否コード・hostメモリ・起動時間の保存とCLI export、秘密・workspace値の非出力を確認 |
 | 実行ごとの利用上限（10月25日） | build・全Go race・vet・lint・MkDocs strictが成功。実Kata通信スイート54.78秒。要求上限・token加算・超過拒否・ProxyとVMの再起動後の維持・台帳共有の拒否を確認 |
-| メイン処理・活動通知 | 未リリースmain。全Go race・build・vet・lint、MkDocs strictが成功。実Kataの追加制御スイートが59.93秒で成功 |
+| メイン処理・活動通知 | v0.0.4。全Go race・build・vet・lint、MkDocs strictが成功。実Kataの追加制御スイートが59.93秒で成功 |
 | 実Kataの確認内容 | node再起動後のメイン処理保護、活動通知でのidle回収防止、通知解除後のidle停止、最大寿命による実行中の停止。秘密・管理socketをVMへ追加共有しない |
 
 - 一括検証の証跡：`.kata-verification/p1-existing-20261024/qualification-run3/qualification.json`、`.kata-verification/setup-e2e/43a22b5269f8/`。最初の候補試験はExecの存在しない環境変数、次は合成APIの`/v1`不足を検出。通常のProxy用プレースホルダーと本番同様のAPI baseへ修正して成功。実提供元へのログイン・本番推論・実課金・実WSLは未検証です。
@@ -192,7 +194,7 @@
 
 | 対象 | 結果 |
 |---|---|
-| 版・環境 | 未リリースmain。試験用バンドル`fa35f89-network-a`／`-b`、使い捨てUbuntu 26.04、containerd 2.4.2、Kata 4.2.0／Dragonball |
+| 版・環境 | v0.0.4。試験用バンドル`fa35f89-network-a`／`-b`、使い捨てUbuntu 26.04、containerd 2.4.2、Kata 4.2.0／Dragonball |
 | 自動試験 | A/AAAA混在・metadata・DNS応答変更、3つのAI経路×5種類のSSE終了条件、停止失敗と未確認状態のCLI表示・JSONを検査 |
 | 実Kata | `TestKataNetworkRevocation`が20.98秒で成功。private・metadata・禁止ポート・redirect拒否、公開IPv4/IPv6 CONNECTの往復を確認 |
 | 通信中の失効 | VMを動かしたままAIトークンを失効。既存SSE/WSの接続先側が切断し、一般通信は継続 |
@@ -205,7 +207,7 @@
 
 ## 依存更新とAPI境界の回帰検証（2026-10-24）
 
-- 対象：**未リリース（main）**。公開v0.0.3の配布物には未反映。
+- 収録版：**v0.0.4**。
 - 全Go race・build・vet・lint・module検証、Go 1.26.0でのビルド、macOS arm64／amd64・Linux arm64のクロスビルドが成功。
 - 依存検査は15→2件。残る2件の適用条件と、追加した依存・API境界検査は[依存関係の検査と対応](development/dependency-security.md)を参照。
 - 実Kataの追加確認は上の通信・失効スイートを参照。過去の全件受入を今回の依存版の全件成功とは扱いません。実アカウント・WSLは未実施です。
@@ -1084,7 +1086,7 @@ uv run --no-project --no-config --managed-python --python 3.12 python scripts/ve
 
 ## 2026-10-25の高速化と回帰確認
 
-- 対象：**未リリース（main）**。条件・値・費用・未計測範囲は[性能ガイドの実測](performance.md#2026-10-25の実測)にまとめています。
+- 対象：**v0.0.4**。条件・値・費用・未計測範囲は[性能ガイドの実測](performance.md#2026-10-25の実測)にまとめています。
 - 同じ専用nodeで変更前→変更後→変更後→変更前の順に実Kataを測り、4回すべて成功しました。
 - 各版で単独起動6回、2台同時起動6組、Exec14回、2台同時Exec10組を比較しています。
 - 変更後の2回とも、同じサイズ・更新時刻のkernel資産改変をExec前に拒否し、復元後の成功と、拒否したコマンドの未実行を確認しました。
@@ -1131,7 +1133,7 @@ uv run --no-project --no-config --managed-python --python 3.12 python scripts/ve
 
 ## 固定origin brokerの細かい制限
 
-- 対象：**未リリース（main）**。[完全一致pathとCLIのmethod指定](guides/credential-broker.md)を追加しました。従来のpath配下指定も維持します。
+- 対象：**v0.0.4**。[完全一致pathとCLIのmethod指定](guides/credential-broker.md)を追加しました。従来のpath配下指定も維持します。
 - `TestKataWorkerMTLS` は専用ノードで104.16秒、broker部分は47.07秒で成功しました。架空の資格情報とローカルTLS fixtureを使い、実AI・実アカウントへは接続していません。
 
 | 確認 | 範囲 |

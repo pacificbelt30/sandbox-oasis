@@ -11,7 +11,7 @@
 
 ## インストールする版
 
-- v0.0.3は`login`・キーリング・age保存を含むビルド済み配布版です。
+- この手順では署名付きのビルド済み配布版（v0.0.4）を導入します。
 - 一続きの操作例：[インストールから初回起動まで](guides/first-run.md)。
 - このページの`releases/latest`は公開版を導入する手順です。
 
@@ -72,7 +72,7 @@ curl -fsSL https://github.com/pacificbelt30/sandbox-oasis/releases/latest/downlo
 
 ```text
 Plan: verified Ubuntu 26.04 amd64 node; Kata 4.2.0 / Dragonball / containerd 2.4.2 / BuildKit 0.34.0 / runc 1.4.3
-Bundle: /tmp/oaiso-release-<id>/bundle (version v0.0.3); operator: user; cache: /var/cache/codex-dock-setup; offline: no
+Bundle: /tmp/oaiso-release-<id>/bundle (version v0.0.4); operator: user; cache: /var/cache/codex-dock-setup; offline: no
 ```
 
 - 版・パス・利用者名は例。実際の環境とリリースにより変わります。
@@ -83,7 +83,7 @@ Bundle: /tmp/oaiso-release-<id>/bundle (version v0.0.3); operator: user; cache: 
 | コマンド・指定 | 動作 |
 |---|---|
 | 指定なし | 同じリリースのCLI・補助プログラムを取得・検証し、配置計画を表示 |
-| `--version v0.0.3` | 指定版を取得 |
+| `--version v0.0.4` | 指定版を取得 |
 | `--apply` | 計画成功後に `sudo` で配置。選択済みPythonの絶対パスも渡す |
 | operator省略 | スクリプトを実行した通常ユーザーを登録 |
 | `--operator USER` | 別の既存通常ユーザーを登録。rootから実行する場合は必須 |
@@ -101,13 +101,13 @@ Bundle: /tmp/oaiso-release-<id>/bundle (version v0.0.3); operator: user; cache: 
 
 ### 版を固定して取得・実行する
 
-**v0.0.3を指定する例。保存したスクリプトを確認してから、同じファイルで計画・適用します。**
+**v0.0.4を指定する例。保存したスクリプトを確認してから、同じファイルで計画・適用します。**
 
 ```bash
-curl -fsSL -o install.sh https://github.com/pacificbelt30/sandbox-oasis/releases/download/v0.0.3/install.sh
+curl -fsSL -o install.sh https://github.com/pacificbelt30/sandbox-oasis/releases/download/v0.0.4/install.sh
 less install.sh
-bash install.sh --version v0.0.3
-bash install.sh --version v0.0.3 --apply
+bash install.sh --version v0.0.4
+bash install.sh --version v0.0.4 --apply
 ```
 
 ## 4. 再ログインして確認
@@ -183,6 +183,7 @@ user sudo codex-dock
 
 - Goが必要になるのは、製品自体やGo APIを使う呼び出し側をソースからビルドする環境です。[Go公式のLinux手順](https://go.dev/doc/install)に沿った[コマンド例](development/toolchain.md#2-goを公式linux手順で導入する)を掲載しています。
 
-## 署名付き配布物（未リリースmain）
+## 配布物の検証
 
-- [署名・作成元・SBOM・旧版への巻戻し防止](guides/signed-releases.md)。次の署名付き配布版ではGitHub CLIも必要です。公開済みv0.0.3にはまだ適用されません。
+- インストーラーは署名・作成元・対象タグ・SHA-256を確認してから配置します。
+- [スクリプト自体の実行前検証・SBOM・旧版への巻戻し防止](guides/signed-releases.md)。

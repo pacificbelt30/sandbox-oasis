@@ -154,4 +154,4 @@ make contracts-check
 | Anthropic SDKs | [Anthropic SDKs](https://platform.claude.com/docs/en/cli-sdks-libraries/overview) |
 ## Runtime qualification
 
-- Unreleased main: [Candidate qualification](development/candidate-qualification.md) connects static checks to isolated real-CLI and Kata fixtures. Scheduled CI prepares a plan; it never adopts pins automatically.
+- v0.0.4: [Candidate qualification](development/candidate-qualification.md) connects static checks to isolated real-CLI and Kata fixtures. Scheduled CI prepares a plan; it never adopts pins automatically.

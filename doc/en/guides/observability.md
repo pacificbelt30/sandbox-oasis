@@ -2,7 +2,7 @@
 
 [日本語](../../guides/observability.md) | **English**
 
-- Available: **Unreleased (main)**.
+- Available: **v0.0.4**.
 - Local JSONL, without an external monitoring service or permanent collector.
 
 | Kind | Retained fields | Limits |

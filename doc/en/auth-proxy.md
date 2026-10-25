@@ -36,7 +36,7 @@ oaiso proxy run
 | Guest relay → auth proxy | Verified proxy IP on port 18080, HTTPS with TLS 1.3 and mTLS |
 | Worker / general egress | `http://codex-http-proxy:18082` |
 
-- This mTLS behavior is **unreleased (main)** and enabled by standard `proxy run` and Go `EnsureCaseProxy`.
+- This mTLS behavior is **v0.0.4** and enabled by standard `proxy run` and Go `EnsureCaseProxy`.
 - A loopback HTTP URL in agent configuration does not mean plaintext auth traffic leaves the VM.
 - Review [entrypoint coverage, certificates and migration](guides/worker-tls.md).
 - Worker-to-proxy endpoints use verified private-network IP mappings rather than guest hosts-file rewriting.

@@ -16,7 +16,7 @@ oaiso upgrade
 **版を固定して計画を表示**
 
 ```bash
-oaiso upgrade --version v0.0.3
+oaiso upgrade --version v0.0.4
 ```
 
 - 先に[GitHub CLIを準備](../installation.md#2-ツールを準備する)します。GitHubへのログインは不要です。
@@ -26,14 +26,14 @@ oaiso upgrade --version v0.0.3
 
 ```text
 Installed CLI: dev
-Target release: v0.0.3
+Target release: v0.0.4
 
 Host update: CLI, node, helpers and pinned runtime assets.
 Images: rebuild the default worker after the host update; prepare proxies with the new CLI.
 Custom images/templates: review separately.
 Before applying: save work, then stop/remove retained workers and proxies with the installed CLI.
 ...
-Plan only. Apply the same release with: oaiso upgrade --version v0.0.3 --apply
+Plan only. Apply the same release with: oaiso upgrade --version v0.0.4 --apply
 ```
 
 - 上は出力例です。実際の版・計画は配置状態で変わります。

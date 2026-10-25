@@ -2,7 +2,7 @@
 
 [日本語](../../guides/live-policy.md) | **English**
 
-- Available: **unreleased (main)**, for egress proxies created by a build containing this feature.
+- Available: **v0.0.4**, for egress proxies created by a build containing this feature.
 - Run on the host with existing node-management permissions.
 - **Updates affect the entire selected shared proxy. All its existing HTTP/CONNECT connections close.**
 

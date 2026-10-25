@@ -27,8 +27,8 @@ oaiso proxy run
 | `--allow-model` | Empty (unrestricted) | Repeat exact model IDs; constrained AI routes reject WebSocket |
 | `--upstream-proxy` | Unset | Explicit HTTP(S) upstream proxy, using verified destination IPs |
 | `--ca-bundle` | Unset | Additional proxy PEM roots |
-| `--max-connections` / `--max-connections-per-source` | `0` | Unreleased main. Worker-facing TCP connections per proxy / source IP |
-| `--network-bytes-per-second` | `0` | Unreleased main. Combined bytes/second per source IP. [Scope and behavior](../guides/resource-limits.md) |
+| `--max-connections` / `--max-connections-per-source` | `0` | v0.0.4. Worker-facing TCP connections per proxy / source IP |
+| `--network-bytes-per-second` | `0` | v0.0.4. Combined bytes/second per source IP. [Scope and behavior](../guides/resource-limits.md) |
 | `--credential-routes` | Unset | Owner-only 0600 broker JSON; mounted into auth only |
 | `--credential-store-socket` / `--case-id` | Unset | Case-specific Store connection; cannot combine with independent profiles |
 

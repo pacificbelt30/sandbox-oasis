@@ -8,8 +8,8 @@
 | Feature | Availability |
 |---|---|
 | Fixed HTTPS origin, subtree paths and methods | v0.0.2+ |
-| Templates, CLI and TUI helpers | Unreleased (main) |
-| Exact paths and CLI method selection | Unreleased (main) |
+| Templates, CLI and TUI helpers | v0.0.4 |
+| Exact paths and CLI method selection | v0.0.4 |
 
 ## Choose the scope
 

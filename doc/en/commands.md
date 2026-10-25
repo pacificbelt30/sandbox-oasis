@@ -11,7 +11,7 @@
 
 | Command | Description | Details |
 |---|---|---|
-| [`oaiso api`](local-api-sdk.md) | Local embedding API (unreleased) | `stdio` / `schema` |
+| [`oaiso api`](local-api-sdk.md) | Local embedding API (v0.0.4) | `stdio` / `schema` |
 | [`oaiso claude`](claude-code.md) | Run official Claude Code | Native flags; API or subscription |
 | [`oaiso codex`](commands/run.md#launch-codex-cli-directly) | Pass Codex CLI arguments through unchanged | Mount current directory and exec Codex |
 | [`oaiso run`](commands/run.md) | Start a sandbox container | Options, approval modes, parallel execution, package management |
@@ -82,7 +82,7 @@ For administrator-only `node serve` and `runtime-lock`, see [host setup](../kata
 
 ## Additional workflow commands
 
-Available: **unreleased (main)**.
+Available: **v0.0.4**.
 
 | Command | Details |
 |---|---|

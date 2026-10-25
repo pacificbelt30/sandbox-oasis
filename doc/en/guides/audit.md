@@ -2,7 +2,7 @@
 
 [日本語](../../guides/audit.md) | **English**
 
-- Available: Unreleased (main).
+- Available: v0.0.4.
 - Records contain hashed subject IDs, fixed reason/operation codes, intent and success/failure. No credentials, placeholders, keys, bodies, URLs or arbitrary error messages.
 
 | Component | Recorded operations | Directory |

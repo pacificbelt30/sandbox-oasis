@@ -2,7 +2,7 @@
 
 [日本語](../../guides/disk-checkpoint.md) | **English**
 
-- Available: **Unreleased (main)**; matching CLI/node/proxy required.
+- Available: **v0.0.4**; matching CLI/node/proxy required.
 - Saves a stopped Kata root filesystem for a **new VM on the same node**. No RAM, instruction pointer, live connection or stream resume.
 
 ## Saved and excluded state
@@ -105,7 +105,7 @@ oaiso checkpoint rm "$checkpoint_id"
 
 ## Retention planning and pins
 
-- Available: **unreleased (main)**.
+- Available: **v0.0.4**.
 - The existing hard catalog capacity remains 16 GiB. `--keep-bytes` is a cleanup target, not a lower admission quota for future captures.
 - Counts logical tar bytes, not total host/containerd content or expanded snapshot usage.
 

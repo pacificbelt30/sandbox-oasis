@@ -2,7 +2,7 @@
 
 [日本語](../../guides/first-run.md) | **English**
 
-- This page covers v0.0.3 or later. Check `oaiso --version` first.
+- This page covers v0.0.4 or later. Check `oaiso --version` first.
 - Requires Ubuntu 26.04, x86_64, systemd, KVM and cgroup v2. [Requirements](../installation.md#1-requirements).
 
 ## 1. Install the prebuilt release
@@ -16,7 +16,7 @@ curl -fsSL https://github.com/pacificbelt30/sandbox-oasis/releases/latest/downlo
 
 - No Go, Make or source checkout is required. The script prepares uv/Python.
 - Setup also installs missing D-Bus, GNOME Keyring and `secret-tool` dependencies.
-- To pin the release, use the [v0.0.3 installation example](../installation.md#download-and-review-a-pinned-release).
+- To pin the release, use the [v0.0.4 installation example](../installation.md#download-and-review-a-pinned-release).
 - For main source builds, see the [toolchain guide](../development/toolchain.md) and [source installation](../../setup.md).
 
 ## 2. Log in again and check the host

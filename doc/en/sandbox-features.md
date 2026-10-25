@@ -93,7 +93,7 @@ oaiso policy show --worker WORKER --json
 - A persisted request whose stop is unconfirmed reports `quarantine_pending`, and destination explanation cannot claim completed denial.
 
 - Resume with a new worker and RequestID under the new policy.
-- Unquarantine is not provided. Unreleased main supports [explicit live egress changes](guides/live-policy.md) while worker execution continues.
+- Unquarantine is not provided. v0.0.4 supports [explicit live egress changes](guides/live-policy.md) while worker execution continues.
 - VM termination stops further communication from the guest.
 - It cannot undo operations already accepted by a remote service and does not wait for every upstream socket in the shared egress proxy to close.
 - Preserve artifacts before reclaiming the retained worker with ordinary `rm` / `RemoveRequest`; removing a managed worktree also deletes that worktree.
@@ -178,7 +178,7 @@ oaiso run --start-hook 'npm ci' --readiness 'test -f node_modules/.package-lock.
 [{"Name":"service","Upstream":"https://api.example.com","Paths":["/v1"],"Methods":["GET","POST"],"Header":"X-Service-Key","Prefix":"","Provider":"openai","Secret":"HOST_SECRET"}]
 ```
 
-- `ExactPaths` adds exact matching (unreleased main). Existing `Paths` include descendants; both allowlists are combined. See [examples](guides/credential-broker.md).
+- `ExactPaths` adds exact matching (v0.0.4). Existing `Paths` include descendants; both allowlists are combined. See [examples](guides/credential-broker.md).
 - Guests send live placeholder Bearer tokens to `http://AUTH_PROXY/broker/service/v1/...`.
 - Fixed HTTPS origin, path boundaries, method and provider are checked before injecting credentials.
 - Encoded paths, WebSockets and following upstream redirects are disallowed.
@@ -272,7 +272,7 @@ The [verification record](../testing.md) distinguishes fixture tests, native Kat
 
 ## Operator resource profiles
 
-- Unreleased main: [connection, bandwidth, FD and block I/O limits](guides/resource-limits.md). `ResourcePolicies(ctx)` exposes complete profiles; `ResourceUsage.Policy` reports the running contract. Proxy TCP limits are separate from AI request budgets.
+- v0.0.4: [connection, bandwidth, FD and block I/O limits](guides/resource-limits.md). `ResourcePolicies(ctx)` exposes complete profiles; `ResourceUsage.Policy` reports the running contract. Proxy TCP limits are separate from AI request budgets.
 
 - PID limits are configured per profile.
 - For example, `oaiso profile define compact-256 --base compact --pids-limit 256` prints a JSON array with compact's CPU/memory budgets and a 256-PID ceiling.
@@ -318,7 +318,7 @@ The [verification record](../testing.md) distinguishes fixture tests, native Kat
 
 ## Primary-process protection and activity leases
 
-- Available: **Unreleased (main)**; requires matching CLI/node support.
+- Available: **v0.0.4**; requires matching CLI/node support.
 - Existing idle defaults remain unchanged. Explicitly protect workers that need it.
 
 | Setting | Protected interval | On expiry/completion |

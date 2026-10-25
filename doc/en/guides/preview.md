@@ -2,7 +2,7 @@
 
 [日本語](../../guides/preview.md) | **English**
 
-- Available: **unreleased (main)**.
+- Available: **v0.0.4**.
 - Requires a running worker with an HTTP/WebSocket app reachable at guest `127.0.0.1`.
 - Listens only on host `127.0.0.1`; this is not public hosting.
 

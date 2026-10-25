@@ -8,8 +8,8 @@
 | 機能 | 利用可能な版 |
 |---|---|
 | 固定HTTPS宛先、path配下、methodの制限 | v0.0.2以降 |
-| 設定テンプレート・CLI・TUI | 未リリース（main） |
-| 完全一致path、CLIのmethod指定 | 未リリース（main） |
+| 設定テンプレート・CLI・TUI | v0.0.4 |
+| 完全一致path、CLIのmethod指定 | v0.0.4 |
 
 ## 制限の範囲を選ぶ
 

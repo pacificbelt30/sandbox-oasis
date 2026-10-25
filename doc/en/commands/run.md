@@ -132,9 +132,9 @@ oaiso run --profile-size small --agent codex
 | `--readiness` | Unset | Guest shell readiness probe |
 | `--readiness-timeout` | 0 (effective 60s) | Hook/probe deadline |
 | `--max-lifetime` / `--idle-timeout` / `--retention` | `0` | Lifetime, idle, exit retention; durations such as `30m` or `2h`; requires `reap` |
-| `--protect-main` | `false` | Unreleased main. Protect a live primary process from idle collection; maximum lifetime still applies |
-| `--max-requests` / `--max-concurrent` | `0` | Unreleased main. Per-execution request/concurrency caps at the auth proxy |
-| `--max-transfer-bytes` / `--max-observed-tokens` | `0` | Unreleased main. Combined body-byte/observed-token caps. [Precision and conditions](../guides/usage-limits.md) |
+| `--protect-main` | `false` | v0.0.4. Protect a live primary process from idle collection; maximum lifetime still applies |
+| `--max-requests` / `--max-concurrent` | `0` | v0.0.4. Per-execution request/concurrency caps at the auth proxy |
+| `--max-transfer-bytes` / `--max-observed-tokens` | `0` | v0.0.4. Combined body-byte/observed-token caps. [Precision and conditions](../guides/usage-limits.md) |
 | `--proxy-admin-url` | `http://127.0.0.1:18081` | Host admin API |
 | `--proxy-container-url` | `http://codex-auth-proxy:18080` | Worker fixed AI routes |
 | `--http-proxy-url` | `http://codex-http-proxy:18082` | Worker general egress |
@@ -377,6 +377,6 @@ oaiso run --template mytool
 - [Network Specification](../network.md)
 - [Configuration Reference](../configuration.md)
 
-- `--observe-dir PATH`: Unreleased main. Save redacted launch timings. [Diagnostics](../guides/observability.md).
+- `--observe-dir PATH`: v0.0.4. Save redacted launch timings. [Diagnostics](../guides/observability.md).
 
-- `--checkpoint ID`: Unreleased main. Start a new Kata VM from a [disk checkpoint](../guides/disk-checkpoint.md), with new mounts/authentication/policies.
+- `--checkpoint ID`: v0.0.4. Start a new Kata VM from a [disk checkpoint](../guides/disk-checkpoint.md), with new mounts/authentication/policies.

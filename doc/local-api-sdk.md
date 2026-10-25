@@ -2,7 +2,7 @@
 
 **日本語** | [English](en/local-api-sdk.md)
 
-- 利用可能：**未リリース（main）**。公開レジストリには未配布です。
+- 利用可能：**v0.0.4**。公開レジストリには未配布です。
 - 同じLinuxホストから、ワーカーの作成・起動・実行・照会・回収を行います。
 - SDK → `oaiso api stdio`の専用パイプ → [公開Go API](go-api.md) → 既存nodeのUnix socket、の順に呼び出します。
 - TCPの待受・管理socketのnetwork公開は追加しません。呼び出し元には既存socketへの権限が必要です。任意のhost mountなどを指定できるため、信頼したプロセスだけで使います。
@@ -225,7 +225,7 @@ uv run --no-project --no-config --managed-python --python 3.12 python scripts/ve
 
 ## ファイル・ジョブ・checkpointを操作する
 
-- 利用可能：**未リリース（main）**。ローカルAPI v1への追加操作です。
+- 利用可能：**v0.0.4**。ローカルAPI v1への追加操作です。
 - `client`は上の例で開いた接続、`worker_id`は起動中のワーカーIDです。
 
 | 操作 | Python | TypeScript |

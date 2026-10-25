@@ -3,7 +3,7 @@
 [日本語](../../development/dependency-security.md) | **English**
 
 - Checked 2026-10-24 on Linux amd64, all Go packages.
-- Dependency updates, applicability review and boundary checks are **Unreleased (main)**, not part of published v0.0.3 assets.
+- Dependency updates, applicability review and boundary checks are included in **v0.0.4**.
 - govulncheck v1.9.0, Go 1.27.3. No finding exclusions or database modifications.
 
 ## Results
@@ -21,7 +21,7 @@
 
 ## Updated dependencies
 
-| Go module | Previous | Unreleased main | Findings removed |
+| Go module | Previous | v0.0.4 | Findings removed |
 |---|---|---|---:|
 | containerd SDK | v2.1.5 | v2.2.9 | 8 |
 | gRPC | v1.78.0 | v1.83.1 | 2 |

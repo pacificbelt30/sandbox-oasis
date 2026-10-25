@@ -2,7 +2,7 @@
 
 **日本語** | [English](../en/guides/resource-limits.md)
 
-- 利用可能：**未リリース（main）**。対応するCLI・node・guard・Proxyが必要です。
+- 利用可能：**v0.0.4**。対応するCLI・node・guard・Proxyが必要です。
 - 追加の制限は任意です。未指定では従来の動作を維持します。
 - 既存のCPU・メモリ・PID、要求本文のサイズ、[AIの実行別利用上限](usage-limits.md)とは別の設定です。
 

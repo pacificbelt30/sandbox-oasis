@@ -8,7 +8,7 @@
 - 呼び出し元にはそのソケットへの権限が必要です。
 - この権限では任意のイメージ、コマンド、ホストマウントを指定できるため、信頼したホストプロセスだけに付与してください。
 
-- Python・TypeScriptと機械可読仕様：[ローカルAPI・SDK](local-api-sdk.md)（未リリース）。
+- Python・TypeScriptと機械可読仕様：[ローカルAPI・SDK](local-api-sdk.md)（v0.0.4）。
 
 ## 利用前の準備
 
@@ -194,7 +194,7 @@ func main() {
 - `Launch` の作成と初回起動が一体である従来の動作は維持します。
 
 - 起動の工程別時間が必要な場合は `LaunchWithTimings(ctx, req)` を使います。
-- Execは `ExecWithTimings(ctx, workerID, request)` で終了コード・`ExecTimings`・errorを返します（未リリースmain）。
+- Execは `ExecWithTimings(ctx, workerID, request)` で終了コード・`ExecTimings`・errorを返します（v0.0.4）。
 - `Launch` と同じ契約で `Worker`、`LaunchTimings`、`error` を返します。
 - [計測の範囲と再現手順](performance.md#起動のどこに時間がかかるか調べる)を参照してください。
 
@@ -320,25 +320,25 @@ go build -o /var/tmp/oaiso-embedding ./examples/embedding
 - `Policy` の `Quarantined` は永続化済みの隔離要求、`QuarantinePending` は停止未確認を表します。
 - `Quarantine` のエラーを成功として扱わないでください。
 
-- 未リリースmain：`LaunchRequest.UsagePolicy`で要求数・同時数・本文量・観測tokenの上限を指定し、`Usage(ctx, workerID)`で照会できます。`CaseProxyOptions.UsageStateDir`はworkspace外の0700ディレクトリを指定。[利用上限](guides/usage-limits.md)。
+- v0.0.4：`LaunchRequest.UsagePolicy`で要求数・同時数・本文量・観測tokenの上限を指定し、`Usage(ctx, workerID)`で照会できます。`CaseProxyOptions.UsageStateDir`はworkspace外の0700ディレクトリを指定。[利用上限](guides/usage-limits.md)。
 
-- 未リリースmain：`LaunchRequest.Lifecycle.ProtectMain`でメイン処理をidle回収から保護。`Heartbeat(ctx, workerID, ttl)`で0〜5分の活動通知を更新・解除できます。最大寿命は延長しません。[条件と実行例](sandbox-features.md#メイン処理と活動通知によるidle回収の防止)。
+- v0.0.4：`LaunchRequest.Lifecycle.ProtectMain`でメイン処理をidle回収から保護。`Heartbeat(ctx, workerID, ttl)`で0〜5分の活動通知を更新・解除できます。最大寿命は延長しません。[条件と実行例](sandbox-features.md#メイン処理と活動通知によるidle回収の防止)。
 
 ## 診断結果の保存
 
-- 未リリースmain：`SaveLaunchObservation`・`ReadObservations`で起動時間を保存・読出し。[保存形式・制限](guides/observability.md)を参照。保存失敗は起動結果とは別に処理してください。
+- v0.0.4：`SaveLaunchObservation`・`ReadObservations`で起動時間を保存・読出し。[保存形式・制限](guides/observability.md)を参照。保存失敗は起動結果とは別に処理してください。
 
 ## disk checkpoint
 
-- 未リリースmain：`Checkpoint`・`Checkpoints`・`InspectCheckpoint`・`RestoreCheckpoint`・`RemoveCheckpoint`。[保存範囲・容量・復元条件](guides/disk-checkpoint.md)を確認してください。
+- v0.0.4：`Checkpoint`・`Checkpoints`・`InspectCheckpoint`・`RestoreCheckpoint`・`RemoveCheckpoint`。[保存範囲・容量・復元条件](guides/disk-checkpoint.md)を確認してください。
 
 ## VM―認証ProxyのTLS
 
-- 利用可能：未リリース（main）。`EnsureCaseProxy`はTLSを有効にします。`ProxyCapabilities().WorkerMTLS`で確認できます。
+- 利用可能：v0.0.4。`EnsureCaseProxy`はTLSを有効にします。`ProxyCapabilities().WorkerMTLS`で確認できます。
 - [有効期限・再起動・旧ワーカーの再作成](guides/worker-tls.md)。
 
 - TLSワーカーの接続URLは、そのVM内だけの`127.0.0.1`を指します。ホスト・別VMで再利用したり、URLを実行IDの代わりにしたりしないでください。実行の識別にはworker／run IDを使います。
 
 ## 資源制御
 
-- 未リリースmain：[接続・帯域・FD・block I/Oの上限](guides/resource-limits.md)。`ResourcePolicies(ctx)`で全プロファイル項目、`ResourceUsage.Policy`で稼働VMの契約を確認できます。ProxyのTCP数はAIの同時要求数とは別です。
+- v0.0.4：[接続・帯域・FD・block I/Oの上限](guides/resource-limits.md)。`ResourcePolicies(ctx)`で全プロファイル項目、`ResourceUsage.Policy`で稼働VMの契約を確認できます。ProxyのTCP数はAIの同時要求数とは別です。

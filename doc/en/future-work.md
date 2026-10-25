@@ -70,7 +70,7 @@
 
 ## Existing SDK dependency findings
 
-- **Unreleased (main)**: dependency updates and applicability review completed; symbol findings reduced from 15 to 2. The earlier age migration reduced 19 to 15.
+- **v0.0.4**: dependency updates and applicability review completed; symbol findings reduced from 15 to 2. The earlier age migration reduced 19 to 15.
 - Both remaining findings concern unused daemon features. No finding exclusions; inapplicability rationale and dependency/API boundary regressions added.
 - Automated checks and follow-up [real Kata network/revocation acceptance](development/network-acceptance.md) pass. No full eight-suite rerun, live-account or WSL acceptance.
 - [Findings and affected modules](development/dependency-security.md).

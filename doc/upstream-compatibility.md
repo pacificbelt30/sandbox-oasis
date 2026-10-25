@@ -162,4 +162,4 @@ make contracts-check
 | Anthropic SDK | [Anthropic SDK](https://platform.claude.com/docs/en/cli-sdks-libraries/overview) |
 ## 実動作まで確認する
 
-- 未リリースmain：[更新候補の互換性確認](development/candidate-qualification.md)で、静的検査を隔離CLI・実Kataの試験へつなげます。定期CIでは計画まで作成し、固定版を自動採用しません。
+- v0.0.4：[更新候補の互換性確認](development/candidate-qualification.md)で、静的検査を隔離CLI・実Kataの試験へつなげます。定期CIでは計画まで作成し、固定版を自動採用しません。

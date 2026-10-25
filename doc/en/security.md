@@ -24,7 +24,7 @@
 - Agent approval settings remain separate.
 - Shared files remain accessible under the selected mount permissions.
 
-- Unreleased main: [TCP admission, per-source bandwidth, guest per-process FD and host block I/O ceilings](guides/resource-limits.md). Opt-in controls; socket IP accounting is not execution authentication, FD ceilings are per process, and cached/tmpfs I/O is outside block limits.
+- v0.0.4: [TCP admission, per-source bandwidth, guest per-process FD and host block I/O ceilings](guides/resource-limits.md). Opt-in controls; socket IP accounting is not execution authentication, FD ceilings are per process, and cached/tmpfs I/O is outside block limits.
 
 ## Credentials
 
@@ -101,12 +101,12 @@
 
 | Item | Limit or default |
 |---|---|
-| Worker-to-auth-proxy traffic | Unreleased main managed proxies use TLS 1.3 and execution-bound client certificates; [usage/migration](guides/worker-tls.md). General egress retains HTTP proxy transport |
+| Worker-to-auth-proxy traffic | v0.0.4 managed proxies use TLS 1.3 and execution-bound client certificates; [usage/migration](guides/worker-tls.md). General egress retains HTTP proxy transport |
 | Worker token binding | Managed TLS routes verify token and current execution public key. A copied token alone is insufficient. A compromised guest retains its own allowed authority. Custom legacy HTTP proxies remain unchanged |
 | General egress | Default deny unless the host explicitly disables it |
 | Empty destination grants | Disconnect general egress |
 | Worker-specific allowlists | Select policy-specific proxies; identical policies can share |
-| Rule updates | Unreleased main: [explicit proxy-wide live changes](guides/live-policy.md), with generation checks, termination confirmation and fail-closed persistence; no automatic config reload |
+| Rule updates | v0.0.4: [explicit proxy-wide live changes](guides/live-policy.md), with generation checks, termination confirmation and fail-closed persistence; no automatic config reload |
 | Model authorization | Opt-in at the host auth proxy; a CLI model flag alone does not enforce authorization |
 | Shared files / Git metadata | Remain writable where explicitly shared read-write |
 
@@ -128,7 +128,7 @@
 | Status | Coverage |
 |---|---|
 | [Recorded real Kata / AI tests](../testing.md) (Japanese) | Real Kata acceptance and existing-auth.json WebSocket/HTTP SSE inference |
-| [Additional network/revocation checks](development/network-acceptance.md) (Unreleased main) | Automated DNS/failed-stop tests; real Kata denials, active SSE/WS revocation and general-traffic closure on quarantine; synthetic upstreams |
+| [Additional network/revocation checks](development/network-acceptance.md) (v0.0.4) | Automated DNS/failed-stop tests; real Kata denials, active SSE/WS revocation and general-traffic closure on quarantine; synthetic upstreams |
 | Requires separate verification | Long-running real OAuth refresh, interactive keyboard use, arbitrary custom images |
 | Claude fixture coverage | Distinct API/subscription placeholders; no real access/refresh tokens in workers |
 | Outside Claude fixture coverage | Live Anthropic inference and subscription usage accounting |
@@ -138,8 +138,8 @@
 
 ## Operation audit
 
-- Unreleased (main): [Persistence, gap detection, capacity and failure behavior](guides/audit.md). Local root-resistant integrity is not guaranteed.
+- v0.0.4: [Persistence, gap detection, capacity and failure behavior](guides/audit.md). Local root-resistant integrity is not guaranteed.
 
 ## Distribution signatures
 
-- Unreleased main: [Signature/provenance/SBOM/rollback policy](guides/signed-releases.md). Published v0.0.3 uses checksums.
+- v0.0.4 or later: [Signature/provenance/SBOM/rollback policy](guides/signed-releases.md).

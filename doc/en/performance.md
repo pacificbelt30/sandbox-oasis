@@ -9,7 +9,7 @@
 
 ### Combine duplicate Exec verification
 
-- Available: **unreleased (main)**.
+- Available: **v0.0.4**.
 - Runtime and host attestation share one full asset verification per Exec.
 - Every operation rereads all assets and checks SHA-256, ownership, paths, permissions and configuration. There is no timestamp cache.
 - Worker configuration, host processes/cgroups and guest identity, privileges and resource limits are checked before the command starts.
@@ -37,7 +37,7 @@
 
 ## Measurements on 2026-10-25
 
-- Scope: **unreleased (main)**. Full asset verification within one Exec was consolidated from three reads to one.
+- Scope: **v0.0.4**. Full asset verification within one Exec was consolidated from three reads to one.
 - SHA-256 accounted for 94.0% of baseline node CPU profile time.
 
 | Condition | Value |
@@ -132,7 +132,7 @@ for _, phase := range timing.Phases {
 
 ## Locate Exec costs
 
-- Available: **unreleased (main)**.
+- Available: **v0.0.4**.
 - `ExecWithTimings(ctx, workerID, request)` returns the exit code, `ExecTimings` and error with normal `Exec` semantics for streams, exit status, cancellation and failures.
 - Records contain fixed phase names and durations only: no arguments, paths, output, credentials or error text. Concurrent calls use separate records.
 
@@ -235,7 +235,7 @@ GOMAXPROCS=4 \
 
 ### Measure startup, Exec and two-worker concurrency
 
-- Available: **unreleased (main)**.
+- Available: **v0.0.4**.
 - Use a dedicated node with capacity for at least two more workers; avoid shared services.
 - Prepare the pinned worker/proxy images as above. No real credentials or AI inference are used.
 - The test measures three sequential launches, three two-worker launch batches, seven sequential Execs and five two-worker Exec batches.

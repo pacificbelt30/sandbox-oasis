@@ -2,7 +2,7 @@
 
 [日本語](../../development/candidate-qualification.md) | **English**
 
-- Available: **Unreleased (main)**. Use an isolated candidate checkout and test images.
+- Available: **v0.0.4**. Use an isolated candidate checkout and test images.
 - Never changes current pins, baseline or releases automatically.
 
 | Stage | Checks | Meaning |

@@ -133,9 +133,9 @@ oaiso run --profile-size small --agent codex
 | `--readiness` | 未指定 | 起動準備完了のguest shell probe |
 | `--readiness-timeout` | 0（実効60秒） | hook・probeの期限 |
 | `--max-lifetime` / `--idle-timeout` / `--retention` | `0` | 寿命・idle・終了後保持。`30m` / `2h` など。`reap` の実行が必要 |
-| `--protect-main` | `false` | 未リリースmain。メイン処理の実行中はidle回収しない。最大寿命は適用 |
-| `--max-requests` / `--max-concurrent` | `0` | 未リリースmain。実行ごとの要求数／同時数を認証Proxyで制限 |
-| `--max-transfer-bytes` / `--max-observed-tokens` | `0` | 未リリースmain。本文合計量／観測tokenで制限。[正確さと条件](../guides/usage-limits.md) |
+| `--protect-main` | `false` | v0.0.4。メイン処理の実行中はidle回収しない。最大寿命は適用 |
+| `--max-requests` / `--max-concurrent` | `0` | v0.0.4。実行ごとの要求数／同時数を認証Proxyで制限 |
+| `--max-transfer-bytes` / `--max-observed-tokens` | `0` | v0.0.4。本文合計量／観測tokenで制限。[正確さと条件](../guides/usage-limits.md) |
 | `--proxy-admin-url` | `http://127.0.0.1:18081` | ホスト管理API |
 | `--proxy-container-url` | `http://codex-auth-proxy:18080` | ワーカー向け固定AI経路 |
 | `--http-proxy-url` | `http://codex-http-proxy:18082` | ワーカー向け一般egress |
@@ -480,6 +480,6 @@ oaiso run --user 1000:1000
 - [ネットワーク仕様](../network.md) — 専用ワーカーネットワークと2種類のプロキシの構成
 - [設定リファレンス](../configuration.md) — config.toml の設定項目
 
-- `--observe-dir PATH`: 未リリースmain。起動時間を秘密を除いた形式で保存。[診断の保存](../guides/observability.md)。
+- `--observe-dir PATH`: v0.0.4。起動時間を秘密を除いた形式で保存。[診断の保存](../guides/observability.md)。
 
-- `--checkpoint ID`: 未リリースmain。[disk checkpoint](../guides/disk-checkpoint.md)から新しいKata VMを起動。workspace・認証・実行規則は新規設定。
+- `--checkpoint ID`: v0.0.4。[disk checkpoint](../guides/disk-checkpoint.md)から新しいKata VMを起動。workspace・認証・実行規則は新規設定。
