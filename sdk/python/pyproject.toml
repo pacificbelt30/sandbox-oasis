@@ -1,0 +1,21 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "oaiso-local"
+version = "0.1.0"
+description = "Pipe-only local SDK for Oaiso embedding protocol v1"
+requires-python = ">=3.12"
+license = "MIT"
+readme = "README.md"
+
+[tool.hatch.build]
+ignore-vcs = true
+exclude = ["**/__pycache__", "**/*.pyc"]
+
+[tool.hatch.build.targets.sdist]
+only-include = ["oaiso", "README.md", "LICENSE", "pyproject.toml"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["oaiso"]

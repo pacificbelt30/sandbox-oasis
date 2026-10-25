@@ -1,0 +1,12 @@
+{
+  "name": "@oaiso/local",
+  "version": "0.1.0",
+  "description": "Pipe-only SDK for Oaiso local embedding protocol v1",
+  "type": "module",
+  "license": "MIT",
+  "engines": {"node": ">=22"},
+  "exports": {".": {"types": "./dist/index.d.ts", "import": "./dist/index.js"}},
+  "files": ["dist", "README.md"],
+  "scripts": {"build": "tsc", "test": "npm run build && node --test test/*.test.mjs"},
+  "devDependencies": {"@types/node": "24.19.2", "typescript": "7.0.2"}
+}

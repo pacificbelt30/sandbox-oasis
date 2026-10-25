@@ -52,3 +52,9 @@ __pycache__/
 
 # Matching CLI/node installation bundles
 /dist/
+
+# Local SDK build/install artifacts
+sdk/typescript/node_modules/
+sdk/typescript/dist/
+sdk/python/dist/
+sdk/python/*.egg-info/

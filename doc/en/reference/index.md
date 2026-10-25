@@ -29,6 +29,7 @@
 
 | Topic | Reference |
 |---|---|
+| Machine-readable contract, Python and TypeScript | [Local API and SDKs](../local-api-sdk.md) |
 | Create, launch, execute, stop, remove and retry | [Go API](../go-api.md) |
 | Case credentials, credential versions and connection generations | [Credential Store](../credential-store.md) |
 | Auth Proxy HTTP API | [Auth API](../auth-proxy/endpoints.md) |

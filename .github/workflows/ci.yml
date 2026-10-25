@@ -200,3 +200,43 @@ jobs:
           tags: codex-dock-proxy:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  local-sdk:
+    name: Local API and SDK contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.13.5"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: sdk/typescript/package-lock.json
+      - name: Install SDK build tools
+        working-directory: sdk/typescript
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Check generated contract and TypeScript types
+        run: |
+          go run ./api/generate
+          git diff --exit-code -- api/local-v1/schema.json sdk/typescript/src/types.ts
+      - name: Run both SDKs against the Go adapter (offline)
+        run: |
+          go test -c -o /tmp/oaiso-local-api.test ./pkg/cxd/localapi
+          uv run --no-project --no-config --managed-python --python 3.12 python scripts/verify-local-sdks.py --fixture /tmp/oaiso-local-api.test
+      - name: Verify Python distribution imports
+        run: |
+          uv build sdk/python --wheel --out-dir /tmp/oaiso-sdk-wheels
+          uv venv --python 3.12 /tmp/oaiso-sdk-python
+          uv pip install --python /tmp/oaiso-sdk-python/bin/python /tmp/oaiso-sdk-wheels/*.whl
+          /tmp/oaiso-sdk-python/bin/python -c 'from oaiso import Client, APIError; print("SDK import OK")'
+      - name: Verify JavaScript distribution imports
+        run: |
+          npm pack ./sdk/typescript --ignore-scripts --pack-destination /tmp
+          npm install --prefix /tmp/oaiso-sdk-js --ignore-scripts --no-audit --no-fund /tmp/oaiso-local-0.1.0.tgz
+          node --input-type=module -e 'import { Client, APIError } from "/tmp/oaiso-sdk-js/node_modules/@oaiso/local/dist/index.js"; console.log("SDK import OK")'

@@ -6,6 +6,8 @@
 - It does not expose a new network service.
 - Access to the root managed socket permits arbitrary images, commands, and host mounts, so grant it only to trusted host processes.
 
+- Python, TypeScript and the machine-readable contract: [Local API and SDKs](local-api-sdk.md) (unreleased).
+
 ## Before connecting
 
 1. [Install the execution host](../setup.md) (Japanese) with the node, containerd, Kata, and BuildKit.

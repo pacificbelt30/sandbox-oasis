@@ -11,6 +11,7 @@
 
 | コマンド | 説明 | 詳細 |
 |---|---|---|
+| [`oaiso api`](local-api-sdk.md) | 組み込み用ローカルAPI（未リリース） | `stdio`・`schema` |
 | [`oaiso claude`](claude-code.md) | 公式Claude Codeの起動 | ネイティブ引数・APIキー／サブスク |
 | [`oaiso codex`](commands/run.md#codex-cli-を直接起動する) | Codex CLIの引数をそのまま渡して起動 | カレントディレクトリを共有・直接exec |
 | [`oaiso run`](commands/run.md) | サンドボックスコンテナの起動 | オプション・承認モード・並列実行・パッケージ管理 |

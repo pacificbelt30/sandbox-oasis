@@ -90,6 +90,7 @@ nav:
       - 設定: configuration.md
       - 組み込みAPI:
           - Go API: go-api.md
+          - ローカルAPI・SDK: local-api-sdk.md
           - Credential Store: credential-store.md
           - 認証API: auth-proxy/endpoints.md
   - 管理・運用:
@@ -169,6 +170,7 @@ nav:
           - Configuration: en/configuration.md
           - Embedding API:
               - Go API: en/go-api.md
+              - Local API and SDKs: en/local-api-sdk.md
               - Credential Store: en/credential-store.md
               - Auth API: en/auth-proxy/endpoints.md
       - Administration:

@@ -34,8 +34,8 @@
 
 | 優先 | 機能 | 最小の提供範囲 | 完了条件 |
 |---|---|---|---|
-| P1 | 機械可読な組み込み仕様 | 公開Go APIの資源・要求ID・状態・error・capabilityを定義 | 版違い、取消、応答消失、再送、回収を自動確認。管理socketを公開networkへ出さない |
-| P1 | Python・TypeScriptの薄いSDK | 同一ホストから作成・実行・照会・回収 | Go APIと同じ再送・権限・失敗の意味を保つ。秘密を引数・標準出力へ出さない |
+| P1 | 機械可読な組み込み仕様 | **完了（未リリースmain）**。[パイプ専用API v1・JSON Schema](../local-api-sdk.md)。資源・要求ID・状態・error・capabilityを定義 | 版違い、取消、応答消失、再送、回収を自動確認。管理socketを公開networkへ出さない |
+| P1 | Python・TypeScriptの薄いSDK | **完了（未リリースmain）**。[同一ホストから作成・実行・照会・回収](../local-api-sdk.md)。両SDKの実Kata受入済み | Go APIと同じ再送・権限・失敗の意味を保つ。秘密を引数・標準出力へ出さない |
 | P2 | diskのcheckpoint | **完了（未リリースmain）**。[停止済みrootfsの保存・新規VMへの復元](../guides/disk-checkpoint.md)。CLI／Go API | RAM保存とは区別。共有mount、書込み中データ、容量、秘密除外、復元互換性を定義 |
 | P2 | 起動済み環境の事前準備 | 効果確認用の小さな試作から開始 | 未割当時は秘密・利用者データを持たせず、割当時に再検証。待機メモリと20%以上の実測効果で判断 |
 | P2 | resource制御の追加 | **完了（未リリースmain）**。[TCP数・接続元別帯域・プロセス別FD・デバイス別block I/O](../guides/resource-limits.md)。CLI／Go API | 既存のCPU・メモリ・PID・本文上限と区別。長いstreamを誤って切らず、他実行への影響を抑える |

@@ -1,5 +1,27 @@
 # テストと動作確認
 
+## ローカルAPI・Python／TypeScript SDK（2026-10-25）
+
+- 対象：**未リリース（main）**。[仕様・導入・使い方](local-api-sdk.md)。`7d17212`を基に追加。
+- 接続は専用stdin/stdoutパイプ。管理socketのnetwork待受は追加せず、公開Go APIへ委譲。
+
+| 検査 | 結果 |
+|---|---|
+| Go | build・vet・lintが成功。結果キャッシュなしの全Go raceと、新adapterの反復race試験が成功 |
+| 境界・既存試験 | 既存5系統のfuzz、Python 65件、CLI名、上流契約のオフライン検査が成功。上流pin・baselineは不変 |
+| 両SDKの契約 | Python 8件・TypeScript 9件が成功。同一Go adapterで版違い・権限エラー・再送・競合・応答消失・取消・期限・出力上限・秘密非表示・回収を確認 |
+| 配布パッケージ | wheel・npm tarballをビルドし、分離環境へ導入してimportと両SDKの契約試験を確認。親Git除外設定でPythonコードが欠ける問題を修正。レジストリへの公開なし |
+| stdin・背圧 | 未指定／空入力／バイナリ入力を区別。stdout・stderrは各256 KiBで取消。応答を読まない場合も、処理と返信待ちを同時16件以内に制限 |
+| 実Kata | `TestKataLocalSDK`が61.11秒で成功。Python 28.24秒、TypeScript 29.67秒。各SDKから作成・起動・実行・資源照会、waitとexecの取消、未読の作成応答を捨てた後の照合・再送・回収、旧CLIの拒否、VM環境・認証JSONへの実資格情報の非混入を確認。資格情報は架空値 |
+| 導入・更新・復旧 | 分離したノードで新規導入、稼働中更新の拒否、正常更新、旧版拒否、起動失敗からの自動復旧、明示rollback、監査を確認 |
+| 回収 | VM・task・コンテナ・network namespace・専用firewallの残留なし。使い捨てノードを回収。共有ホストのcontainerd・BuildKit・nodeのPIDと起動時刻は不変 |
+| 文書・生成仕様 | 日英ガイド、CLI一覧、目次を更新。JSON Schema・TypeScript型はGo DTOから生成し、CIで差分を検出 |
+
+- 試験中の修正：出力バッファの補助メソッドによる上限迂回を除去。stdin未指定と空入力を区別し、返信待ちも同時処理上限に含めるよう修正。
+- 試験準備の失敗も保存：必要パッケージ入りの既存イメージを選び、Storeの試験ディレクトリを0700に修正。作業ファイルの所有者とVMのUID/GIDを合わせて再試験。権限チェックは維持。
+- 証跡：`.kata-verification/local-sdk-20261025/`と`.kata-verification/setup-e2e/c310fbf8a4c7/`。版は`v0.0.0-local-sdk-a/b`。最終バイナリ・SDKのhashを保存。
+- 実Kataは新API・SDKの受入に限定。既存12スイート全件の再受入、実アカウントでの認証・推論、実WSLは今回の対象外。SDKは公開レジストリへ未配布。
+
 ## 追加機能の通し検証（2026-10-25）
 
 - 対象：**未リリース（main）**。`1d4fdc1`を基に、今回の修正を加えて検証。

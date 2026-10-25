@@ -29,6 +29,7 @@
 
 | 調べる対象 | リファレンス |
 |---|---|
+| 機械可読仕様・Python・TypeScript | [ローカルAPI・SDK](../local-api-sdk.md) |
 | 作成・起動・実行・停止・削除・再送 | [Go API](../go-api.md) |
 | ケース別認証・資格情報版・接続世代 | [Credential Store](../credential-store.md) |
 | Auth ProxyのHTTP API | [認証API](../auth-proxy/endpoints.md) |

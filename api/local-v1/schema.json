@@ -1,0 +1,2134 @@
+{
+  "$defs": {
+    "APICancelParams": {
+      "additionalProperties": false,
+      "properties": {
+        "call_id": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "call_id"
+      ],
+      "type": "object"
+    },
+    "APICancelResult": {
+      "additionalProperties": false,
+      "properties": {
+        "accepted": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "accepted"
+      ],
+      "type": "object"
+    },
+    "APICapabilities": {
+      "additionalProperties": false,
+      "properties": {
+        "max_concurrent_calls": {
+          "type": "integer"
+        },
+        "max_output_bytes": {
+          "type": "integer"
+        },
+        "max_request_bytes": {
+          "type": "integer"
+        },
+        "max_response_bytes": {
+          "type": "integer"
+        },
+        "methods": {
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "node": {
+          "$ref": "#/$defs/Capabilities"
+        },
+        "protocol_version": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "protocol_version",
+        "node",
+        "methods",
+        "max_request_bytes",
+        "max_response_bytes",
+        "max_output_bytes",
+        "max_concurrent_calls"
+      ],
+      "type": "object"
+    },
+    "APIError": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "enum": [
+            "invalid_argument",
+            "version_mismatch",
+            "conflict",
+            "cleanup_pending",
+            "outcome_unknown",
+            "request_gone",
+            "in_progress",
+            "capacity",
+            "not_found",
+            "canceled",
+            "deadline_exceeded",
+            "permission_denied",
+            "output_limit",
+            "not_initialized",
+            "busy",
+            "internal"
+          ],
+          "type": "string"
+        },
+        "codes": {
+          "items": {
+            "enum": [
+              "invalid_argument",
+              "version_mismatch",
+              "conflict",
+              "cleanup_pending",
+              "outcome_unknown",
+              "request_gone",
+              "in_progress",
+              "capacity",
+              "not_found",
+              "canceled",
+              "deadline_exceeded",
+              "permission_denied",
+              "output_limit",
+              "not_initialized",
+              "busy",
+              "internal"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "message": {
+          "type": "string"
+        },
+        "requires_reconciliation": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "code",
+        "codes",
+        "message",
+        "requires_reconciliation"
+      ],
+      "type": "object"
+    },
+    "APIExecParams": {
+      "additionalProperties": false,
+      "properties": {
+        "argv": {
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "env": {
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "stdin": {
+          "contentEncoding": "base64",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "worker_id": {
+          "type": "string"
+        },
+        "working_dir": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "worker_id",
+        "argv"
+      ],
+      "type": "object"
+    },
+    "APIExecResult": {
+      "additionalProperties": false,
+      "properties": {
+        "exit_code": {
+          "type": "integer"
+        },
+        "stderr": {
+          "contentEncoding": "base64",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "stdout": {
+          "contentEncoding": "base64",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "exit_code",
+        "stdout",
+        "stderr"
+      ],
+      "type": "object"
+    },
+    "APIExitResult": {
+      "additionalProperties": false,
+      "properties": {
+        "exit_code": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "exit_code"
+      ],
+      "type": "object"
+    },
+    "APILaunchParams": {
+      "additionalProperties": false,
+      "properties": {
+        "request": {
+          "$ref": "#/$defs/LaunchRequest"
+        }
+      },
+      "required": [
+        "request"
+      ],
+      "type": "object"
+    },
+    "APIOpenParams": {
+      "additionalProperties": false,
+      "properties": {
+        "options": {
+          "$ref": "#/$defs/Options"
+        }
+      },
+      "required": [
+        "options"
+      ],
+      "type": "object"
+    },
+    "APIRemoveParams": {
+      "additionalProperties": false,
+      "properties": {
+        "force": {
+          "type": "boolean"
+        },
+        "worker_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "worker_id",
+        "force"
+      ],
+      "type": "object"
+    },
+    "APIRemoveRequestParams": {
+      "additionalProperties": false,
+      "properties": {
+        "force": {
+          "type": "boolean"
+        },
+        "request_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "force"
+      ],
+      "type": "object"
+    },
+    "APIRequestParams": {
+      "additionalProperties": false,
+      "properties": {
+        "request_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id"
+      ],
+      "type": "object"
+    },
+    "APIStopParams": {
+      "additionalProperties": false,
+      "properties": {
+        "timeout_seconds": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "worker_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "worker_id"
+      ],
+      "type": "object"
+    },
+    "APISuccess": {
+      "additionalProperties": false,
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "ok"
+      ],
+      "type": "object"
+    },
+    "APIWorkerParams": {
+      "additionalProperties": false,
+      "properties": {
+        "worker_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "worker_id"
+      ],
+      "type": "object"
+    },
+    "Capabilities": {
+      "additionalProperties": false,
+      "properties": {
+        "BuildVersion": {
+          "type": "string"
+        },
+        "Features": {
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "ProtocolVersion": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "BuildVersion",
+        "ProtocolVersion",
+        "Features"
+      ],
+      "type": "object"
+    },
+    "Compatibility": {
+      "additionalProperties": false,
+      "properties": {
+        "CABundle": {
+          "type": "string"
+        },
+        "JVMProxy": {
+          "type": "boolean"
+        },
+        "SSHProxy": {
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "EgressPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "AllowCIDRs": {
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "AllowDomains": {
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "AllowPorts": {
+          "items": {
+            "type": "integer"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "AllowPublicDestinations": {
+          "type": "boolean"
+        },
+        "DefaultDeny": {
+          "type": "boolean"
+        },
+        "DenyCIDRs": {
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "DenyDomains": {
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "DenyPorts": {
+          "items": {
+            "type": "integer"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "Environment": {
+      "additionalProperties": false,
+      "properties": {
+        "image_id": {
+          "type": "string"
+        },
+        "readiness": {
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "readiness_timeout": {
+          "description": "Duration in nanoseconds; use an exactly representable integer.",
+          "type": "integer"
+        },
+        "start_hooks": {
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "Filesystem": {
+      "additionalProperties": false,
+      "properties": {
+        "deny_read": {
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "deny_write": {
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "IOLimit": {
+      "additionalProperties": false,
+      "properties": {
+        "major": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "minor": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "read_bytes_per_second": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "read_iops": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "write_bytes_per_second": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "write_iops": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "major",
+        "minor"
+      ],
+      "type": "object"
+    },
+    "Identity": {
+      "additionalProperties": false,
+      "properties": {
+        "case_id": {
+          "type": "string"
+        },
+        "connection_version": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "LaunchRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "Agent": {
+          "type": "string"
+        },
+        "AgentArgs": {
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "ApprovalMode": {
+          "type": "string"
+        },
+        "Branch": {
+          "type": "string"
+        },
+        "CloneDir": {
+          "type": "string"
+        },
+        "Compatibility": {
+          "$ref": "#/$defs/Compatibility"
+        },
+        "EgressAllowDomains": {
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "Environment": {
+          "$ref": "#/$defs/Environment"
+        },
+        "Filesystem": {
+          "$ref": "#/$defs/Filesystem"
+        },
+        "Identity": {
+          "$ref": "#/$defs/Identity"
+        },
+        "Image": {
+          "type": "string"
+        },
+        "Lifecycle": {
+          "$ref": "#/$defs/Lifecycle"
+        },
+        "Model": {
+          "type": "string"
+        },
+        "ModelPolicy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ModelPolicy"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "Mounts": {
+          "items": {
+            "$ref": "#/$defs/Mount"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "NewBranch": {
+          "type": "boolean"
+        },
+        "NoGitMetadata": {
+          "type": "boolean"
+        },
+        "NoInternet": {
+          "type": "boolean"
+        },
+        "PolicyPreset": {
+          "type": "string"
+        },
+        "Profile": {
+          "type": "string"
+        },
+        "ProjectDir": {
+          "pattern": "^/",
+          "type": "string"
+        },
+        "ReadOnly": {
+          "type": "boolean"
+        },
+        "ReadOnlyRootFS": {
+          "type": "boolean"
+        },
+        "RequestID": {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string",
+          "x-max-utf8-bytes": 256
+        },
+        "Runtime": {
+          "type": "string"
+        },
+        "TemporaryStorage": {
+          "items": {
+            "$ref": "#/$defs/TemporaryStorage"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "TokenTTL": {
+          "description": "Duration in nanoseconds; use an exactly representable integer.",
+          "type": "integer"
+        },
+        "UsagePolicy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/UsagePolicy"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "UseWorktree": {
+          "type": "boolean"
+        },
+        "User": {
+          "type": "string"
+        },
+        "WatchPolling": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "RequestID",
+        "ProjectDir"
+      ],
+      "type": "object"
+    },
+    "Lifecycle": {
+      "additionalProperties": false,
+      "properties": {
+        "idle_timeout": {
+          "description": "Duration in nanoseconds; use an exactly representable integer.",
+          "type": "integer"
+        },
+        "max_lifetime": {
+          "description": "Duration in nanoseconds; use an exactly representable integer.",
+          "type": "integer"
+        },
+        "protect_main": {
+          "type": "boolean"
+        },
+        "retention": {
+          "description": "Duration in nanoseconds; use an exactly representable integer.",
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "Limits": {
+      "additionalProperties": false,
+      "properties": {
+        "bytes_per_second": {
+          "type": "integer"
+        },
+        "max_connections": {
+          "type": "integer"
+        },
+        "max_connections_per_source": {
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "ModelPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "allowed_models": {
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "Mount": {
+      "additionalProperties": false,
+      "properties": {
+        "ReadOnly": {
+          "type": "boolean"
+        },
+        "Source": {
+          "type": "string"
+        },
+        "Target": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "Options": {
+      "additionalProperties": false,
+      "properties": {
+        "EgressNetworkResources": {
+          "$ref": "#/$defs/Limits"
+        },
+        "EgressPolicy": {
+          "$ref": "#/$defs/EgressPolicy"
+        },
+        "EgressProxyImage": {
+          "type": "string"
+        },
+        "HTTPProxyURL": {
+          "type": "string"
+        },
+        "NodeSocket": {
+          "type": "string"
+        },
+        "ProxyAdminSecret": {
+          "type": "string"
+        },
+        "ProxyAdminURL": {
+          "type": "string"
+        },
+        "ProxyContainerURL": {
+          "type": "string"
+        },
+        "StateDir": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "Profile": {
+      "additionalProperties": false,
+      "properties": {
+        "CPUCores": {
+          "type": "integer"
+        },
+        "GuestMemoryBytes": {
+          "type": "integer"
+        },
+        "HostMemoryBytes": {
+          "type": "integer"
+        },
+        "Name": {
+          "type": "string"
+        },
+        "PIDLimit": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "Name",
+        "CPUCores",
+        "GuestMemoryBytes",
+        "HostMemoryBytes",
+        "PIDLimit"
+      ],
+      "type": "object"
+    },
+    "ProxyCapabilities": {
+      "additionalProperties": false,
+      "properties": {
+        "Anthropic": {
+          "type": "boolean"
+        },
+        "AnthropicOAuth": {
+          "type": "boolean"
+        },
+        "CaseProxy": {
+          "type": "boolean"
+        },
+        "CredentialBroker": {
+          "type": "boolean"
+        },
+        "ModelAuthorization": {
+          "type": "boolean"
+        },
+        "ModelPolicyActive": {
+          "type": "boolean"
+        },
+        "OpenAIOAuth": {
+          "type": "boolean"
+        },
+        "TokenIdentity": {
+          "type": "boolean"
+        },
+        "TokenModelPolicy": {
+          "type": "boolean"
+        },
+        "TokenUsagePolicy": {
+          "type": "boolean"
+        },
+        "WorkerMTLS": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "WorkerMTLS",
+        "ModelAuthorization",
+        "TokenModelPolicy",
+        "TokenUsagePolicy",
+        "ModelPolicyActive",
+        "CaseProxy",
+        "CredentialBroker",
+        "TokenIdentity",
+        "OpenAIOAuth",
+        "Anthropic",
+        "AnthropicOAuth"
+      ],
+      "type": "object"
+    },
+    "Request": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "method": {
+              "const": "open"
+            },
+            "params": {
+              "$ref": "#/$defs/APIOpenParams"
+            },
+            "timeout_ms": {
+              "default": 180000,
+              "maximum": 1200000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "version": {
+              "const": 1
+            }
+          },
+          "required": [
+            "version",
+            "id",
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "method": {
+              "const": "cancel"
+            },
+            "params": {
+              "$ref": "#/$defs/APICancelParams"
+            },
+            "timeout_ms": {
+              "default": 180000,
+              "maximum": 1200000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "version": {
+              "const": 1
+            }
+          },
+          "required": [
+            "version",
+            "id",
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "method": {
+              "const": "capabilities"
+            },
+            "params": {
+              "additionalProperties": false,
+              "properties": {},
+              "type": "object"
+            },
+            "timeout_ms": {
+              "default": 180000,
+              "maximum": 1200000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "version": {
+              "const": 1
+            }
+          },
+          "required": [
+            "version",
+            "id",
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "method": {
+              "const": "proxy_capabilities"
+            },
+            "params": {
+              "additionalProperties": false,
+              "properties": {},
+              "type": "object"
+            },
+            "timeout_ms": {
+              "default": 180000,
+              "maximum": 1200000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "version": {
+              "const": 1
+            }
+          },
+          "required": [
+            "version",
+            "id",
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "method": {
+              "const": "profiles"
+            },
+            "params": {
+              "additionalProperties": false,
+              "properties": {},
+              "type": "object"
+            },
+            "timeout_ms": {
+              "default": 180000,
+              "maximum": 1200000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "version": {
+              "const": 1
+            }
+          },
+          "required": [
+            "version",
+            "id",
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "method": {
+              "const": "resource_policies"
+            },
+            "params": {
+              "additionalProperties": false,
+              "properties": {},
+              "type": "object"
+            },
+            "timeout_ms": {
+              "default": 180000,
+              "maximum": 1200000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "version": {
+              "const": 1
+            }
+          },
+          "required": [
+            "version",
+            "id",
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "method": {
+              "const": "resource_usage"
+            },
+            "params": {
+              "$ref": "#/$defs/APIWorkerParams"
+            },
+            "timeout_ms": {
+              "default": 180000,
+              "maximum": 1200000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "version": {
+              "const": 1
+            }
+          },
+          "required": [
+            "version",
+            "id",
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "method": {
+              "const": "create"
+            },
+            "params": {
+              "$ref": "#/$defs/APILaunchParams"
+            },
+            "timeout_ms": {
+              "default": 180000,
+              "maximum": 1200000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "version": {
+              "const": 1
+            }
+          },
+          "required": [
+            "version",
+            "id",
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "method": {
+              "const": "launch"
+            },
+            "params": {
+              "$ref": "#/$defs/APILaunchParams"
+            },
+            "timeout_ms": {
+              "default": 180000,
+              "maximum": 1200000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "version": {
+              "const": 1
+            }
+          },
+          "required": [
+            "version",
+            "id",
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "method": {
+              "const": "get"
+            },
+            "params": {
+              "$ref": "#/$defs/APIWorkerParams"
+            },
+            "timeout_ms": {
+              "default": 180000,
+              "maximum": 1200000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "version": {
+              "const": 1
+            }
+          },
+          "required": [
+            "version",
+            "id",
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "method": {
+              "const": "list"
+            },
+            "params": {
+              "additionalProperties": false,
+              "properties": {},
+              "type": "object"
+            },
+            "timeout_ms": {
+              "default": 180000,
+              "maximum": 1200000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "version": {
+              "const": 1
+            }
+          },
+          "required": [
+            "version",
+            "id",
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "method": {
+              "const": "request"
+            },
+            "params": {
+              "$ref": "#/$defs/APIRequestParams"
+            },
+            "timeout_ms": {
+              "default": 180000,
+              "maximum": 1200000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "version": {
+              "const": 1
+            }
+          },
+          "required": [
+            "version",
+            "id",
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "method": {
+              "const": "remove_request"
+            },
+            "params": {
+              "$ref": "#/$defs/APIRemoveRequestParams"
+            },
+            "timeout_ms": {
+              "default": 180000,
+              "maximum": 1200000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "version": {
+              "const": 1
+            }
+          },
+          "required": [
+            "version",
+            "id",
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "method": {
+              "const": "start"
+            },
+            "params": {
+              "$ref": "#/$defs/APIWorkerParams"
+            },
+            "timeout_ms": {
+              "default": 180000,
+              "maximum": 1200000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "version": {
+              "const": 1
+            }
+          },
+          "required": [
+            "version",
+            "id",
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "method": {
+              "const": "stop"
+            },
+            "params": {
+              "$ref": "#/$defs/APIStopParams"
+            },
+            "timeout_ms": {
+              "default": 180000,
+              "maximum": 1200000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "version": {
+              "const": 1
+            }
+          },
+          "required": [
+            "version",
+            "id",
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "method": {
+              "const": "remove"
+            },
+            "params": {
+              "$ref": "#/$defs/APIRemoveParams"
+            },
+            "timeout_ms": {
+              "default": 180000,
+              "maximum": 1200000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "version": {
+              "const": 1
+            }
+          },
+          "required": [
+            "version",
+            "id",
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "method": {
+              "const": "quarantine"
+            },
+            "params": {
+              "$ref": "#/$defs/APIWorkerParams"
+            },
+            "timeout_ms": {
+              "default": 180000,
+              "maximum": 1200000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "version": {
+              "const": 1
+            }
+          },
+          "required": [
+            "version",
+            "id",
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "method": {
+              "const": "wait"
+            },
+            "params": {
+              "$ref": "#/$defs/APIWorkerParams"
+            },
+            "timeout_ms": {
+              "default": 180000,
+              "maximum": 1200000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "version": {
+              "const": 1
+            }
+          },
+          "required": [
+            "version",
+            "id",
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "method": {
+              "const": "exec"
+            },
+            "params": {
+              "$ref": "#/$defs/APIExecParams"
+            },
+            "timeout_ms": {
+              "default": 180000,
+              "maximum": 1200000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "version": {
+              "const": 1
+            }
+          },
+          "required": [
+            "version",
+            "id",
+            "method",
+            "params"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "RequestStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "Attempt": {
+          "type": "integer"
+        },
+        "Name": {
+          "type": "string"
+        },
+        "State": {
+          "enum": [
+            "pending",
+            "complete",
+            "failed",
+            "cleanup-pending"
+          ],
+          "type": "string"
+        },
+        "WorkerID": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "State",
+        "WorkerID",
+        "Name",
+        "Attempt"
+      ],
+      "type": "object"
+    },
+    "ResourceProfile": {
+      "additionalProperties": false,
+      "properties": {
+        "block_io": {
+          "items": {
+            "$ref": "#/$defs/IOLimit"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "cpu_cores": {
+          "type": "integer"
+        },
+        "file_descriptor_limit": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "guest_memory_bytes": {
+          "type": "integer"
+        },
+        "host_memory_bytes": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "pid_limit": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "cpu_cores",
+        "guest_memory_bytes",
+        "host_memory_bytes",
+        "pid_limit"
+      ],
+      "type": "object"
+    },
+    "ResourceUsage": {
+      "additionalProperties": false,
+      "properties": {
+        "HostMemoryCurrentBytes": {
+          "type": "integer"
+        },
+        "HostMemoryPeakBytes": {
+          "type": "integer"
+        },
+        "OOMKills": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "ObservedAt": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "PeakAvailable": {
+          "type": "boolean"
+        },
+        "Policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ResourceProfile"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "Profile": {
+          "$ref": "#/$defs/Profile"
+        },
+        "Worker": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "Policy",
+        "Worker",
+        "ObservedAt",
+        "Profile",
+        "HostMemoryCurrentBytes",
+        "HostMemoryPeakBytes",
+        "PeakAvailable",
+        "OOMKills"
+      ],
+      "type": "object"
+    },
+    "Response": {
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "required": [
+            "result"
+          ]
+        },
+        {
+          "required": [
+            "error"
+          ]
+        }
+      ],
+      "properties": {
+        "error": {
+          "$ref": "#/$defs/APIError"
+        },
+        "id": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "result": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/APICapabilities"
+            },
+            {
+              "$ref": "#/$defs/APICancelResult"
+            },
+            {
+              "$ref": "#/$defs/APICapabilities"
+            },
+            {
+              "$ref": "#/$defs/ProxyCapabilities"
+            },
+            {
+              "items": {
+                "$ref": "#/$defs/Profile"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            },
+            {
+              "items": {
+                "$ref": "#/$defs/ResourceProfile"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            },
+            {
+              "$ref": "#/$defs/ResourceUsage"
+            },
+            {
+              "$ref": "#/$defs/Worker"
+            },
+            {
+              "$ref": "#/$defs/Worker"
+            },
+            {
+              "$ref": "#/$defs/Worker"
+            },
+            {
+              "items": {
+                "$ref": "#/$defs/Worker"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            },
+            {
+              "$ref": "#/$defs/RequestStatus"
+            },
+            {
+              "$ref": "#/$defs/APISuccess"
+            },
+            {
+              "$ref": "#/$defs/APISuccess"
+            },
+            {
+              "$ref": "#/$defs/APISuccess"
+            },
+            {
+              "$ref": "#/$defs/APISuccess"
+            },
+            {
+              "$ref": "#/$defs/APISuccess"
+            },
+            {
+              "$ref": "#/$defs/APIExitResult"
+            },
+            {
+              "$ref": "#/$defs/APIExecResult"
+            }
+          ]
+        },
+        "version": {
+          "const": 1
+        }
+      },
+      "required": [
+        "version",
+        "id"
+      ],
+      "type": "object"
+    },
+    "TemporaryStorage": {
+      "additionalProperties": false,
+      "properties": {
+        "executable": {
+          "type": "boolean"
+        },
+        "lifetime": {
+          "type": "string"
+        },
+        "max_bytes": {
+          "type": "integer"
+        },
+        "medium": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "UsagePolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "max_bytes": {
+          "type": "integer"
+        },
+        "max_concurrent": {
+          "type": "integer"
+        },
+        "max_requests": {
+          "type": "integer"
+        },
+        "max_tokens": {
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "Worker": {
+      "additionalProperties": false,
+      "properties": {
+        "Branch": {
+          "type": "string"
+        },
+        "FinishedAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "ID": {
+          "type": "string"
+        },
+        "Image": {
+          "type": "string"
+        },
+        "Name": {
+          "type": "string"
+        },
+        "StartedAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "Status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ID",
+        "Name",
+        "Status",
+        "Image",
+        "Branch",
+        "StartedAt",
+        "FinishedAt"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://pacificbelt30.github.io/sandbox-oasis/api/local-v1/schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/Request"
+    },
+    {
+      "$ref": "#/$defs/Response"
+    }
+  ],
+  "title": "Oaiso local embedding protocol v1",
+  "x-oaiso": {
+    "automatic_retries": false,
+    "byte_encoding": "base64",
+    "default_general_egress": "deny",
+    "disconnect": "cancel_active_calls_close_handles_workers_may_remain",
+    "duration_unit": "nanoseconds_except_timeout_ms_and_timeout_seconds",
+    "errors": [
+      "invalid_argument",
+      "version_mismatch",
+      "conflict",
+      "cleanup_pending",
+      "outcome_unknown",
+      "request_gone",
+      "in_progress",
+      "capacity",
+      "not_found",
+      "canceled",
+      "deadline_exceeded",
+      "permission_denied",
+      "output_limit",
+      "not_initialized",
+      "busy",
+      "internal"
+    ],
+    "launch_ids": "node_wide_durable_RequestID_1_to_256_UTF8_bytes",
+    "max_concurrent_calls": 16,
+    "max_output_bytes_per_stream": 262144,
+    "max_request_bytes": 1048576,
+    "max_response_bytes": 4194304,
+    "methods": [
+      {
+        "cancel": "close_handles",
+        "mutation": false,
+        "name": "open",
+        "retry": "never"
+      },
+      {
+        "cancel": "cancel_call_only",
+        "mutation": false,
+        "name": "cancel",
+        "retry": "never"
+      },
+      {
+        "cancel": "cancel_call_only",
+        "mutation": false,
+        "name": "capabilities",
+        "retry": "read_only"
+      },
+      {
+        "cancel": "cancel_call_only",
+        "mutation": false,
+        "name": "proxy_capabilities",
+        "retry": "read_only"
+      },
+      {
+        "cancel": "cancel_call_only",
+        "mutation": false,
+        "name": "profiles",
+        "retry": "read_only"
+      },
+      {
+        "cancel": "cancel_call_only",
+        "mutation": false,
+        "name": "resource_policies",
+        "retry": "read_only"
+      },
+      {
+        "cancel": "cancel_call_only",
+        "mutation": false,
+        "name": "resource_usage",
+        "retry": "read_only"
+      },
+      {
+        "cancel": "reconcile_request",
+        "mutation": true,
+        "name": "create",
+        "retry": "same_request_id_and_options"
+      },
+      {
+        "cancel": "reconcile_request",
+        "mutation": true,
+        "name": "launch",
+        "retry": "same_request_id_and_options"
+      },
+      {
+        "cancel": "cancel_call_only",
+        "mutation": false,
+        "name": "get",
+        "retry": "read_only"
+      },
+      {
+        "cancel": "cancel_call_only",
+        "mutation": false,
+        "name": "list",
+        "retry": "read_only"
+      },
+      {
+        "cancel": "cancel_call_only",
+        "mutation": false,
+        "name": "request",
+        "retry": "read_only"
+      },
+      {
+        "cancel": "reconcile_request",
+        "mutation": true,
+        "name": "remove_request",
+        "retry": "same_request_id"
+      },
+      {
+        "cancel": "reconcile_worker",
+        "mutation": true,
+        "name": "start",
+        "retry": "reconcile_worker"
+      },
+      {
+        "cancel": "reconcile_worker",
+        "mutation": true,
+        "name": "stop",
+        "retry": "reconcile_worker"
+      },
+      {
+        "cancel": "reconcile_worker",
+        "mutation": true,
+        "name": "remove",
+        "retry": "reconcile_worker"
+      },
+      {
+        "cancel": "reconcile_worker",
+        "mutation": true,
+        "name": "quarantine",
+        "retry": "same_worker_id"
+      },
+      {
+        "cancel": "cancel_wait_only",
+        "mutation": false,
+        "name": "wait",
+        "retry": "read_only"
+      },
+      {
+        "cancel": "stop_guest_command_then_reconcile",
+        "mutation": true,
+        "name": "exec",
+        "retry": "never"
+      }
+    ],
+    "node_authority": "caller_unix_socket_permissions_root_equivalent",
+    "request_ids": "strictly_increasing_from_1_per_process",
+    "request_states": [
+      "pending",
+      "complete",
+      "failed",
+      "cleanup-pending"
+    ],
+    "results": [
+      {
+        "method": "open",
+        "result": {
+          "$ref": "#/$defs/APICapabilities"
+        }
+      },
+      {
+        "method": "cancel",
+        "result": {
+          "$ref": "#/$defs/APICancelResult"
+        }
+      },
+      {
+        "method": "capabilities",
+        "result": {
+          "$ref": "#/$defs/APICapabilities"
+        }
+      },
+      {
+        "method": "proxy_capabilities",
+        "result": {
+          "$ref": "#/$defs/ProxyCapabilities"
+        }
+      },
+      {
+        "method": "profiles",
+        "result": {
+          "items": {
+            "$ref": "#/$defs/Profile"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        }
+      },
+      {
+        "method": "resource_policies",
+        "result": {
+          "items": {
+            "$ref": "#/$defs/ResourceProfile"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        }
+      },
+      {
+        "method": "resource_usage",
+        "result": {
+          "$ref": "#/$defs/ResourceUsage"
+        }
+      },
+      {
+        "method": "create",
+        "result": {
+          "$ref": "#/$defs/Worker"
+        }
+      },
+      {
+        "method": "launch",
+        "result": {
+          "$ref": "#/$defs/Worker"
+        }
+      },
+      {
+        "method": "get",
+        "result": {
+          "$ref": "#/$defs/Worker"
+        }
+      },
+      {
+        "method": "list",
+        "result": {
+          "items": {
+            "$ref": "#/$defs/Worker"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        }
+      },
+      {
+        "method": "request",
+        "result": {
+          "$ref": "#/$defs/RequestStatus"
+        }
+      },
+      {
+        "method": "remove_request",
+        "result": {
+          "$ref": "#/$defs/APISuccess"
+        }
+      },
+      {
+        "method": "start",
+        "result": {
+          "$ref": "#/$defs/APISuccess"
+        }
+      },
+      {
+        "method": "stop",
+        "result": {
+          "$ref": "#/$defs/APISuccess"
+        }
+      },
+      {
+        "method": "remove",
+        "result": {
+          "$ref": "#/$defs/APISuccess"
+        }
+      },
+      {
+        "method": "quarantine",
+        "result": {
+          "$ref": "#/$defs/APISuccess"
+        }
+      },
+      {
+        "method": "wait",
+        "result": {
+          "$ref": "#/$defs/APIExitResult"
+        }
+      },
+      {
+        "method": "exec",
+        "result": {
+          "$ref": "#/$defs/APIExecResult"
+        }
+      }
+    ],
+    "transport": "ndjson-stdio",
+    "unknown_mutation_outcome": "reconcile_request_or_worker_before_retry",
+    "worker_status": "opaque_observed_string_never_assume_unknown_means_stopped"
+  }
+}
