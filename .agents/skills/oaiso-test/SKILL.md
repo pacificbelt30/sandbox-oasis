@@ -52,6 +52,14 @@ uv run --no-project --no-config --managed-python --python 3.12 \
   python -m unittest discover -s deploy/kata -p 'test_*.py'
 ```
 
+## 容量とcacheを回収する
+
+- ローカル検証の前後に`df -h /`を記録する。Dockerを使う検証では`docker system df`も確認し、必要な空きがない状態で大きなbuildを始めない。
+- 後続工程が使わないGoのbuild・test・fuzz cacheは、検証の最後に`go clean -cache -testcache -fuzzcache`で回収する。module cacheは再取得が必要になるため、この作業で取得したものか、利用者が削除を依頼した場合だけ`go clean -modcache`の対象にする。
+- `coverage.out`、試験バイナリ、展開したSDK、生成したsiteなどは、開始前の状態と照合し、この検証で作ったものだけを回収する。利用者の既存成果物を`make clean`へ巻き込まない。
+- Dockerのbuild cache・イメージは、検証で作成した対象をID・tag・labelで限定して回収する。共有Dockerで一括pruneを行わず、全未使用イメージの削除は利用者が明示した場合だけ行う。
+- cacheの回収と試験結果は分けて報告する。cacheを削除できなくても試験成功とはせず、残量と残した理由を示す。
+
 ## 結果を扱う
 
 - 最初の失敗を残して原因を調べ、修正した経路を再検証する。理由なく同じ成功済み試験を繰り返さない。

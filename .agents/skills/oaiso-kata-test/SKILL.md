@@ -12,6 +12,7 @@ description: "OaisoのVM・認証・通信・入出力・共有・Go APIの変�
 - Linux x86_64、KVM、cgroup v2、空きメモリ、必要なデバイス・ツールを確認する。前提不足ならその項目を報告し、runcへの切替やskipで代用しない。
 - CLI・node・guard・loggerと試験バイナリのBuildVersionをそろえる。イメージの固定CLI・entrypoint・Proxy protocolも照合する。検証ゲートを無効化して通さない。
 - 架空の資格情報とローカルfixtureを使う。ホストの認証ファイル・SSH agent・管理ソケット・秘密の環境変数を作業VMへ渡さない。
+- 開始前に`df -h /`と`docker system df`を記録し、2つのbundle、イメージarchive、使い捨てnodeのcontainerd展開領域、証跡を作れる空きを確保する。前回の同等試験の使用量と安全余裕を満たせない場合は、開始せず容量不足を報告する。
 
 ## 使い捨てノードで導入から確認する
 
@@ -52,3 +53,6 @@ CODEX_DOCK_DISPOSABLE_SETUP=1 uv run --no-project --no-config --managed-python -
 - containerdに接続できない状態は「不明」。孤児・空き資源と決めつけて削除しない。
 - 合格時もVM・task・コンテナ・ネットワーク・専用firewallの残留を調べる。失敗した場合は回収結果と証跡も報告する。
 - キャッシュ有無、実キーリングかfixtureか、外部通信の有無を記録する。実アカウント・実WSL・対話画面の全操作まで確認したとは書かない。
+- 再試験に使わない試験用Docker build cache・イメージ、展開bundle、試験バイナリは、ID・tag・labelと作成元を照合して終了時に回収する。共有Dockerの一括pruneや、Oaiso専用containerd data rootの直接削除は行わない。
+- `.kata-verification/`では結果・失敗理由・回収記録を残し、再生成可能な重複archiveや一時rootだけを分けて回収する。証跡全体の削除は利用者の明示依頼がある場合に限る。
+- 回収後に`df -h /`と`docker system df`を再確認し、開始前後の空き容量、残したcache・証跡、再取得が必要になる資産を報告する。

@@ -125,3 +125,7 @@ Runtime changes also need `make kata-e2e` on a prepared Linux/KVM host.
 Documentation changes need `mkdocs build --strict`.
 See [testing](doc/testing.md) for live AI checks and limitations.
 Do not put real credentials, tokens or private acceptance logs into the repository.
+
+検証の前後に`df -h /`を確認し、Dockerを使う場合は`docker system df`も記録する。
+後続の検証が使わない生成物・build／test／fuzz cache・使い捨てイメージは、作成元と所有範囲を確認して作業終了時に回収する。
+共有Dockerの一括prune、既存のタグ付きイメージ、再試験に必要な配布cache、`.kata-verification/`の証跡は、利用者の明示依頼なしに削除しない。
