@@ -36,10 +36,10 @@
 
 ## スクリプトも実行前に確認する
 
-通常ユーザーで実行します。下のブロックはv0.0.4の署名を確認して、配置計画を表示します。
+通常ユーザーで実行します。下のブロックはv0.0.5の署名を確認して、配置計画を表示します。
 
 ```bash
-export RELEASE_TAG=v0.0.4
+export RELEASE_TAG=v0.0.5
 bash <<'SH'
 set -euo pipefail
 : "${RELEASE_TAG:?先に署名付き配布版のタグをexportしてください}"

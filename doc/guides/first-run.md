@@ -16,7 +16,7 @@ curl -fsSL https://github.com/pacificbelt30/sandbox-oasis/releases/latest/downlo
 
 - Go・Make・ソース取得は不要。uv・Pythonはスクリプトが準備します。
 - 不足するD-Bus・GNOME Keyring・`secret-tool`もsetupが導入します。
-- 版を固定する場合：[v0.0.4を指定して導入](../installation.md#版を固定して取得実行する)。
+- 版を固定する場合：[v0.0.5を指定して導入](../installation.md#版を固定して取得実行する)。
 - mainをソースから導入する場合：[開発ツール](../development/toolchain.md)と[ソースからの配置手順](../setup.md)を参照してください。
 
 ## 2. 再ログインして基盤を確認する
