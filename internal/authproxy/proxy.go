@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pacificbelt30/codex-dock/internal/netquota"
 	"github.com/pacificbelt30/codex-dock/internal/networkpolicy"
 	"github.com/pacificbelt30/codex-dock/internal/policyevents"
 	"github.com/pacificbelt30/codex-dock/internal/usage"
@@ -23,6 +24,7 @@ import (
 
 // Proxy is the Auth Proxy server that issues short-lived tokens to containers.
 type Proxy struct {
+	dataResources         *netquota.Listener
 	lifecycleMu           sync.Mutex
 	stopped               bool
 	done                  chan struct{}
@@ -94,6 +96,9 @@ func (p *Proxy) ProfileConnectionVersion() string { return p.caseConnectionVersi
 // In OAuth mode (detected via IsOAuthAuth), credentials are loaded from
 // ~/.codex/auth.json. In API key mode, the API key is loaded as usual.
 func NewProxy(cfg Config) (result *Proxy, initErr error) {
+	if err := cfg.NetworkResources.Validate(); err != nil {
+		return nil, err
+	}
 	if cfg.WorkerMTLS && (cfg.isEgress() || len(cfg.AdminSecret) < 32 || cfg.AdminListenAddr == "") {
 		return nil, fmt.Errorf("worker TLS requires an auth proxy and separate protected admin listener")
 	}
@@ -342,6 +347,14 @@ func (p *Proxy) Start() error {
 	if err != nil {
 		return fmt.Errorf("starting auth proxy: %w", err)
 	}
+	if p.cfg.NetworkResources != (netquota.Limits{}) {
+		p.dataResources, err = netquota.Wrap(ln, p.cfg.NetworkResources)
+		if err != nil {
+			_ = ln.Close()
+			return err
+		}
+		ln = p.dataResources
+	}
 	if p.transportCA != nil {
 		ln = tls.NewListener(ln, p.transportCA.TLSConfig())
 	}
@@ -524,6 +537,9 @@ func (p *Proxy) Stop() {
 	p.tokens = make(map[string]*tokenRecord)
 	p.tokensByValue = make(map[string]*tokenRecord)
 	p.mu.Unlock()
+	if p.dataResources != nil {
+		_ = p.dataResources.Close()
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if p.server != nil {

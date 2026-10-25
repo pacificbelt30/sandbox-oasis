@@ -93,7 +93,7 @@ func (g *Guard) readRecord(id string) (allocationRecord, error) {
 		return r, fmt.Errorf("unknown allocation resource profile; restore its pinned definition before recovery")
 	}
 	_, builtin := LookupResourceProfile(r.Profile)
-	if !builtin && r.Budget == nil || r.Budget != nil && *r.Budget != profile {
+	if !builtin && r.Budget == nil || r.Budget != nil && !r.Budget.Equal(profile) {
 		return r, fmt.Errorf("allocation resource profile definition changed; restore its pinned definition")
 	}
 

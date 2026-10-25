@@ -1,6 +1,7 @@
 package authproxy
 
 import (
+	"github.com/pacificbelt30/codex-dock/internal/netquota"
 	"github.com/pacificbelt30/codex-dock/internal/networkpolicy"
 	"github.com/pacificbelt30/codex-dock/pkg/cxd/credentialstore"
 	"io"
@@ -21,6 +22,8 @@ const (
 
 // Config configures the Auth Proxy.
 type Config struct {
+	// NetworkResources bounds the data listener, independently of execution usage budgets.
+	NetworkResources netquota.Limits
 	// WorkerMTLS encrypts the worker data listener and binds every token to its client certificate.
 	WorkerMTLS bool
 	// AuditDirectory stores bounded operation evidence. Managed proxies default to UsageStateDir/audit.

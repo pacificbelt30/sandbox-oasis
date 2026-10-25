@@ -117,7 +117,7 @@ func TestCustomResourceBudgetIsDurableAndCannotBeReinterpreted(t *testing.T) {
 	}
 	other := &Guard{config: g.config, manifest: g.manifest, profiles: append([]ResourceProfile(nil), g.profiles...)}
 	record, err := other.readRecord(id)
-	if err != nil || record.Budget == nil || *record.Budget != p {
+	if err != nil || record.Budget == nil || !record.Budget.Equal(p) {
 		t.Fatalf("custom budget was not retained: %v", err)
 	}
 	extra := p

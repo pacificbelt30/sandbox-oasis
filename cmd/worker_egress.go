@@ -23,8 +23,15 @@ func workerEgressSpec(cmd *cobra.Command, domains []string) (proxyRunArgs, error
 	if err != nil {
 		return proxyRunArgs{}, err
 	}
-	spec := proxyRunArgs{upstreamProxy: proxyUpstreamURL, caFile: proxyCAFile, role: authproxy.RoleEgress, networkName: proxyRunNetwork, image: viper.GetString("proxy_image"), listenAddr: "0.0.0.0:18082", blockPrivate: true, forwardPolicy: rules}
+	resources, err := proxyNetworkResourceLimits(cmd)
+	if err != nil {
+		return proxyRunArgs{}, err
+	}
+	spec := proxyRunArgs{networkResources: resources, upstreamProxy: proxyUpstreamURL, caFile: proxyCAFile, role: authproxy.RoleEgress, networkName: proxyRunNetwork, image: viper.GetString("proxy_image"), listenAddr: "0.0.0.0:18082", blockPrivate: true, forwardPolicy: rules}
 	spec.name = workeregress.Name(rules)
+	if id := spec.networkResources.ID(); id != "" {
+		spec.name += "-" + id[:16]
+	}
 	return spec, nil
 }
 

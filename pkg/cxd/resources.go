@@ -12,7 +12,21 @@ import (
 
 // ResourceUsage distinguishes the pinned capacity contract from observed host
 // cgroup usage. Peak is optional on older kernels; neither value is guest RSS.
+// ResourcePolicy includes optional process and block I/O limits. The existing
+// Profile type remains comparable and retains its CPU/memory/PID contract.
+type ResourcePolicy = kataguard.ResourceProfile
+type BlockIOLimit = kataguard.IOLimit
+
+func (c *Client) ResourcePolicies(ctx context.Context) ([]ResourcePolicy, error) {
+	policies, err := c.node.Profiles(ctx)
+	if err != nil {
+		return nil, classify(err)
+	}
+	return policies, nil
+}
+
 type ResourceUsage struct {
+	Policy                 *ResourcePolicy
 	Worker                 string
 	ObservedAt             time.Time
 	Profile                Profile
@@ -64,7 +78,7 @@ func (c *Client) ResourceUsage(ctx context.Context, worker string) (ResourceUsag
 	if err != nil || current < 0 {
 		return ResourceUsage{}, fmt.Errorf("invalid observed memory usage")
 	}
-	r := ResourceUsage{Worker: w.ID, ObservedAt: inv.ObservedAt, Profile: Profile{p.Name, p.CPUCores, p.GuestMemoryBytes, p.HostMemoryBytes, p.PIDLimit}, HostMemoryCurrentBytes: current}
+	r := ResourceUsage{Policy: &p, Worker: w.ID, ObservedAt: inv.ObservedAt, Profile: Profile{p.Name, p.CPUCores, p.GuestMemoryBytes, p.HostMemoryBytes, p.PIDLimit}, HostMemoryCurrentBytes: current}
 	if peak, ok := v.Resources["memory.peak"]; ok {
 		r.HostMemoryPeakBytes, err = strconv.ParseInt(peak, 10, 64)
 		if err != nil || r.HostMemoryPeakBytes < 0 {

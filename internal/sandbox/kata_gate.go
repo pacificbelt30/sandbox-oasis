@@ -17,6 +17,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/docker/go-units"
 	"github.com/pacificbelt30/codex-dock/internal/kataguard"
 	"github.com/pacificbelt30/codex-dock/internal/workerpolicy"
 )
@@ -130,6 +131,9 @@ func (m *Manager) prepareKataBootstrap(ctx context.Context, c *container.Config,
 	h.NanoCPUs = int64(profile.CPUCores) * 1_000_000_000
 	pids := profile.PIDLimit
 	h.PidsLimit = &pids
+	if profile.FileDescriptorLimit != 0 {
+		h.Ulimits = []*units.Ulimit{{Name: "nofile", Soft: int64(profile.FileDescriptorLimit), Hard: int64(profile.FileDescriptorLimit)}}
+	}
 	if profile.Name == "standard" {
 		h.CgroupParent, err = g.Reserve(ctx, allocation)
 	} else if reserver, ok := g.(kataProfileReserver); ok {
@@ -195,6 +199,12 @@ func verifyGuest(data []byte, nonce, hostBoot, user string, waiting bool, profil
 	}
 	if probe["pids"] != strconv.FormatInt(profile.PIDLimit, 10) || probe["memory"] != strconv.FormatInt(profile.GuestMemoryBytes, 10) || probe["cpu"] != profile.CPUQuota() {
 		return fmt.Errorf("guest resource limits do not match the Kata profile")
+	}
+	if profile.FileDescriptorLimit != 0 {
+		expected := fmt.Sprintf("%d %d", profile.FileDescriptorLimit, profile.FileDescriptorLimit)
+		if probe["nofile"] != expected || probe["init_nofile"] != expected {
+			return fmt.Errorf("guest file descriptor limit mismatch")
+		}
 	}
 	if waiting && !strings.Contains(probe["cmdline"], "\x00wait\x00"+nonce+"\x00") {
 		return fmt.Errorf("worker started before trusted bootstrap verification")

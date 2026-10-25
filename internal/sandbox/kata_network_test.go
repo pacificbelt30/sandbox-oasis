@@ -22,6 +22,7 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/pacificbelt30/codex-dock/internal/authproxy"
 	"github.com/pacificbelt30/codex-dock/internal/engine"
+	"github.com/pacificbelt30/codex-dock/internal/kataguard"
 	"github.com/pacificbelt30/codex-dock/internal/launchtiming"
 	"github.com/pacificbelt30/codex-dock/internal/observability"
 	"github.com/pacificbelt30/codex-dock/internal/workeregress"
@@ -32,11 +33,15 @@ import (
 //go:embed testdata/network-revocation.py
 var networkRevocationFixture string
 
+//go:embed testdata/resource-controls.py
+var resourceControlsFixture string
+
 // Real production handlers/dialer over Kata networking, with synthetic upstreams.
 // The observer proves peer-side closure, rather than inferring it from an API ACK.
-func TestKataNetworkRevocation(t *testing.T) { testKataNetworkRevocation(t, false) }
-func TestKataWorkerMTLS(t *testing.T)        { testKataNetworkRevocation(t, true) }
-func testKataNetworkRevocation(t *testing.T, secure bool) {
+func TestKataNetworkRevocation(t *testing.T) { testKataNetworkRevocation(t, false, false) }
+func TestKataWorkerMTLS(t *testing.T)        { testKataNetworkRevocation(t, true, false) }
+func TestKataResourceControls(t *testing.T)  { testKataNetworkRevocation(t, true, true) }
+func testKataNetworkRevocation(t *testing.T, secure, resources bool) {
 	if os.Getenv("CODEX_DOCK_KATA_E2E") != "1" {
 		t.Skip("set CODEX_DOCK_KATA_E2E=1 on an isolated matching node")
 	}
@@ -79,6 +84,9 @@ func testKataNetworkRevocation(t *testing.T, secure bool) {
 	}
 	start := func(name string, args []string, auth bool) (string, string) {
 		t.Helper()
+		if resources {
+			args = append(args, "--max-connections", "64", "--max-connections-per-source", "8", "--network-bytes-per-second", "65536")
+		}
 		ports := nat.PortSet{observerPort: {}}
 		bindings := nat.PortMap{observerPort: {{HostIP: "127.0.0.1"}}}
 		env := []string{"CXD_KATA_NETWORK_FIXTURE=1"}
@@ -152,6 +160,21 @@ func testKataNetworkRevocation(t *testing.T, secure bool) {
 		t.Fatal("worker TLS not advertised")
 	}
 	project, state := t.TempDir(), t.TempDir()
+	if resources {
+		root := os.Getenv("CODEX_DOCK_RESOURCE_WORKSPACE")
+		if root == "" {
+			t.Fatal("resource acceptance requires an explicit disk-backed workspace")
+		}
+		project, err = os.MkdirTemp(root, "run-")
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() {
+			if err := os.RemoveAll(project); err != nil {
+				t.Error(err)
+			}
+		})
+	}
 	if err := os.Chmod(state, 0700); err != nil {
 		t.Fatal(err)
 	}
@@ -162,7 +185,11 @@ func testKataNetworkRevocation(t *testing.T, secure bool) {
 	t.Cleanup(func() { _ = m.Close() })
 	name := prefix + "-worker"
 	launchCtx, timer := launchtiming.Begin(ctx)
-	id, err := m.RunContext(launchCtx, RunOptions{Name: name, ProjectDir: project, Image: os.Getenv("CODEX_DOCK_KATA_TEST_IMAGE"), Runtime: RuntimeKata,
+	resourceProfile := ""
+	if resources {
+		resourceProfile = "resource-test"
+	}
+	id, err := m.RunContext(launchCtx, RunOptions{ResourceProfile: resourceProfile, Name: name, ProjectDir: project, Image: os.Getenv("CODEX_DOCK_KATA_TEST_IMAGE"), Runtime: RuntimeKata,
 		ContainerUser: strconv.Itoa(os.Getuid()) + ":" + strconv.Itoa(os.Getgid()), Detach: true, ExecCmd: "exec python3 -u /workspace/network.py"})
 	total, phases := timer.Finish()
 	if err != nil {
@@ -209,6 +236,48 @@ func testKataNetworkRevocation(t *testing.T, secure bool) {
 	waitConnections(authObserver, 2)
 	waitConnections(egressObserver, 3)
 	t.Log("verified: guest HTTP/CONNECT reject private IPv4/IPv6, mapped metadata and forbidden port; redirect to metadata rejected; public IPv4/IPv6 CONNECT echo and streams established")
+
+	if resources {
+		if err := os.WriteFile(filepath.Join(project, "resources.py"), []byte(resourceControlsFixture), 0600); err != nil {
+			t.Fatal(err)
+		}
+		verifier, err := kataguard.Connect(engine.Socket(), "unix://"+engine.Socket())
+		if err != nil {
+			t.Fatal(err)
+		}
+		policy, err := m.resourceProfile(ctx, resourceProfile)
+		if err != nil || policy.FileDescriptorLimit != 512 || len(policy.BlockIO) == 0 {
+			t.Fatalf("resource policy missing: %+v %v", policy, err)
+		}
+		before, err := verifier.Inventory(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		beforeVM, err := kataguard.ResolveVM(before, id)
+		if err != nil || !beforeVM.HostVerified || kataguard.VerifyIOLimits(beforeVM.Resources["io.max"], policy.BlockIO) != nil {
+			t.Fatalf("unverified host I/O policy: %+v %v", beforeVM, err)
+		}
+		output := kataExec(t, ctx, node, id, false, []string{"python3", "/workspace/resources.py"})
+		t.Logf("resource controls in real Kata: %s", output)
+
+		waitConnections(authObserver, 2)
+		waitConnections(egressObserver, 3)
+		after, err := verifier.Inventory(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		afterVM, err := kataguard.ResolveVM(after, id)
+		if err != nil || !afterVM.HostVerified || kataguard.VerifyIOLimits(afterVM.Resources["io.max"], policy.BlockIO) != nil {
+			t.Fatalf("host I/O policy changed: %+v %v", afterVM, err)
+		}
+		t.Logf("host block I/O observations before=%q after=%q", beforeVM.Resources["io.stat"], afterVM.Resources["io.stat"])
+		var observed struct {
+			WriteSeconds float64 `json:"write_seconds"`
+		}
+		if err := json.Unmarshal([]byte(strings.TrimSpace(output)), &observed); err != nil || observed.WriteSeconds < 1 {
+			t.Fatalf("host I/O throttling was not observed: %s %v", output, err)
+		}
+	}
 
 	t.Run("diagnostic-capture-export", func(t *testing.T) {
 		directory := t.TempDir()

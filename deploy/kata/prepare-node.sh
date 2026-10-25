@@ -14,6 +14,12 @@ test -z "$(cat "$group/cgroup.procs")"
 # Existing worker envelopes survive node-service restarts. Only the empty
 # parent is configured; no child or its occupants are changed.
 test "$(stat -c %u "$group")" = 0
-printf '+cpu +memory +pids\n' > "$group/cgroup.subtree_control"
+controllers='+cpu +memory +pids'
+# I/O is optional for existing profiles. Never enable controllers in another
+# service's subtree; the operator must delegate io from the parent first.
+if grep -qw io /sys/fs/cgroup/cgroup.subtree_control; then
+    controllers="$controllers +io"
+fi
+printf '%s\n' "$controllers" > "$group/cgroup.subtree_control"
 chmod 0755 "$group"
 chown 0:0 "$group" "$group/cgroup.procs" "$group/cgroup.threads" "$group/cgroup.subtree_control"

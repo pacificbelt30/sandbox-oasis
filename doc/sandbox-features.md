@@ -291,6 +291,8 @@ go test ./internal/networkpolicy -run '^$' -bench . -benchmem -count=3
 
 ## 管理者定義の資源プロファイル
 
+- 未リリースmain：[接続・帯域・FD・block I/Oの上限](guides/resource-limits.md)。`ResourcePolicies(ctx)`で全プロファイル項目、`ResourceUsage.Policy`で稼働VMの契約を確認できます。ProxyのTCP数はAIの同時要求数とは別です。
+
 - PID上限はプロファイルごとに指定できます。
 - たとえば、`oaiso profile define compact-256 --base compact --pids-limit 256` は、compactのCPU・メモリ予算を維持した256 PIDのJSON配列を標準出力へ生成します。
 - ファイルやnode設定は自動で変更しません。

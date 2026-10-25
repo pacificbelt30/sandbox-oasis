@@ -79,6 +79,11 @@ def main():
     volume = name + '-data'
     evidence = ROOT / '.kata-verification/setup-e2e' / identity
     evidence.mkdir(parents=True)
+    # Freeze scripts before starting the node. A read-only bind of the working
+    # tree still sees host edits, which can corrupt a running shell controller.
+    verification = evidence / 'verification-source'
+    shutil.copytree(ROOT / 'deploy/kata', verification,
+                    ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
     started = False
     volume_created = False
     try:
@@ -118,7 +123,7 @@ def main():
         for source, target, readonly in [
             (args.bundle, '/bundle', True), (args.next_bundle, '/bundle-next', True),
             (args.images, '/images.tar', True), (args.acceptance, '/acceptance.test', True),
-            (args.cache, '/cache-input', True), (ROOT / 'deploy/kata', '/verification', True),
+            (args.cache, '/cache-input', True), (verification, '/verification', True),
             (evidence, '/evidence', False)]:
             argv += ['--mount', f'type=bind,src={source.resolve()},dst={target}' + (',readonly' if readonly else '')]
         argv += [args.image, '/bin/sh', '/verification/verify-boot.sh']

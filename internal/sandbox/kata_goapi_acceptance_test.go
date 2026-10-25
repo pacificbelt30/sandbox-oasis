@@ -133,9 +133,15 @@ func TestKataGoAPI(t *testing.T) {
 				t.Error(err)
 			}
 		})
-		proxy, err := cxd.EnsureCaseProxy(ctx, cxd.CaseProxyOptions{Image: proxyImage, Name: caseID, CaseID: caseID, StoreSocket: socket, UsageStateDir: filepath.Join(dir, "usage"), AdminPort: port, AdminSecret: prefix + "-private-admin-secret"})
+		proxyOptions := cxd.CaseProxyOptions{Image: proxyImage, Name: caseID, CaseID: caseID, StoreSocket: socket, UsageStateDir: filepath.Join(dir, "usage"), AdminPort: port, AdminSecret: prefix + "-private-admin-secret", NetworkResources: cxd.ProxyResourceLimits{MaxConnections: 64, MaxConnectionsPerSource: 8, BytesPerSecond: 1 << 20}}
+		proxy, err := cxd.EnsureCaseProxy(ctx, proxyOptions)
 		if err != nil {
 			t.Fatal(err)
+		}
+		changedProxy := proxyOptions
+		changedProxy.NetworkResources.MaxConnectionsPerSource = 9
+		if _, err := cxd.EnsureCaseProxy(ctx, changedProxy); err == nil {
+			t.Fatal("changed proxy resource limits silently reused")
 		}
 		opts := cxd.Options{ProxyAdminURL: proxy.AdminURL, ProxyContainerURL: proxy.ContainerURL, ProxyAdminSecret: prefix + "-private-admin-secret", StateDir: filepath.Join(dir, "state")}
 		api, err := cxd.Open(ctx, opts)
@@ -150,6 +156,17 @@ func TestKataGoAPI(t *testing.T) {
 		profile := "small"
 		if i == 1 {
 			profile = "standard"
+		}
+		policies, err := api.ResourcePolicies(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if i == 0 {
+			for _, policy := range policies {
+				if policy.Name == "resource-test" {
+					profile = policy.Name
+				}
+			}
 		}
 		id := identity.Identity{CaseID: caseID, RunID: "run", ConnectionVersion: "1", Provider: "openai"}
 		req := cxd.LaunchRequest{RequestID: caseID, ProjectDir: t.TempDir(), Image: image, Profile: profile, NoInternet: true, Identity: id, User: fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid())}
@@ -192,6 +209,15 @@ func TestKataGoAPI(t *testing.T) {
 		inspect, err := node.ContainerInspect(ctx, worker.ID)
 		if err != nil {
 			t.Fatal(err)
+		}
+		observedResources, err := api.ResourceUsage(ctx, worker.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, policy := range policies {
+			if policy.Name == profile && !observedResources.Policy.Equal(policy) {
+				t.Fatal("complete resource policy was not retained")
+			}
 		}
 		var expected cxd.Profile
 		for _, p := range profiles {

@@ -252,6 +252,8 @@ Under `[proxy]`:
 
 | Key | Default | Used by |
 |---|---|---|
+| `max_connections` / `max_connections_per_source` | `0` | Unreleased main. `proxy run --max-connections` / `--max-connections-per-source` |
+| `network_bytes_per_second` | `0` | Unreleased main. `--network-bytes-per-second`. [Scope and behavior](guides/resource-limits.md) |
 | `container_url` | `http://codex-auth-proxy:18080` | `run --proxy-container-url` |
 | `admin_url` | `http://127.0.0.1:18081` | `run --proxy-admin-url`, worker management |
 | `admin_secret` | Unset | Admin client; also supply the server secret with `proxy run --admin-secret` |
@@ -340,6 +342,8 @@ Runtime overrides take precedence over config, below explicit flags.
 - Recreate the proxy and check [supported routes](sandbox-features.md#model-authorization-and-staged-startup).
 
 ## Operator resource profiles
+
+- [Additional FD and block I/O profile fields](guides/resource-limits.md): unreleased main. Existing built-in profiles retain their defaults.
 
 - `run.profile_size` selects a built-in or node-registered name.
 - The root node operator registers additional budgets through `node serve --resource-profiles /etc/codex-dock/resource-profiles.json`, independently of user TOML.

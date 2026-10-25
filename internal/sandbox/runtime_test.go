@@ -130,7 +130,7 @@ func newEngineFixture(t *testing.T) (*engineFixture, *Manager) {
 		if err != nil {
 			return nil, err
 		}
-		return json.Marshal(map[string]string{"boot_id": "fixture-guest-kernel", "status": status, "cmdline": guestGuard + "\x00wait\x00" + f.worker.Config.Labels[labelAllocation] + "\x00", "pids": strconv.FormatInt(profile.PIDLimit, 10), "memory": strconv.FormatInt(profile.GuestMemoryBytes, 10), "cpu": profile.CPUQuota()})
+		return json.Marshal(map[string]string{"boot_id": "fixture-guest-kernel", "status": status, "cmdline": guestGuard + "\x00wait\x00" + f.worker.Config.Labels[labelAllocation] + "\x00", "pids": strconv.FormatInt(profile.PIDLimit, 10), "memory": strconv.FormatInt(profile.GuestMemoryBytes, 10), "cpu": profile.CPUQuota(), "nofile": fmt.Sprintf("%d %d", profile.FileDescriptorLimit, profile.FileDescriptorLimit), "init_nofile": fmt.Sprintf("%d %d", profile.FileDescriptorLimit, profile.FileDescriptorLimit)})
 	}
 	return f, m
 }
@@ -518,7 +518,7 @@ func TestRemovalConfirmsContainerAbsenceAfterNestedNotFound(t *testing.T) {
 
 func TestOperatorProfileAppliesAndAttestsCPUAndPIDLimits(t *testing.T) {
 	f, m := newEngineFixture(t)
-	p := kataguard.ResourceProfile{Name: "batch", CPUCores: 2, GuestMemoryBytes: kataguard.CompactGuestMemory, HostMemoryBytes: kataguard.CompactHostMemory, PIDLimit: 256}
+	p := kataguard.ResourceProfile{Name: "batch", CPUCores: 2, GuestMemoryBytes: kataguard.CompactGuestMemory, HostMemoryBytes: kataguard.CompactHostMemory, PIDLimit: 256, FileDescriptorLimit: 512}
 	m.guard = &fakeKataNode{profiles: []kataguard.ResourceProfile{p}}
 	id, err := m.Run(RunOptions{Name: "custom-budget", ProjectDir: t.TempDir(), ResourceProfile: p.Name, Detach: true})
 	if err != nil {
@@ -536,6 +536,14 @@ func TestOperatorProfileAppliesAndAttestsCPUAndPIDLimits(t *testing.T) {
 	if err := m.validateKataWorker(context.Background(), id); err != nil {
 		t.Fatal(err)
 	}
+	if len(h.Ulimits) != 1 || h.Ulimits[0].Soft != 512 || h.Ulimits[0].Hard != 512 {
+		t.Fatal("nofile not applied")
+	}
+	h.Ulimits[0].Hard = 513
+	if err := m.validateKataWorker(context.Background(), id); err == nil {
+		t.Fatal("changed nofile accepted")
+	}
+	h.Ulimits[0].Hard = 512
 	h.NanoCPUs = 1_000_000_000
 	if err := m.validateKataWorker(context.Background(), id); err == nil {
 		t.Fatal("changed CPU budget passed attestation")

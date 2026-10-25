@@ -155,7 +155,7 @@ func (p *Proxy) handleWebSocketProxy(w http.ResponseWriter, r *http.Request, tar
 		done <- struct{}{}
 	}()
 	go func() {
-		_, _ = io.Copy(upstreamConn, clientConn)
+		_, _ = io.Copy(upstreamConn, clientBufRW)
 		done <- struct{}{}
 	}()
 	<-done

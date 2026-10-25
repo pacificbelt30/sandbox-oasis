@@ -1,5 +1,31 @@
 # テストと動作確認
 
+## 接続・帯域・FD・block I/O（2026-10-25）
+
+- 対象：**未リリース（main）**。[設定・単位・対象外](guides/resource-limits.md)。追加設定なしでは従来の動作を維持します。
+
+| 検査 | 結果 |
+|---|---|
+| 全件 | `make build test vet lint`、5系統の`make security-fuzz`、Python 65＋24件、CLI検査、文書strictビルドが成功 |
+| 接続数 | 実Kataで接続元上限8。既存3接続に加えて5接続を受入、追加7接続を拒否。既存の接続は維持 |
+| 帯域 | 64 KiB/秒・burst 32 KiBで64 KiBの受信が約0.51秒。再接続による枠の初期化、別接続元との枠の混同、中断不能な待機を単体でも検査 |
+| FD | 実Kataの初期処理とExecへsoft/hard 512を適用。stdio以外に509個のopen後、`EMFILE`。hard上限の引上げも拒否 |
+| I/O | ホストの`io.max`でread 64 MiB/秒、write 8 MiB/秒、read 4096 IOPS、write 1024 IOPSを照合。実ディスクへ16 MiBを書きfsyncする処理は約2.13秒。対象cgroupのwrite計上も約16 MiB増加 |
+| 通信・認証 | リソース制限中のSSE/WS継続・失効・隔離、固定Codex 0.163.0／Claude Code 2.1.306、broker、Proxy＋VM再起動後の利用上限維持が成功 |
+| Go API | 制限付きCase Proxy、異なる上限への無断再利用の拒否、FD/I/O付きprofileの起動・契約照会、再送・取消・ケース間認証分離が成功 |
+| 導入・回収 | 使い捨てノード`19fca9150a96`でResourceControls（119.61秒）・GoAPI（75.04秒）が成功。更新・旧版拒否・失敗時の自動復旧・rollback・空の資源一覧まで成功。ノード・volumeを回収 |
+
+- 修正した境界：帯域待ち中の一時的な読み取り中断では、消費済みのTCPデータを保持して再開。CONNECT／WebSocketのbuffer済みデータも転送。設定の誤記・桁あふれを無制限に読み替えないことを確認。
+- 途中の失敗も保持：試験用設定ディレクトリ・node待機を修正。tmpfsではI/O速度を検証できないため実ディスクへ変更。実行中のshellが作業ツリーの編集を読んだ失敗は、検証スクリプトのコピーを固定することで防止。
+- 証跡：`.kata-verification/p2-resources-20261025/`と`.kata-verification/setup-e2e/19fca9150a96/`。試験用の固定版`v0.0.0-resources-verified-a/b`を使用。実アカウント・外部AI推論・実課金は使用していません。
+- 速度を実測したのはwrite BPS。read／IOPSの実ワークロード性能、全デバイス・filesystem、NICの瞬間帯域、全Kataスイートの再受入を網羅していません。FDはguestのプロセス単位、block I/Oは当該ホストcgroup・デバイスへの計上分です。
+- 共有ホストのcontainerd・BuildKit・nodeの起動時刻は不変。配布版の公開・共有ホストの更新は行っていません。
+
+再実行は[導入・更新・復旧の準備](#新規導入更新復旧を検証する)と[通信試験のfixture](development/network-acceptance.md)を使用し、`verify-setup.py`へ`--acceptance-run '^TestKata(ResourceControls|GoAPI)$'`を指定します。
+
+- この明示した使い捨てノードだけに試験用profile・io委譲・実ディスクのworkspaceを準備します。共有ホストへ適用しないでください。
+- `verification-source/`へ試験スクリプトを固定し、稼働中の作業ツリー編集の影響を防ぎます。
+
 ## 不正入力・競合・障害の追加検査（2026-10-25）
 
 - 対象：未リリース（main）。[対象・再実行・限界](development/security-tests.md)。

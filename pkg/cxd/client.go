@@ -30,14 +30,15 @@ import (
 
 // Options contains trusted host settings. A cloned project cannot set these.
 type Options struct {
-	NodeSocket        string
-	ProxyAdminURL     string
-	ProxyContainerURL string
-	ProxyAdminSecret  string
-	HTTPProxyURL      string
-	EgressProxyImage  string
-	EgressPolicy      EgressPolicy
-	StateDir          string
+	NodeSocket             string
+	ProxyAdminURL          string
+	ProxyContainerURL      string
+	ProxyAdminSecret       string
+	HTTPProxyURL           string
+	EgressProxyImage       string
+	EgressNetworkResources ProxyResourceLimits
+	EgressPolicy           EgressPolicy
+	StateDir               string
 }
 
 // Client is a handle to the local node. Close it when the product shuts down.
@@ -49,6 +50,9 @@ type Client struct {
 
 // Open connects to the node without starting an auth proxy or a worker.
 func Open(ctx context.Context, opts Options) (*Client, error) {
+	if err := opts.EgressNetworkResources.Validate(); err != nil {
+		return nil, err
+	}
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -272,7 +276,7 @@ func (c *Client) launch(ctx context.Context, req LaunchRequest, createOnly bool)
 	}
 	var egressRules networkpolicy.Rules
 	var egressPolicyID string
-	managedEgress := !req.NoInternet && (len(req.EgressAllowDomains) != 0 || workeregress.Configured(c.opts.EgressPolicy.rules()))
+	managedEgress := !req.NoInternet && (len(req.EgressAllowDomains) != 0 || workeregress.Configured(c.opts.EgressPolicy.rules()) || c.opts.EgressNetworkResources != (ProxyResourceLimits{}))
 	if managedEgress {
 		egressRules = resolved
 		egressPolicyID = workeregress.ID(egressRules)
@@ -286,13 +290,14 @@ func (c *Client) launch(ctx context.Context, req LaunchRequest, createOnly bool)
 	// persisted or hashed into the node's request ledger.
 	fingerprintInput, err := json.Marshal(struct {
 		LaunchRequest
-		ProxyContainerURL string
-		ProxyAdminURL     string
-		HTTPProxyURL      string
-		EgressProxyImage  string
-		EgressPolicyID    string
-		CreateOnly        bool `json:",omitempty"`
-	}{req, c.opts.ProxyContainerURL, c.opts.ProxyAdminURL, c.opts.HTTPProxyURL, c.opts.EgressProxyImage, egressPolicyID, createOnly})
+		ProxyContainerURL      string
+		ProxyAdminURL          string
+		HTTPProxyURL           string
+		EgressProxyImage       string
+		EgressPolicyID         string
+		CreateOnly             bool                `json:",omitempty"`
+		EgressNetworkResources ProxyResourceLimits `json:",omitzero"`
+	}{req, c.opts.ProxyContainerURL, c.opts.ProxyAdminURL, c.opts.HTTPProxyURL, c.opts.EgressProxyImage, egressPolicyID, createOnly, c.opts.EgressNetworkResources})
 	if err != nil {
 		return Worker{}, err
 	}
@@ -324,7 +329,7 @@ func (c *Client) launch(ctx context.Context, req LaunchRequest, createOnly bool)
 	httpProxyURL := c.opts.HTTPProxyURL
 	if managedEgress {
 		var policyErr error
-		httpProxyURL, policyErr = workeregress.Ensure(ctx, c.opts.NodeSocket, c.opts.EgressProxyImage, egressRules)
+		httpProxyURL, policyErr = workeregress.EnsureWithLimits(ctx, c.opts.NodeSocket, c.opts.EgressProxyImage, egressRules, c.opts.EgressNetworkResources)
 		if policyErr != nil {
 			return Worker{}, errors.Join(policyErr, c.abortClaim(key, claim.Lease, ""))
 		}

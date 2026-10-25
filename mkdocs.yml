@@ -52,6 +52,7 @@ nav:
           - Claude Code: claude-code.md
       - ファイル共有とworktree: workspace.md
       - 実行ごとの利用上限: guides/usage-limits.md
+      - 接続・帯域・FD・I/Oの上限: guides/resource-limits.md
       - 診断の保存: guides/observability.md
       - 配布物の署名と作成元: guides/signed-releases.md
       - VMと認証Proxyの暗号化: guides/worker-tls.md
@@ -131,6 +132,7 @@ nav:
               - Launch methods and support: en/guides/agents.md
               - Claude Code: en/claude-code.md
           - Per-execution usage limits: en/guides/usage-limits.md
+          - Connection, bandwidth, FD and I/O limits: en/guides/resource-limits.md
           - Save diagnostics: en/guides/observability.md
           - Signed releases: en/guides/signed-releases.md
           - Worker TLS: en/guides/worker-tls.md

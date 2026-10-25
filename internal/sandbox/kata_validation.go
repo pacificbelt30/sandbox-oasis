@@ -41,6 +41,9 @@ func (m *Manager) validateKataWorker(ctx context.Context, id string) error {
 	if h.Memory != profile.GuestMemoryBytes || h.MemorySwap != profile.GuestMemoryBytes || h.NanoCPUs != int64(profile.CPUCores)*1_000_000_000 || h.PidsLimit == nil || *h.PidsLimit != profile.PIDLimit {
 		return fmt.Errorf("kata workload resource limits changed")
 	}
+	if profile.FileDescriptorLimit != 0 && (len(h.Ulimits) != 1 || h.Ulimits[0] == nil || h.Ulimits[0].Name != "nofile" || h.Ulimits[0].Soft != int64(profile.FileDescriptorLimit) || h.Ulimits[0].Hard != int64(profile.FileDescriptorLimit)) {
+		return fmt.Errorf("kata file descriptor limit changed")
+	}
 	if _, err := validateSavedTemporaryStorage(v, profile.GuestMemoryBytes); err != nil {
 		return err
 	}

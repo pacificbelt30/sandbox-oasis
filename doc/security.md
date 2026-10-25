@@ -93,6 +93,8 @@
 | network | 専用bridge・namespace・静的Proxy hosts。直接外向き・ホスト・peer通信を遮断 |
 | management | containerd/node/BuildKit socket・資産・台帳・host kernel操作用パスを渡さない |
 
+- 未リリースmain：[TCP接続数・接続元別帯域・guestのプロセス別FD・ホストblock I/Oの上限](guides/resource-limits.md)。任意設定です。IPによる集計は実行元の認証とは別、FDはプロセス単位、cached read・tmpfsはblock I/O制限の対象外です。
+
 ### ユーザーコードを解放する順序
 
 1. 固定bootstrapをPID 1で起動。

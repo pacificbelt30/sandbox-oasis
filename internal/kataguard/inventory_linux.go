@@ -146,6 +146,11 @@ func (g *Guard) observeEnvelope(ctx context.Context, id string) VM {
 			vm.Resources[name] = strings.TrimSpace(string(b))
 		}
 	}
+	for _, name := range []string{"io.max", "io.stat"} {
+		if data, err := os.ReadFile(filepath.Join(path, name)); err == nil {
+			vm.Resources[name] = strings.TrimSpace(string(data))
+		}
+	}
 	if vm.Populated {
 		vm.Processes, err = g.scanProcesses(ctx, id, vm.ContainerID, true)
 		vm.HostVerified = err == nil

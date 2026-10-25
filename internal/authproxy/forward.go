@@ -73,7 +73,7 @@ func (p *Proxy) handleForwardConnect(w http.ResponseWriter, r *http.Request) {
 		_ = destConn.Close()
 		return
 	}
-	clientConn, _, err := hj.Hijack()
+	clientConn, buffered, err := hj.Hijack()
 	if err != nil {
 		log.Printf("forward proxy hijack error: %v", err)
 		_ = destConn.Close()
@@ -88,7 +88,7 @@ func (p *Proxy) handleForwardConnect(w http.ResponseWriter, r *http.Request) {
 
 	// Splice the two connections together until either side closes.
 	go func() {
-		_, _ = io.Copy(destConn, clientConn)
+		_, _ = io.Copy(destConn, buffered)
 		_ = destConn.Close()
 		_ = clientConn.Close()
 	}()

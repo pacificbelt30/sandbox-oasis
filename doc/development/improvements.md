@@ -38,7 +38,7 @@
 | P1 | Python・TypeScriptの薄いSDK | 同一ホストから作成・実行・照会・回収 | Go APIと同じ再送・権限・失敗の意味を保つ。秘密を引数・標準出力へ出さない |
 | P2 | diskのcheckpoint | **完了（未リリースmain）**。[停止済みrootfsの保存・新規VMへの復元](../guides/disk-checkpoint.md)。CLI／Go API | RAM保存とは区別。共有mount、書込み中データ、容量、秘密除外、復元互換性を定義 |
 | P2 | 起動済み環境の事前準備 | 効果確認用の小さな試作から開始 | 未割当時は秘密・利用者データを持たせず、割当時に再検証。待機メモリと20%以上の実測効果で判断 |
-| P2 | resource制御の追加 | 接続数・転送量・file descriptor・I/O等の上限を検討 | 既存のCPU・メモリ・PID・本文上限と区別。長いstreamを誤って切らず、他実行への影響を抑える |
+| P2 | resource制御の追加 | **完了（未リリースmain）**。[TCP数・接続元別帯域・プロセス別FD・デバイス別block I/O](../guides/resource-limits.md)。CLI／Go API | 既存のCPU・メモリ・PID・本文上限と区別。長いstreamを誤って切らず、他実行への影響を抑える |
 
 - 追加agentへの対応条件は[今後の対応](../future-work.md)で管理します。認証分離を緩めて対応数を増やしません。
 

@@ -47,6 +47,16 @@ func newProfileCommand() *cobra.Command {
 					profile.Name, profile.CPUCores, float64(profile.GuestMemoryBytes)/(1<<30), float64(profile.HostMemoryBytes)/(1<<30), profile.PIDLimit); err != nil {
 					return err
 				}
+				if profile.FileDescriptorLimit != 0 {
+					if _, err := fmt.Fprintf(cmd.OutOrStdout(), "  File descriptors/process: %d (soft and hard)\n", profile.FileDescriptorLimit); err != nil {
+						return err
+					}
+				}
+				for _, limit := range profile.BlockIO {
+					if _, err := fmt.Fprintf(cmd.OutOrStdout(), "  Host block I/O: %s\n", limit.Line()); err != nil {
+						return err
+					}
+				}
 			}
 			return nil
 		},
@@ -61,15 +71,24 @@ func newProfileCommand() *cobra.Command {
 func newProfileDefinitionCommand() *cobra.Command {
 	var base string
 	var pids int64
+	var nofile uint64
+	var ioLimits []string
 	command := &cobra.Command{
-		Use: "define NAME", Short: "Print a node resource-profile JSON array with an explicit PID ceiling",
+		Use: "define NAME", Short: "Print a node resource-profile JSON array with PID, file descriptor and optional block I/O ceilings",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			profile, ok := kataguard.LookupResourceProfile(base)
 			if !ok {
 				return fmt.Errorf("unknown built-in base profile %q", base)
 			}
-			profile.Name, profile.PIDLimit = args[0], pids
+			profile.Name, profile.PIDLimit, profile.FileDescriptorLimit = args[0], pids, nofile
+			for _, text := range ioLimits {
+				limit, err := kataguard.ParseIOLimit(text)
+				if err != nil {
+					return err
+				}
+				profile.BlockIO = append(profile.BlockIO, limit)
+			}
 			if err := kataguard.ValidateCustomResourceProfile(profile); err != nil {
 				return err
 			}
@@ -81,6 +100,8 @@ func newProfileDefinitionCommand() *cobra.Command {
 	command.Flags().StringVar(&base, "base", "compact", "Built-in CPU/memory budget to copy: standard, small or compact")
 	command.Flags().Int64Var(&pids, "pids-limit", 0, "Host and guest PID limit (64..4096; required)")
 	_ = command.MarkFlagRequired("pids-limit")
+	command.Flags().Uint64Var(&nofile, "nofile", 0, "Per-process guest file descriptor soft/hard ceiling (128..1048576; 0 preserves runtime default)")
+	command.Flags().StringArrayVar(&ioLimits, "io-limit", nil, "Host block device I/O ceiling: 'MAJOR:MINOR rbps=N wbps=N riops=N wiops=N' (repeatable; omitted dimensions are unlimited)")
 	return command
 }
 

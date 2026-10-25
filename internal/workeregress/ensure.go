@@ -11,6 +11,7 @@ import (
 	dn "github.com/docker/docker/api/types/network"
 	"github.com/pacificbelt30/codex-dock/internal/buildinfo"
 	"github.com/pacificbelt30/codex-dock/internal/engine"
+	"github.com/pacificbelt30/codex-dock/internal/netquota"
 	"github.com/pacificbelt30/codex-dock/internal/network"
 	"github.com/pacificbelt30/codex-dock/internal/networkpolicy"
 )
@@ -29,6 +30,13 @@ const (
 // Ensure creates or resumes an immutable, credential-free policy proxy. It
 // never replaces a mismatched proxy because retained workers pin its address.
 func Ensure(ctx context.Context, socket, image string, rules networkpolicy.Rules) (string, error) {
+	return EnsureWithLimits(ctx, socket, image, rules, netquota.Limits{})
+}
+
+func EnsureWithLimits(ctx context.Context, socket, image string, rules networkpolicy.Rules, limits netquota.Limits) (string, error) {
+	if err := limits.Validate(); err != nil {
+		return "", err
+	}
 	if !rules.BlockPrivate || !Configured(rules) {
 		return "", fmt.Errorf("worker egress requires an explicit policy and private address blocking")
 	}
@@ -63,8 +71,11 @@ func Ensure(ctx context.Context, socket, image string, rules networkpolicy.Rules
 		return "", fmt.Errorf("inspecting egress network: %w", err)
 	}
 	name := Name(rules)
+	if id := limits.ID(); id != "" {
+		name += "-" + id[:16]
+	}
 	if existing, err := cli.ContainerInspect(ctx, name); err == nil {
-		if existing.Config == nil || existing.State == nil || existing.Config.Image != image || existing.Config.Labels[proxyLayoutLabel] != proxyLayoutVersion || existing.Config.Labels[proxyPolicyLabel] != ID(rules) {
+		if existing.Config == nil || existing.State == nil || existing.Config.Image != image || existing.Config.Labels[proxyLayoutLabel] != proxyLayoutVersion || existing.Config.Labels[proxyPolicyLabel] != ID(rules) || existing.Config.Labels[netquota.Label] != limits.ID() {
 			return "", fmt.Errorf("egress proxy %q has a different image, layout or policy; drain its workers before replacement", name)
 		}
 		if !existing.State.Running {
@@ -95,7 +106,11 @@ func Ensure(ctx context.Context, socket, image string, rules networkpolicy.Rules
 				args = append(args, pair.flag, strconv.Itoa(value))
 			}
 		}
+		args = append(args, limits.Args()...)
 		cfg := &container.Config{Image: image, User: "0:0", Cmd: args, Labels: map[string]string{proxyLayoutLabel: proxyLayoutVersion, proxyPolicyLabel: ID(rules)}}
+		if id := limits.ID(); id != "" {
+			cfg.Labels[netquota.Label] = id
+		}
 		host := &container.HostConfig{Runtime: "runc", CapDrop: []string{"ALL"}, SecurityOpt: []string{"no-new-privileges:true"}, NetworkMode: container.NetworkMode(network.EgressNetworkName)}
 		created, err := cli.ContainerCreate(ctx, cfg, host, nil, nil, name)
 		if err != nil {

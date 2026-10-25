@@ -27,6 +27,9 @@ func runKataFixtureProxy() int {
 	}
 	f := flag.NewFlagSet("fixture-proxy", flag.ContinueOnError)
 	var cfg Config
+	f.IntVar(&cfg.NetworkResources.MaxConnections, "max-connections", 0, "")
+	f.IntVar(&cfg.NetworkResources.MaxConnectionsPerSource, "max-connections-per-source", 0, "")
+	f.Int64Var(&cfg.NetworkResources.BytesPerSecond, "network-bytes-per-second", 0, "")
 	f.BoolVar(&cfg.WorkerMTLS, "worker-mtls", false, "")
 	cfg.EventWriter = os.Stdout
 	var socket, role string

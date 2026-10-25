@@ -94,7 +94,7 @@ func (g *Guard) Validate(ctx context.Context, runtime string) error {
 	if err != nil {
 		return err
 	}
-	if !slices.Equal(profiles, g.profiles) {
+	if !slices.EqualFunc(profiles, g.profiles, ResourceProfile.Equal) {
 		return fmt.Errorf("node resource profiles changed; restart the node after draining changed definitions")
 	}
 	if m.Runtime != runtime {
@@ -220,6 +220,15 @@ func (g *Guard) checkLimits(path string) error {
 			return fmt.Errorf("kata host envelope mismatch: %s", name)
 		}
 	}
+	if len(profile.BlockIO) > 0 {
+		data, err := os.ReadFile(filepath.Join(path, "io.max"))
+		if err != nil {
+			return err
+		}
+		if err := VerifyIOLimits(string(data), profile.BlockIO); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -231,6 +240,17 @@ func (g *Guard) ReserveProfile(ctx context.Context, id, profileName string) (str
 	profile, ok := g.resourceProfile(profileName)
 	if !ok {
 		return "", fmt.Errorf("unknown Kata resource profile %q", profileName)
+	}
+	if len(profile.BlockIO) > 0 {
+		enabled, err := os.ReadFile(filepath.Join(g.config.CgroupRoot, "cgroup.subtree_control"))
+		if err != nil || !slices.Contains(strings.Fields(string(enabled)), "io") {
+			return "", fmt.Errorf("requested block I/O limits require io controller delegation in the node subtree")
+		}
+		for _, limit := range profile.BlockIO {
+			if _, err := os.Stat(filepath.Join("/sys/dev/block", limit.Device())); err != nil {
+				return "", fmt.Errorf("requested I/O device %s is unavailable: %w", limit.Device(), err)
+			}
+		}
 	}
 	path, err := g.group(id)
 	if err != nil {
@@ -282,6 +302,12 @@ func (g *Guard) ReserveProfile(ctx context.Context, id, profileName string) (str
 	}
 	for name, value := range groupLimitsFor(profile) {
 		if err = os.WriteFile(filepath.Join(path, name), []byte(value), 0600); err != nil {
+			_ = os.Remove(path)
+			return "", err
+		}
+	}
+	for _, limit := range profile.BlockIO {
+		if err = os.WriteFile(filepath.Join(path, "io.max"), []byte(limit.Line()), 0600); err != nil {
 			_ = os.Remove(path)
 			return "", err
 		}

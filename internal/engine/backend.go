@@ -441,6 +441,23 @@ func (b *Backend) create(ctx context.Context, c container.Config, h container.Ho
 	if h.PidsLimit != nil {
 		opts = append(opts, oci.WithPidsLimit(*h.PidsLimit))
 	}
+	if len(h.Ulimits) > 0 {
+		if len(h.Ulimits) != 1 || h.Ulimits[0] == nil || h.Ulimits[0].Name != "nofile" || h.Ulimits[0].Soft != h.Ulimits[0].Hard || h.Ulimits[0].Soft < 128 || h.Ulimits[0].Hard > 1<<20 {
+			return "", fmt.Errorf("unsupported process file descriptor limit")
+		}
+		limit := uint64(h.Ulimits[0].Soft)
+		opts = append(opts, func(_ context.Context, _ oci.Client, _ *containers.Container, s *oci.Spec) error {
+			// Replace the runtime default so conflicting duplicate limits cannot win.
+			var keep []specs.POSIXRlimit
+			for _, r := range s.Process.Rlimits {
+				if r.Type != "RLIMIT_NOFILE" {
+					keep = append(keep, r)
+				}
+			}
+			s.Process.Rlimits = append(keep, specs.POSIXRlimit{Type: "RLIMIT_NOFILE", Soft: limit, Hard: limit})
+			return nil
+		})
+	}
 	storage, err := workerpolicy.ParseTemporaryStorage(c.Labels[workerpolicy.TemporaryStorageLabel])
 	if err != nil {
 		return "", err

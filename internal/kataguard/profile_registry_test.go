@@ -25,7 +25,7 @@ func TestOperatorProfilesKeepPinnedBoundsAndBuiltinDefaults(t *testing.T) {
 		t.Fatal(err)
 	}
 	profiles, err := loadResourceProfiles(path)
-	if err != nil || len(profiles) != 1 || profiles[0] != p {
+	if err != nil || len(profiles) != 1 || !profiles[0].Equal(p) {
 		t.Fatalf("profiles: %v %v", profiles, err)
 	}
 	if p.CPUQuota() != "200000 100000" {

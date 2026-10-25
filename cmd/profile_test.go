@@ -66,3 +66,20 @@ func TestProfileDefinitionRejectsUnboundedAndReservedInputs(t *testing.T) {
 		}
 	}
 }
+
+func TestProfileDefinitionIncludesFDAndBlockIO(t *testing.T) {
+	command := newProfileCommand()
+	var output bytes.Buffer
+	command.SetOut(&output)
+	command.SetArgs([]string{"define", "limited", "--pids-limit", "256", "--nofile", "512", "--io-limit", "8:0 wbps=1048576 wiops=100"})
+	if err := command.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	var profiles []kataguard.ResourceProfile
+	if err := json.Unmarshal(output.Bytes(), &profiles); err != nil {
+		t.Fatal(err)
+	}
+	if len(profiles) != 1 || profiles[0].FileDescriptorLimit != 512 || len(profiles[0].BlockIO) != 1 || profiles[0].BlockIO[0].WriteIOPS != 100 {
+		t.Fatalf("lost limits: %s", output.Bytes())
+	}
+}

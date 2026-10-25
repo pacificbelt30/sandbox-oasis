@@ -158,6 +158,11 @@ approval_mode = "suggest"
 
 # -----------------------------------------------------------------------------
 # [proxy]
+# Optional data-listener TCP ceilings; unreleased main. Per proxy, not AI request budgets.
+# max_connections = 512
+# max_connections_per_source = 32
+# network_bytes_per_second = 1048576 # combined directions per source IP; 32 KiB burst
+
 # Unreleased main: private fixed-origin broker routes; outside worker shares.
 # credential_routes = "/home/alice/.config/codex-dock/broker/routes.json"
  — defaults for the auth proxy / router

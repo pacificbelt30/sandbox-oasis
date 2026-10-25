@@ -27,7 +27,7 @@ func ValidateCustomResourceProfile(p ResourceProfile) error {
 	if p.CPUCores < 1 || p.CPUCores > 64 || p.GuestMemoryBytes < CompactGuestMemory || p.GuestMemoryBytes > GuestMemory || p.GuestMemoryBytes%mib != 0 || p.HostMemoryBytes < p.GuestMemoryBytes+256*mib || p.HostMemoryBytes > HostMemory || p.HostMemoryBytes%mib != 0 || p.PIDLimit < 64 || p.PIDLimit > 4096 {
 		return fmt.Errorf("resource profile exceeds pinned CPU/memory/PID bounds")
 	}
-	return nil
+	return ValidateAdditionalLimits(p)
 }
 
 func loadResourceProfiles(path string) ([]ResourceProfile, error) {

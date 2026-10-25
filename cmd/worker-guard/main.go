@@ -23,7 +23,7 @@ func main() {
 	}
 	switch os.Args[1] {
 	case "capabilities":
-		if err := json.NewEncoder(os.Stdout).Encode([]string{"temporary-storage-probe-v1", "worker-mtls-v1"}); err != nil {
+		if err := json.NewEncoder(os.Stdout).Encode([]string{"temporary-storage-probe-v1", "worker-mtls-v1", "process-nofile-v1"}); err != nil {
 			die(err)
 		}
 	case "transport-install":
@@ -102,6 +102,21 @@ func main() {
 				die(err)
 			}
 			out[name] = strings.TrimSpace(string(data))
+		}
+		var limit syscall.Rlimit
+		if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &limit); err != nil {
+			die(err)
+		}
+		out["nofile"] = fmt.Sprintf("%d %d", limit.Cur, limit.Max)
+		initLimits, err := os.ReadFile("/proc/1/limits")
+		if err != nil {
+			die(err)
+		}
+		for _, line := range strings.Split(string(initLimits), "\n") {
+			fields := strings.Fields(line)
+			if len(fields) == 6 && strings.Join(fields[:3], " ") == "Max open files" {
+				out["init_nofile"] = fields[3] + " " + fields[4]
+			}
 		}
 		if len(os.Args) > 2 {
 			observations, err := temporaryObservations(os.Args[2:])

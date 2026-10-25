@@ -258,6 +258,8 @@ Dockerfile、テンプレート、カスタムイメージの例は[build](comma
 
 | キー | 既定値 | 対応箇所 |
 |---|---|---|
+| `max_connections` / `max_connections_per_source` | `0` | 未リリースmain。`proxy run --max-connections` / `--max-connections-per-source` |
+| `network_bytes_per_second` | `0` | 未リリースmain。`--network-bytes-per-second`。[対象と動作](guides/resource-limits.md) |
 | `container_url` | `http://codex-auth-proxy:18080` | `run --proxy-container-url` |
 | `admin_url` | `http://127.0.0.1:18081` | `run --proxy-admin-url`、ワーカー管理 |
 | `admin_secret` | 未設定 | 管理クライアントの認証。サーバー起動には `proxy run --admin-secret` も指定する |
@@ -351,6 +353,8 @@ Dockerfile、テンプレート、カスタムイメージの例は[build](comma
 - プロキシ再作成と[対応経路の確認](sandbox-features.md#モデル認可と段階的な起動)が必要です。
 
 ## ノード管理者の資源プロファイル
+
+- [FD・block I/Oの追加プロファイル設定](guides/resource-limits.md)：未リリースmain。組み込みプロファイルの既定値は維持します。
 
 - `run.profile_size` は組み込みまたはnodeに登録された名前を選びます。
 - 追加の予算は、rootのnode管理者が `node serve --resource-profiles /etc/codex-dock/resource-profiles.json` で登録します。

@@ -271,6 +271,8 @@ The [verification record](../testing.md) distinguishes fixture tests, native Kat
 
 ## Operator resource profiles
 
+- Unreleased main: [connection, bandwidth, FD and block I/O limits](guides/resource-limits.md). `ResourcePolicies(ctx)` exposes complete profiles; `ResourceUsage.Policy` reports the running contract. Proxy TCP limits are separate from AI request budgets.
+
 - PID limits are configured per profile.
 - For example, `oaiso profile define compact-256 --base compact --pids-limit 256` prints a JSON array with compact's CPU/memory budgets and a 256-PID ceiling.
 - It does not edit files or node configuration.

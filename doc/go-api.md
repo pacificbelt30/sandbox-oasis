@@ -333,3 +333,7 @@ go build -o /var/tmp/oaiso-embedding ./examples/embedding
 - [有効期限・再起動・旧ワーカーの再作成](guides/worker-tls.md)。
 
 - TLSワーカーの接続URLは、そのVM内だけの`127.0.0.1`を指します。ホスト・別VMで再利用したり、URLを実行IDの代わりにしたりしないでください。実行の識別にはworker／run IDを使います。
+
+## 資源制御
+
+- 未リリースmain：[接続・帯域・FD・block I/Oの上限](guides/resource-limits.md)。`ResourcePolicies(ctx)`で全プロファイル項目、`ResourceUsage.Policy`で稼働VMの契約を確認できます。ProxyのTCP数はAIの同時要求数とは別です。

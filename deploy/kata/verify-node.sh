@@ -26,6 +26,42 @@ fi
 cli runtime-check --json > /evidence/readiness.json
 initial_release=$(release)
 proof 'fresh setup and operator readiness'
+# Only this explicitly selected, disposable resource suite defines an I/O
+# profile and enables io in its own cgroup namespace. No shared host is changed.
+if [[ ${CODEX_DOCK_KATA_ACCEPTANCE_RUN:-} == *ResourceControls* ]]; then
+ python3 - <<'PYRESOURCE'
+import json, os
+from pathlib import Path
+# Evidence is a private bind on the host block filesystem, not guest/host tmpfs.
+dev = os.stat('/evidence').st_dev
+major, minor = os.major(dev), os.minor(dev)
+if not major or not Path(f'/sys/dev/block/{major}:{minor}').exists():
+    raise SystemExit('real block device required for I/O resource acceptance')
+workspace = Path('/evidence/resource-workspaces')
+workspace.mkdir(mode=0o700); os.chown(workspace,1000,1000)
+profile = dict(name='resource-test',cpu_cores=1,guest_memory_bytes=512<<20,host_memory_bytes=768<<20,pid_limit=512,file_descriptor_limit=512,
+               block_io=[dict(major=major,minor=minor,write_bytes_per_second=8<<20,read_bytes_per_second=64<<20,read_iops=4096,write_iops=1024)])
+path=Path('/etc/codex-dock/resource-test.json')
+path.parent.mkdir(parents=True,exist_ok=True)
+path.write_text(json.dumps([profile])); path.chmod(0o600)
+# Keep the normal installer-controlled binary path so later upgrades are tested.
+base=Path('/etc/systemd/system/codex-dock-node.service').read_text()
+line=next(line for line in base.splitlines() if line.startswith('ExecStart='))
+line=line.split('ExecStart=',1)[1].split(' node serve ',1)[1]
+dropin=Path('/etc/systemd/system/codex-dock-node.service.d/resources.conf')
+dropin.parent.mkdir(parents=True,exist_ok=True)
+dropin.write_text('[Service]\nExecStart=\nExecStart=/usr/local/bin/oaiso node serve '+line+' --resource-profiles '+str(path)+'\n')
+PYRESOURCE
+ printf '+io' > /sys/fs/cgroup/cgroup.subtree_control
+ printf '+io' > /sys/fs/cgroup/codex-dock/cgroup.subtree_control
+ systemctl daemon-reload
+ systemctl restart codex-dock-node
+ for attempt in $(seq 1 150); do
+  if cli profile --node resource-test --json > /evidence/resource-profile.json 2>/evidence/resource-node-start.txt; then break; fi
+  sleep .2
+ done
+ cli profile --node resource-test --json > /evidence/resource-profile.json
+fi
 if [[ ${CODEX_DOCK_VERIFY_ONBOARDING:-} == 1 ]]; then
  # Test-only network trust/proxy setup for the session's package registry.
  # No host service or credentials are mounted into the disposable node.
@@ -134,6 +170,7 @@ if [[ -x /acceptance.test ]]; then
  operator env CODEX_DOCK_KATA_E2E=1 CODEX_DOCK_KATA_POLICY_E2E=1 CODEX_DOCK_KATA_TEST_BINARY=/usr/local/bin/oaiso \
   CODEX_DOCK_KATA_TEST_IMAGE="$worker_fixture" CODEX_DOCK_KATA_PROXY_IMAGE="$proxy_fixture" \
   CODEX_DOCK_KATA_NETWORK_PROXY_IMAGE="${CODEX_DOCK_KATA_NETWORK_PROXY_IMAGE:-}" \
+  CODEX_DOCK_RESOURCE_WORKSPACE=/evidence/resource-workspaces \
   CODEX_DOCK_KATA_OWNER_FIXTURE=/home/kata-test/owner-fixture/project \
   CODEX_DOCK_NODE_RESTART_REQUEST_DIR=/run/setup-node-restart \
   /acceptance.test -test.run "${CODEX_DOCK_KATA_ACCEPTANCE_RUN:-^TestKata(Acceptance|AuthenticationSession|EncryptedProfile|KeyringProfile|WorkspaceSharing|PolicyFeatures|PrimaryTerminal|GoAPI)$}" -test.v -test.count=1 -test.timeout=25m > /evidence/acceptance.txt 2>&1 &
@@ -192,6 +229,19 @@ PYAFTER
   proof "node operation audit chain verified without pending results"
  fi
  proof "native Kata acceptance on newly installed node: ${CODEX_DOCK_KATA_ACCEPTANCE_RUN:-all}"
+fi
+if [[ ${CODEX_DOCK_KATA_ACCEPTANCE_RUN:-} == *ResourceControls* ]]; then
+ # All suite-owned workers have been removed. Restore the normal node command
+ # before exercising installation updates and rollback.
+ rm /etc/systemd/system/codex-dock-node.service.d/resources.conf
+ systemctl daemon-reload
+ systemctl restart codex-dock-node
+ for attempt in $(seq 1 150); do
+  if cli runtime-check --json > /evidence/readiness-after-resources.json 2>/evidence/resource-node-reset.txt; then break; fi
+  sleep .2
+ done
+ cli runtime-check --json > /evidence/readiness-after-resources.json
+ proof 'resource fixture removed before standard update and recovery'
 fi
 # Case proxies intentionally retain their shared egress network for reuse.
 # This disposable controller owns an initially empty node: remove only that

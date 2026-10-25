@@ -24,6 +24,8 @@
 - Agent approval settings remain separate.
 - Shared files remain accessible under the selected mount permissions.
 
+- Unreleased main: [TCP admission, per-source bandwidth, guest per-process FD and host block I/O ceilings](guides/resource-limits.md). Opt-in controls; socket IP accounting is not execution authentication, FD ceilings are per process, and cached/tmpfs I/O is outside block limits.
+
 ## Credentials
 
 ### Storage and worker-visible fields

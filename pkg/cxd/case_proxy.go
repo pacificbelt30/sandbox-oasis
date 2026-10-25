@@ -25,19 +25,24 @@ import (
 	"github.com/pacificbelt30/codex-dock/internal/authproxy"
 	"github.com/pacificbelt30/codex-dock/internal/buildinfo"
 	"github.com/pacificbelt30/codex-dock/internal/engine"
+	"github.com/pacificbelt30/codex-dock/internal/netquota"
 	"github.com/pacificbelt30/codex-dock/internal/network"
 )
+
+// ProxyResourceLimits bounds proxy TCP connections and per-source bandwidth.
+type ProxyResourceLimits = netquota.Limits
 
 // CaseProxyOptions creates a distinct auth proxy for one credential case.
 // StoreSocket is served for CaseID by credentialstore.Serve in the trusted host product.
 type CaseProxyOptions struct {
-	NodeSocket  string
-	Image       string
-	Name        string
-	CaseID      string
-	StoreSocket string
-	AdminPort   int
-	AdminSecret string
+	NetworkResources ProxyResourceLimits
+	NodeSocket       string
+	Image            string
+	Name             string
+	CaseID           string
+	StoreSocket      string
+	AdminPort        int
+	AdminSecret      string
 	// AllowedModels optionally enforces exact upstream model IDs for this case.
 	AllowedModels []string
 	// UsageStateDir optionally mounts owner-private durable counters into this
@@ -56,6 +61,9 @@ var caseProxyName = regexp.MustCompile(`^[a-z][a-z0-9-]{0,62}$`)
 // EnsureCaseProxy starts an auth proxy with no host HOME credential mounts.
 // The store socket is mounted only into this proxy, never into worker VMs.
 func EnsureCaseProxy(ctx context.Context, opts CaseProxyOptions) (CaseProxy, error) {
+	if err := opts.NetworkResources.Validate(); err != nil {
+		return CaseProxy{}, err
+	}
 	if opts.UsageStateDir != "" {
 		if !filepath.IsAbs(opts.UsageStateDir) || filepath.Clean(opts.UsageStateDir) != opts.UsageStateDir {
 			return CaseProxy{}, fmt.Errorf("usage directory must be a clean absolute path")
@@ -126,6 +134,9 @@ func EnsureCaseProxy(ctx context.Context, opts CaseProxyOptions) (CaseProxy, err
 		if existing.Config == nil || existing.State == nil || existing.Config.Image != opts.Image || existing.Config.Labels["io.codex-dock.proxy-layout"] != "split-v4-worker-mtls" || existing.Config.Labels["io.codex-dock.credential-case"] != caseHash {
 			return CaseProxy{}, fmt.Errorf("case proxy name already belongs to another image, layout or case")
 		}
+		if existing.Config.Labels[netquota.Label] != opts.NetworkResources.ID() {
+			return CaseProxy{}, fmt.Errorf("case proxy network resource limits differ; drain workers before replacement")
+		}
 		mounted := false
 		usageDirectory := ""
 		if existing.HostConfig != nil {
@@ -173,6 +184,10 @@ func EnsureCaseProxy(ctx context.Context, opts CaseProxyOptions) (CaseProxy, err
 		Cmd:    []string{"proxy", "serve", "--worker-mtls", "--listen", "0.0.0.0:18080", "--role", "auth", "--admin-listen", "egress:" + strconv.Itoa(opts.AdminPort), "--admin-secret", opts.AdminSecret, "--block-private", "--credential-store-socket", "/run/cxd-credential-store.sock", "--case-id", opts.CaseID},
 		Labels: map[string]string{"io.codex-dock.proxy-layout": "split-v4-worker-mtls", "io.codex-dock.credential-case": caseHash},
 	}
+	if id := opts.NetworkResources.ID(); id != "" {
+		cfg.Labels[netquota.Label] = id
+	}
+	cfg.Cmd = append(cfg.Cmd, opts.NetworkResources.Args()...)
 	for _, model := range opts.AllowedModels {
 		cfg.Cmd = append(cfg.Cmd, "--allow-model", model)
 	}

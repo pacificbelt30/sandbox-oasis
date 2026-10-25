@@ -327,3 +327,7 @@ go build -o /var/tmp/oaiso-embedding ./examples/embedding
 - [Expiry, restart and legacy worker recreation](guides/worker-tls.md).
 
 - TLS worker connection URLs refer to that guest’s loopback relay. Do not reuse them on the host/another VM or use URLs as execution IDs; use worker/run IDs.
+
+## Resource controls
+
+- Unreleased main: [connection, bandwidth, FD and block I/O limits](guides/resource-limits.md). `ResourcePolicies(ctx)` exposes complete profiles; `ResourceUsage.Policy` reports the running contract. Proxy TCP limits are separate from AI request budgets.

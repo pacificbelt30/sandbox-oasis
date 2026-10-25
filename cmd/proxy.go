@@ -16,6 +16,7 @@ import (
 	dockerdefaults "github.com/pacificbelt30/codex-dock/docker"
 	"github.com/pacificbelt30/codex-dock/internal/authproxy"
 	"github.com/pacificbelt30/codex-dock/internal/buildinfo"
+	"github.com/pacificbelt30/codex-dock/internal/netquota"
 	"github.com/pacificbelt30/codex-dock/internal/network"
 	"github.com/pacificbelt30/codex-dock/internal/networkpolicy"
 	"github.com/pacificbelt30/codex-dock/pkg/cxd/credentialstore"
@@ -88,6 +89,10 @@ var proxyServeCmd = &cobra.Command{
 	Hidden: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		applyForwardPolicyDefaults(cmd)
+		resources, err := proxyNetworkResourceLimits(cmd)
+		if err != nil {
+			return err
+		}
 		var store credentialstore.Store
 		proxyProfileKeyStdin, err := cmd.Flags().GetBool("profile-key-stdin")
 		if err != nil {
@@ -155,6 +160,7 @@ var proxyServeCmd = &cobra.Command{
 		}
 		p, err := authproxy.NewProxy(authproxy.Config{
 			UpstreamProxyURL: proxyUpstreamURL, CABundlePEM: bundle,
+			NetworkResources:     resources,
 			CredentialRoutesFile: proxyBrokerFile,
 			AllowedModels:        proxyAllowedModels,
 			EventWriter:          os.Stdout,
@@ -223,7 +229,11 @@ authority. General egress requires domain or CIDR grants by default; changing
 settings does not update existing proxies or workers.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		applyForwardPolicyDefaults(cmd)
-		return startProxyContainer(cmd.Context())
+		resources, err := proxyNetworkResourceLimits(cmd)
+		if err != nil {
+			return err
+		}
+		return startProxyContainerWithResources(cmd.Context(), resources)
 	},
 }
 
@@ -236,6 +246,17 @@ settings does not update existing proxies or workers.`,
 // It builds the proxy image / egress network when missing and restarts existing
 // (stopped) containers. Shared by `proxy run` and `oaiso run`'s auto-start.
 func startProxyContainer(ctx context.Context) error {
+	limits, err := proxyNetworkResourceLimits(nil)
+	if err != nil {
+		return err
+	}
+	return startProxyContainerWithResources(ctx, limits)
+}
+
+func startProxyContainerWithResources(ctx context.Context, resources netquota.Limits) error {
+	if err := resources.Validate(); err != nil {
+		return err
+	}
 	adminSecret, adminSecretFile, err := proxyServerSecret()
 	if err != nil {
 		return err
@@ -336,7 +357,7 @@ func startProxyContainer(ctx context.Context) error {
 	}
 
 	// 1) Auth proxy: holds credentials, admin published, no forwarding.
-	auth := proxyRunArgs{allowedModels: proxyAllowedModels, brokerFile: proxyBrokerFile, upstreamProxy: proxyUpstreamURL, caFile: proxyCAFile,
+	auth := proxyRunArgs{networkResources: resources, allowedModels: proxyAllowedModels, brokerFile: proxyBrokerFile, upstreamProxy: proxyUpstreamURL, caFile: proxyCAFile,
 		name:               proxyRunName,
 		role:               authproxy.RoleAuth,
 		networkName:        proxyRunNetwork,
@@ -375,7 +396,7 @@ func startProxyContainer(ctx context.Context) error {
 	}
 
 	// 2) Egress proxy: forward-only, no credentials, LAN blocked.
-	egress := proxyRunArgs{upstreamProxy: proxyUpstreamURL, caFile: proxyCAFile,
+	egress := proxyRunArgs{networkResources: resources, upstreamProxy: proxyUpstreamURL, caFile: proxyCAFile,
 		name:          proxyRunHTTPName,
 		role:          authproxy.RoleEgress,
 		networkName:   proxyRunNetwork,
@@ -427,6 +448,9 @@ func proxyImageCompatible(labels map[string]string) bool {
 // ensureProxyContainer (re)starts one proxy container from its spec: a running
 // container is left alone, a stopped one is started, and a missing one is created.
 func ensureProxyContainer(ctx context.Context, spec proxyRunArgs) (result error) {
+	if err := spec.networkResources.Validate(); err != nil {
+		return err
+	}
 	// A cached image can still contain an old binary after the host CLI is
 	// upgraded. Labels describe its layout, not its authentication behavior.
 	defer func() {
@@ -455,6 +479,9 @@ func ensureProxyContainer(ctx context.Context, spec proxyRunArgs) (result error)
 		}
 		if spec.profileFingerprint != "" && !v.State.Running && (len(spec.profileKey) == 0 || len(spec.profileKey) > credentialstore.UnlockKeyMaxSize) {
 			return credentialstore.ErrLocked
+		}
+		if v.Config.Labels[netquota.Label] != spec.networkResources.ID() {
+			return fmt.Errorf("proxy network resource limits changed; drain workers before explicitly recreating this proxy")
 		}
 		if v.Config.Labels[proxyTransportLabel] != proxyTransportID(spec) {
 			return fmt.Errorf("proxy transport settings changed; drain workers before explicitly recreating this proxy")
@@ -590,6 +617,7 @@ func init() {
 	proxyServeCmd.Flags().StringVar(&proxyAdminSecret, "admin-secret", "", "admin secret for /admin/* endpoints")
 	proxyServeCmd.Flags().StringVar(&proxyAdminSecretFile, "admin-secret-file", "", "Owner-only (0600) file containing the admin secret")
 	bindForwardPolicyFlags(proxyServeCmd)
+	bindNetworkResourceFlags(proxyServeCmd)
 	proxyServeCmd.Flags().StringVar(&proxyBrokerFile, "credential-routes", "", "Private JSON file of fixed credential routes")
 	proxyServeCmd.Flags().BoolVar(&proxyBlockPrivate, "block-private", false, "Refuse outbound connections to private/LAN/link-local addresses (RFC1918, 127/8, 169.254/16, ULA, CGNAT)")
 	proxyServeCmd.Flags().StringVar(&proxyOAuthStateDir, "oauth-state-dir", "", "Writable private directory for rotated OAuth credentials")
@@ -618,6 +646,7 @@ func init() {
 	proxyRunCmd.Flags().StringVar(&proxyCredentialSocket, "credential-store-socket", "", "Private host credential store Unix socket (requires --case-id)")
 	proxyRunCmd.Flags().StringVar(&proxyCaseID, "case-id", "", "Credential case for this auth proxy instance")
 	bindForwardPolicyFlags(proxyRunCmd)
+	bindNetworkResourceFlags(proxyRunCmd)
 	proxyRunCmd.Flags().StringVar(&proxyBrokerFile, "credential-routes", "", "Private host JSON file mounted only into the auth proxy")
 
 	// stop flags
@@ -633,6 +662,7 @@ func init() {
 var proxyBrokerFile string
 
 type proxyRunArgs struct {
+	networkResources                                 netquota.Limits
 	profileName, profileDirectory, profileConnection string
 	profileFingerprint                               string
 	profileKey                                       []byte
@@ -687,6 +717,9 @@ func buildProxyRunArgs(a proxyRunArgs) []string {
 		"run", "-d", "--name", a.name,
 		"--label", proxyLayoutLabel + "=" + proxyLayoutVersion,
 		"--network", a.networkName,
+	}
+	if id := a.networkResources.ID(); id != "" {
+		args = append(args, "--label", netquota.Label+"="+id)
 	}
 	if a.brokerFile != "" {
 		args = append(args, "-v", a.brokerFile+":/run/cxd-broker.json:ro")
@@ -749,6 +782,7 @@ func buildProxyRunArgs(a proxyRunArgs) []string {
 	}
 
 	args = append(args, a.image, "proxy", "serve", "--listen", a.listenAddr)
+	args = append(args, a.networkResources.Args()...)
 	if a.profileName != "" {
 		args = append(args, "--auth-profile", a.profileName, "--profile-store-dir", "/run/cxd-profile")
 	}

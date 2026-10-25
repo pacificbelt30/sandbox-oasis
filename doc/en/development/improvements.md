@@ -38,7 +38,7 @@
 | P1 | Thin Python/TypeScript SDKs | Same-host create/execute/inspect/cleanup | Preserve Go retry/authority/failure semantics; no secrets in argv/stdout |
 | P2 | Disk checkpoints | **Completed (Unreleased main)**. [Stopped rootfs capture/new VM restore](../guides/disk-checkpoint.md), CLI/Go API | Not RAM preservation; define mounts, concurrent writes, size, secret exclusion and restore compatibility |
 | P2 | Prestarted environments | Small benefit-assessment prototype | No unassigned credentials/user data; revalidate at allocation; require acceptable standby memory and measured ≥20% benefit |
-| P2 | Further resource controls | Connections, transfer, file descriptors and I/O limits | Distinct from existing CPU/memory/PID/body limits; preserve legitimate long streams and contain noisy workloads |
+| P2 | Further resource controls | **Complete (unreleased main)**. [TCP admission, per-source bandwidth, per-process FDs and device block I/O](../guides/resource-limits.md). CLI / Go API | Distinct from existing CPU/memory/PID/body limits; preserve legitimate long streams and contain noisy workloads |
 
 - Additional agent acceptance remains in [future work](../future-work.md). Never weaken credential separation merely to increase the agent count.
 
