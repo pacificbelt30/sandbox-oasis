@@ -37,11 +37,18 @@ func TestConcurrentAdmissionsAndTransfersCannotExceedBudget(t *testing.T) {
 		wg.Go(func() {
 			r, err := l.Begin(key)
 			if err != nil {
+				if !errors.Is(err, ErrLimit) {
+					t.Error(err)
+				}
 				return
 			}
 			admitted.Add(1)
-			_, _ = r.Consume(30)
-			_ = r.Finish(0, false)
+			if _, err := r.Consume(30); err != nil && !errors.Is(err, ErrLimit) {
+				t.Error(err)
+			}
+			if err := r.Finish(0, false); err != nil {
+				t.Error(err)
+			}
 		})
 	}
 	wg.Wait()
@@ -49,8 +56,54 @@ func TestConcurrentAdmissionsAndTransfersCannotExceedBudget(t *testing.T) {
 	if err != nil || s.Requests > 10 || s.Active != 0 || s.Bytes > 100 || admitted.Load() != s.Requests {
 		t.Fatalf("budget bypass: %+v %v", s, err)
 	}
+	// A burst can admit only two requests before the remaining goroutines
+	// observe the concurrency cap. That valid schedule leaves bytes unspent.
+	// Exhaust those bytes explicitly before checking admission at the byte cap.
+	if s.Bytes < 100 {
+		r, err := l.Begin(key)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if n, err := r.Consume(int(100 - s.Bytes)); err != nil || int64(n) != 100-s.Bytes {
+			t.Fatal("remaining byte reservation failed", n, err)
+		}
+		if err := r.Finish(0, false); err != nil {
+			t.Fatal(err)
+		}
+	}
 	if _, err := l.Begin(key); !errors.Is(err, ErrLimit) {
 		t.Fatalf("exhausted byte budget accepted: %v", err)
+	}
+}
+
+func TestConcurrentRequestAdmissionsEnforceExactRequestCeiling(t *testing.T) {
+	l := openTest(t)
+	key := Key("worker", identity.Identity{})
+	if _, err := l.Bind(key, &identity.UsagePolicy{MaxRequests: 10}); err != nil {
+		t.Fatal(err)
+	}
+	var admitted atomic.Int64
+	var wg sync.WaitGroup
+	for range 40 {
+		wg.Go(func() {
+			r, err := l.Begin(key)
+			if errors.Is(err, ErrLimit) {
+				return
+			}
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			admitted.Add(1)
+			if err := r.Finish(0, false); err != nil {
+				t.Error(err)
+			}
+		})
+	}
+	wg.Wait()
+	s, err := l.Inspect(key)
+	if err != nil || admitted.Load() != 10 || s.Requests != 10 || s.Active != 0 {
+		t.Fatalf("request ceiling: %+v admitted=%d err=%v", s, admitted.Load(), err)
 	}
 }
 
