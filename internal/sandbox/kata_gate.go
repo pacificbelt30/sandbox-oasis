@@ -77,9 +77,18 @@ func (m *Manager) protectKataMounts(mounts []mount.Mount) error {
 		return err
 	}
 	for _, bind := range mounts {
+		if !filepath.IsAbs(bind.Source) || filepath.Clean(bind.Source) != bind.Source {
+			return fmt.Errorf("kata mount source must be an absolute canonical path: %s", bind.Source)
+		}
 		source, err := filepath.EvalSymlinks(bind.Source)
 		if err != nil {
 			return err
+		}
+		// A retained worker must mount the same canonical path that was saved at
+		// admission. In particular, a guest must not replace a source reachable
+		// through another writable share with a symlink before restart.
+		if source != bind.Source {
+			return fmt.Errorf("kata mount source changed after admission; recreate the worker: %s", bind.Source)
 		}
 		for _, protected := range g.ProtectedPaths() {
 			if source == protected || strings.HasPrefix(protected, source+string(filepath.Separator)) || strings.HasPrefix(source, protected+string(filepath.Separator)) {
@@ -90,6 +99,40 @@ func (m *Manager) protectKataMounts(mounts []mount.Mount) error {
 			destination := filepath.Clean(bind.Target)
 			if destination == target || strings.HasPrefix(target, strings.TrimSuffix(destination, "/")+"/") || strings.HasPrefix(destination, target+"/") {
 				return fmt.Errorf("mount overlaps trusted Kata bootstrap or kernel interfaces")
+			}
+		}
+	}
+	return nil
+}
+
+// canonicalizeKataMounts resolves every source before it is persisted in the
+// container configuration. Restart validation can then fail closed if a guest
+// changes any source or parent component into a symlink between task generations.
+func canonicalizeKataMounts(mounts []mount.Mount) error {
+	for i := range mounts {
+		if !filepath.IsAbs(mounts[i].Source) {
+			return fmt.Errorf("kata mount source must be absolute: %s", mounts[i].Source)
+		}
+		source, err := filepath.EvalSymlinks(mounts[i].Source)
+		if err != nil {
+			return err
+		}
+		mounts[i].Source = source
+	}
+	return nil
+}
+
+// validateKataMountSourceIsolation prevents a guest-writable share from also
+// containing another bind source. Otherwise the guest can replace that nested
+// source while stopped and change what a retained worker receives on restart.
+func validateKataMountSourceIsolation(mounts []mount.Mount) error {
+	for sourceIndex, source := range mounts {
+		for writableIndex, writable := range mounts {
+			if sourceIndex == writableIndex || writable.ReadOnly {
+				continue
+			}
+			if strings.HasPrefix(source.Source, writable.Source+string(filepath.Separator)) {
+				return fmt.Errorf("kata mount source %s is inside guest-writable mount %s", source.Source, writable.Source)
 			}
 		}
 	}

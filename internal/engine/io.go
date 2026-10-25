@@ -15,6 +15,8 @@ import (
 	"github.com/containerd/containerd/v2/pkg/cio"
 )
 
+const primaryOutputLimit int64 = 16 << 20
+
 // Binary loggers own output independently of this service. Primary Kata
 // terminals wrap this input state with a recoverable passfd FIFO collector.
 type loggingIO struct {
@@ -38,7 +40,7 @@ func (l *loggingIO) Cancel()            { _ = l.CloseInput() }
 func (*loggingIO) Wait()                {}
 func (l *loggingIO) Close() error       { return l.CloseInput() }
 func (b *Backend) logIO(r *record) (cio.Creator, error) {
-	creator, err := b.logIOAt(b.path(r.ID), r.ID, r.Config.Tty, r.Config.OpenStdin, 0)
+	creator, err := b.logIOAt(b.path(r.ID), r.ID, r.Config.Tty, r.Config.OpenStdin, primaryOutputLimit)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +55,7 @@ func (b *Backend) logIO(r *record) (cio.Creator, error) {
 				_ = streams.Close()
 				return nil, fmt.Errorf("unexpected terminal I/O implementation")
 			}
-			terminal, err := openTerminalIO(b.path(r.ID), owned)
+			terminal, err := openTerminalIO(b.path(r.ID), owned, primaryOutputLimit)
 			if err != nil {
 				_ = owned.Close()
 				return nil, err
@@ -65,16 +67,9 @@ func (b *Backend) logIO(r *record) (cio.Creator, error) {
 		return creator, nil
 	}
 	// Runc's binary logging driver deliberately has no stdin. Its file driver
-	// keeps shim-owned output while connecting the provided input FIFO. Kata's
-	// nonterminal binary-logger path is unchanged.
-	path := filepath.Join(b.path(r.ID), "console.log")
-	log, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY|syscall.O_NOFOLLOW, 0600)
-	if err != nil {
-		return nil, err
-	}
-	if err = log.Close(); err != nil {
-		return nil, err
-	}
+	// does connect the input FIFO, and recognizes a FIFO output path. Route that
+	// output through the same bounded collector as Kata terminals instead of an
+	// unbounded regular file.
 	return func(id string) (cio.IO, error) {
 		streams, err := creator(id)
 		if err != nil {
@@ -85,9 +80,12 @@ func (b *Backend) logIO(r *record) (cio.Creator, error) {
 			_ = streams.Close()
 			return nil, fmt.Errorf("unexpected stdin I/O implementation")
 		}
-		output := (&url.URL{Scheme: "file", Path: path}).String()
-		owned.config.Stdout, owned.config.Stderr = output, output
-		return owned, nil
+		output, err := openRuncStdinIO(b.path(r.ID), owned, primaryOutputLimit)
+		if err != nil {
+			_ = owned.Close()
+			return nil, err
+		}
+		return output, nil
 	}, nil
 }
 func (b *Backend) logIOAt(dir, id string, tty, stdin bool, limit int64) (cio.Creator, error) {

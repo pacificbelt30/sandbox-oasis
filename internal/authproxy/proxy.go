@@ -45,7 +45,9 @@ type Proxy struct {
 	listener              net.Listener
 	server                *http.Server
 	mu                    sync.RWMutex
-	refreshMu             sync.Mutex                  // serialize refreshes across both providers
+	openAIRefreshMu       sync.Mutex                  // serialize OpenAI refresh-token rotation
+	anthropicRefreshMu    sync.Mutex                  // serialize Anthropic refresh-token rotation
+	refreshMu             sync.Mutex                  // protect shared credential-store generation and persistence
 	oauthSource           map[string]string           // hash of read-only login refresh token
 	storeCreds            credentialstore.Credentials // protected by refreshMu
 	storeVersion          string                      // protected by refreshMu

@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -648,6 +649,28 @@ func fakeOAuthServer(t *testing.T, handler http.HandlerFunc) *httptest.Server {
 	return srv
 }
 
+type blockingRefreshBody struct {
+	started     chan struct{}
+	closed      chan struct{}
+	startedOnce sync.Once
+	closedOnce  sync.Once
+}
+
+func newBlockingRefreshBody() *blockingRefreshBody {
+	return &blockingRefreshBody{started: make(chan struct{}), closed: make(chan struct{})}
+}
+
+func (b *blockingRefreshBody) Read([]byte) (int, error) {
+	b.startedOnce.Do(func() { close(b.started) })
+	<-b.closed
+	return 0, io.ErrClosedPipe
+}
+
+func (b *blockingRefreshBody) Close() error {
+	b.closedOnce.Do(func() { close(b.closed) })
+	return nil
+}
+
 func TestHandleOAuthTokenRefresh_HappyPath(t *testing.T) {
 	var gotBody map[string]interface{}
 	var gotContentType string
@@ -901,6 +924,168 @@ func TestHandleOAuthTokenRefresh_EmptyBodyStillInjectsHostToken(t *testing.T) {
 	// Even with empty body, proxy must inject the host's real refresh_token.
 	if gotBody["refresh_token"] != "rt-secret-stays-on-host" {
 		t.Errorf("upstream refresh_token = %v; want rt-secret-stays-on-host", gotBody["refresh_token"])
+	}
+}
+
+func TestHandleOAuthTokenRefresh_BoundsBodyBeforeProviderLock(t *testing.T) {
+	upstreamCalls := 0
+	fake := fakeOAuthServer(t, func(w http.ResponseWriter, r *http.Request) {
+		upstreamCalls++
+		w.WriteHeader(http.StatusInternalServerError)
+	})
+	p := newOAuthProxyWithFakeOAuth(t, fake)
+	if err := p.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer p.Stop()
+	cdx, _ := p.IssueToken("ctr-body-limit", 60)
+	payload := `{"padding":"` + strings.Repeat("x", int(openAIRefreshBodyLimit)) + `"}`
+	w := httptest.NewRecorder()
+	p.handleOAuthTokenRefresh(w, httptest.NewRequest(http.MethodPost, "/oauth/token?cdx="+cdx, strings.NewReader(payload)))
+	if w.Code != http.StatusRequestEntityTooLarge || upstreamCalls != 0 {
+		t.Fatalf("oversized body code=%d upstream=%d", w.Code, upstreamCalls)
+	}
+}
+
+func TestHandleOAuthTokenRefresh_TimesOutSlowBodyOnRealConnection(t *testing.T) {
+	p := newOAuthTestProxy(t, "at-test")
+	if err := p.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer p.Stop()
+	cdx, err := p.IssueToken("ctr-slow-body", 60)
+	if err != nil {
+		t.Fatal(err)
+	}
+	upstreamCalls := 0
+	p.httpClient = &http.Client{Transport: privacyTransport(func(*http.Request) (*http.Response, error) {
+		upstreamCalls++
+		return nil, fmt.Errorf("unexpected upstream request")
+	})}
+	srv := httptest.NewServer(http.HandlerFunc(p.handleOAuthTokenRefresh))
+	defer srv.Close()
+	conn, err := net.Dial("tcp", strings.TrimPrefix(srv.URL, "http://"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	if err = conn.SetDeadline(time.Now().Add(openAIRefreshBodyTimeout + 3*time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = fmt.Fprintf(conn, "POST /oauth/token?cdx=%s HTTP/1.1\r\nHost: fixture\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{", cdx); err != nil {
+		t.Fatal(err)
+	}
+	resp, err := http.ReadResponse(bufio.NewReader(conn), &http.Request{Method: http.MethodPost})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusRequestTimeout || upstreamCalls != 0 {
+		t.Fatalf("slow body status=%d upstream=%d", resp.StatusCode, upstreamCalls)
+	}
+}
+
+func TestHandleOAuthTokenRefresh_RevocationClosesBlockedBodyWithoutHoldingRefreshLock(t *testing.T) {
+	p := newOAuthTestProxy(t, "at-test")
+	if err := p.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer p.Stop()
+	cdx, _ := p.IssueToken("ctr-blocked-body", 60)
+	body := newBlockingRefreshBody()
+	req := httptest.NewRequest(http.MethodPost, "/oauth/token?cdx="+cdx, nil)
+	req.Body = body
+	w := httptest.NewRecorder()
+	done := make(chan struct{})
+	go func() {
+		p.handleOAuthTokenRefresh(w, req)
+		close(done)
+	}()
+	select {
+	case <-body.started:
+	case <-time.After(time.Second):
+		t.Fatal("handler did not start reading the request body")
+	}
+	for name, lock := range map[string]*sync.Mutex{
+		"provider": &p.openAIRefreshMu,
+		"store":    &p.refreshMu,
+	} {
+		lockAvailable := make(chan struct{})
+		go func() {
+			lock.Lock()
+			lockAvailable <- struct{}{}
+			lock.Unlock()
+		}()
+		select {
+		case <-lockAvailable:
+		case <-time.After(time.Second):
+			t.Fatalf("request body read held the %s refresh lock", name)
+		}
+	}
+	p.RevokeToken("ctr-blocked-body")
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("revocation did not unblock the request body")
+	}
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("revoked body request code=%d", w.Code)
+	}
+}
+
+func TestHandleOAuthTokenRefresh_RevocationCancelsUpstream(t *testing.T) {
+	started := make(chan struct{})
+	canceled := make(chan struct{})
+	p := newOAuthTestProxy(t, "at-initial")
+	p.httpClient = &http.Client{Transport: privacyTransport(func(r *http.Request) (*http.Response, error) {
+		close(started)
+		<-r.Context().Done()
+		close(canceled)
+		return nil, r.Context().Err()
+	})}
+	if err := p.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer p.Stop()
+	cdx, _ := p.IssueToken("ctr-blocked-upstream", 60)
+	w := httptest.NewRecorder()
+	done := make(chan struct{})
+	go func() {
+		p.handleOAuthTokenRefresh(w, httptest.NewRequest(http.MethodPost, "/oauth/token?cdx="+cdx, strings.NewReader(`{}`)))
+		close(done)
+	}()
+	select {
+	case <-started:
+	case <-time.After(time.Second):
+		t.Fatal("upstream refresh did not start")
+	}
+	p.RevokeToken("ctr-blocked-upstream")
+	for name, signal := range map[string]<-chan struct{}{"upstream cancellation": canceled, "handler completion": done} {
+		select {
+		case <-signal:
+		case <-time.After(time.Second):
+			t.Fatalf("revocation did not cause %s", name)
+		}
+	}
+	if w.Code == http.StatusOK {
+		t.Fatal("revoked refresh returned a successful worker response")
+	}
+}
+
+func TestHandleOAuthTokenRefresh_BoundsIssuerResponse(t *testing.T) {
+	fake := fakeOAuthServer(t, func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(strings.Repeat("x", int(openAIRefreshResponseLimit)+1)))
+	})
+	p := newOAuthProxyWithFakeOAuth(t, fake)
+	if err := p.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer p.Stop()
+	cdx, _ := p.IssueToken("ctr-response-limit", 60)
+	w := httptest.NewRecorder()
+	p.handleOAuthTokenRefresh(w, httptest.NewRequest(http.MethodPost, "/oauth/token?cdx="+cdx, strings.NewReader(`{}`)))
+	if w.Code != http.StatusBadGateway {
+		t.Fatalf("oversized issuer response code=%d", w.Code)
 	}
 }
 

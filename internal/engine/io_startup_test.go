@@ -4,6 +4,9 @@ package engine
 
 import (
 	"errors"
+	"net/url"
+	"os"
+	"strconv"
 	"strings"
 	"syscall"
 	"testing"
@@ -59,6 +62,18 @@ func TestRuncStdinUsesShimFileOutputAndKataKeepsBinaryLogger(t *testing.T) {
 			}
 			if !strings.HasPrefix(streams.Config().Stdout, want) || streams.Config().Stdin == "" {
 				t.Fatal("runtime input/output scheme is incorrect")
+			}
+			u, err := url.Parse(streams.Config().Stdout)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if runtime == "runc" {
+				info, err := os.Stat(u.Path)
+				if err != nil || info.Mode()&os.ModeNamedPipe == 0 {
+					t.Fatalf("runc output is not a bounded collector FIFO: %v", err)
+				}
+			} else if u.Query().Get("--max-bytes") != strconv.FormatInt(primaryOutputLimit, 10) {
+				t.Fatal("Kata binary logger is missing the primary output limit")
 			}
 		})
 	}

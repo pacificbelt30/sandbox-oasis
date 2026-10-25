@@ -7,6 +7,7 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/pacificbelt30/codex-dock/internal/launchtiming"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -199,6 +200,129 @@ func TestKataMountCannotForgeProbeOrOverwriteBootstrap(t *testing.T) {
 	}
 	if err := m.protectKataMounts([]mount.Mount{{Source: source, Target: "/fixtures"}}); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestKataMountSourceMustRemainCanonicalAcrossRestart(t *testing.T) {
+	_, m := newEngineFixture(t)
+	root := t.TempDir()
+	real := filepath.Join(root, "real")
+	alias := filepath.Join(root, "alias")
+	if err := os.Mkdir(real, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(real, alias); err != nil {
+		t.Fatal(err)
+	}
+	mounts := []mount.Mount{{Type: mount.TypeBind, Source: alias, Target: "/fixtures"}}
+	if err := canonicalizeKataMounts(mounts); err != nil {
+		t.Fatal(err)
+	}
+	if mounts[0].Source != real {
+		t.Fatalf("source was not canonicalized: %q", mounts[0].Source)
+	}
+	if err := m.protectKataMounts(mounts); err != nil {
+		t.Fatal(err)
+	}
+	replaced := real + "-old"
+	if err := os.Rename(real, replaced); err != nil {
+		t.Fatal(err)
+	}
+	outside := t.TempDir()
+	if err := os.Symlink(outside, real); err != nil {
+		t.Fatal(err)
+	}
+	if err := m.protectKataMounts(mounts); err == nil || !strings.Contains(err.Error(), "changed after admission") {
+		t.Fatalf("replaced source accepted: %v", err)
+	}
+}
+
+func TestRestartRejectsReplacedMountBeforeTaskOrCredentialRestore(t *testing.T) {
+	f, m := newEngineFixture(t)
+	p := &runtimeProxy{fakeProxy: fakeProxy{endpoint: "http://auth:18080"}}
+	m.proxy = p
+	id, err := m.Run(RunOptions{Name: "worker", ProjectDir: t.TempDir(), Detach: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = m.Stop(id, 1); err != nil {
+		t.Fatal(err)
+	}
+	root := t.TempDir()
+	source := filepath.Join(root, "source")
+	if err = os.Mkdir(source, 0700); err != nil {
+		t.Fatal(err)
+	}
+	f.worker.HostConfig.Mounts = append(f.worker.HostConfig.Mounts, mount.Mount{Type: mount.TypeBind, Source: source, Target: "/fixtures", ReadOnly: true})
+	if err = os.Rename(source, source+"-old"); err != nil {
+		t.Fatal(err)
+	}
+	if err = os.Symlink(t.TempDir(), source); err != nil {
+		t.Fatal(err)
+	}
+	restored := len(p.restored)
+	if err = m.Start(id); err == nil || !strings.Contains(err.Error(), "changed after admission") {
+		t.Fatalf("replaced retained mount accepted: %v", err)
+	}
+	if f.starts != 1 || len(p.restored) != restored {
+		t.Fatalf("restart dispatched task or credentials: starts=%d restored=%v", f.starts, p.restored)
+	}
+}
+
+func TestKataMountSourceRejectsRelativeAPIPath(t *testing.T) {
+	mounts := []mount.Mount{{Type: mount.TypeBind, Source: "relative", Target: "/fixtures"}}
+	if err := canonicalizeKataMounts(mounts); err == nil {
+		t.Fatal("relative Kata mount source accepted")
+	}
+}
+
+func TestKataMountSourceRejectsNestedSourceInsideWritableShare(t *testing.T) {
+	workspace := t.TempDir()
+	nested := filepath.Join(workspace, "nested")
+	if err := os.Mkdir(nested, 0700); err != nil {
+		t.Fatal(err)
+	}
+	mounts := []mount.Mount{
+		{Type: mount.TypeBind, Source: workspace, Target: "/workspace"},
+		{Type: mount.TypeBind, Source: nested, Target: "/nested", ReadOnly: true},
+	}
+	if err := canonicalizeKataMounts(mounts); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateKataMountSourceIsolation(mounts); err == nil || !strings.Contains(err.Error(), "guest-writable") {
+		t.Fatalf("nested source accepted: %v", err)
+	}
+}
+
+func TestKataMountSourceAllowsDisjointAndReadOnlyParents(t *testing.T) {
+	workspace := t.TempDir()
+	disjoint := t.TempDir()
+	nested := filepath.Join(workspace, "nested")
+	if err := os.Mkdir(nested, 0700); err != nil {
+		t.Fatal(err)
+	}
+	for name, mounts := range map[string][]mount.Mount{
+		"disjoint": {
+			{Type: mount.TypeBind, Source: workspace, Target: "/workspace"},
+			{Type: mount.TypeBind, Source: disjoint, Target: "/data", ReadOnly: true},
+		},
+		"same source at another target": {
+			{Type: mount.TypeBind, Source: workspace, Target: "/workspace"},
+			{Type: mount.TypeBind, Source: workspace, Target: "/mirror", ReadOnly: true},
+		},
+		"read-only parent": {
+			{Type: mount.TypeBind, Source: workspace, Target: "/workspace", ReadOnly: true},
+			{Type: mount.TypeBind, Source: nested, Target: "/nested", ReadOnly: true},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if err := canonicalizeKataMounts(mounts); err != nil {
+				t.Fatal(err)
+			}
+			if err := validateKataMountSourceIsolation(mounts); err != nil {
+				t.Fatal(err)
+			}
+		})
 	}
 }
 

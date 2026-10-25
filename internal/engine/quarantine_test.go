@@ -83,13 +83,17 @@ func TestQuarantineRefusesProxyAndReportsPersistenceFailure(t *testing.T) {
 		}
 	}
 }
-func TestOldRecordKeepsExecutionAllowed(t *testing.T) {
+func TestOldRecordRequiresOutputPolicyMigration(t *testing.T) {
 	var r record
 	if err := json.Unmarshal([]byte(`{"ID":"legacy"}`), &r); err != nil {
 		t.Fatal(err)
 	}
+	if err := executionAllowed(&r); !errdefs.IsConflict(err) {
+		t.Fatalf("legacy output policy allowed execution: %v", err)
+	}
+	r.PrimaryOutputLimit = primaryOutputLimit
 	if err := executionAllowed(&r); err != nil {
-		t.Fatal(err)
+		t.Fatalf("current output policy rejected: %v", err)
 	}
 }
 

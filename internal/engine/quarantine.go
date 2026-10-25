@@ -16,6 +16,9 @@ func executionAllowed(r *record) error {
 	if r.Quarantined {
 		return fmt.Errorf("worker is quarantined; preserve its workspace and create a new worker: %w", errdefs.ErrConflict)
 	}
+	if r.PrimaryOutputLimit != primaryOutputLimit {
+		return fmt.Errorf("worker output policy requires node recovery before execution: %w", errdefs.ErrConflict)
+	}
 	return nil
 }
 

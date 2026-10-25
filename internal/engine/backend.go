@@ -91,6 +91,7 @@ type record struct {
 	NetNSDevice, NetNSInode uint64
 	FailedCreate            bool
 	Quarantined             bool `json:",omitempty"`
+	PrimaryOutputLimit      int64
 }
 type execution struct {
 	cancel     context.CancelFunc `json:"-"`
@@ -364,7 +365,7 @@ func (b *Backend) create(ctx context.Context, c container.Config, h container.Ho
 	if c.StopSignal == "" {
 		c.StopSignal = ic.Config.StopSignal
 	}
-	r := &record{ID: cid, Name: name, Created: time.Now().UTC(), Config: c, Host: h, Networks: map[string]*dn.EndpointSettings{}}
+	r := &record{ID: cid, Name: name, Created: time.Now().UTC(), Config: c, Host: h, Networks: map[string]*dn.EndpointSettings{}, PrimaryOutputLimit: primaryOutputLimit}
 	if r.Host.Runtime == "" {
 		r.Host.Runtime = "runc"
 	}

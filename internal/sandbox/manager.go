@@ -317,6 +317,15 @@ func (m *Manager) RunContext(parent context.Context, opts RunOptions) (container
 	}
 	mounts = append(mounts, gitMounts...)
 	if isolation == RuntimeKata {
+		if err = canonicalizeKataMounts(mounts); err != nil {
+			return "", err
+		}
+		if len(mounts) > 0 && mounts[0].Target == "/workspace" {
+			absWorkspace = mounts[0].Source
+		}
+		if err = validateKataMountSourceIsolation(mounts); err != nil {
+			return "", err
+		}
 		if err = m.protectKataMounts(mounts); err != nil {
 			return "", err
 		}

@@ -73,8 +73,8 @@ func (p *Proxy) refreshAnthropicOAuthIfNeeded(ctx context.Context) error {
 	if p.anthropicOAuth == nil {
 		return nil
 	}
-	p.refreshMu.Lock()
-	defer p.refreshMu.Unlock()
+	p.anthropicRefreshMu.Lock()
+	defer p.anthropicRefreshMu.Unlock()
 	p.mu.RLock()
 	if p.anthropicOAuth == nil {
 		p.mu.RUnlock()
@@ -150,6 +150,8 @@ func (p *Proxy) refreshAnthropicOAuthIfNeeded(ctx context.Context) error {
 	if tr.ExpiresIn > 0 {
 		next.ExpiresAt = time.Now().UnixMilli() + tr.ExpiresIn*1000
 	}
+	p.refreshMu.Lock()
+	defer p.refreshMu.Unlock()
 	if err := p.persistOAuthState("anthropic", &next); err != nil {
 		if p.cfg.Verbose {
 			fmt.Printf("Anthropic OAuth refresh state save failed: %v\n", err)

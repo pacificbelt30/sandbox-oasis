@@ -2,11 +2,19 @@ package authproxy
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"time"
+)
+
+const (
+	openAIRefreshBodyLimit       int64 = 64 << 10
+	openAIRefreshResponseLimit   int64 = 1 << 20
+	openAIRefreshBodyTimeout           = 10 * time.Second
+	openAIRefreshUpstreamTimeout       = 20 * time.Second
 )
 
 // handleOAuthTokenRefresh acts as an OAuth token refresh proxy for containers.
@@ -42,39 +50,67 @@ func (p *Proxy) handleOAuthTokenRefresh(w http.ResponseWriter, r *http.Request) 
 
 	p.mu.RLock()
 	found := p.tokensByValue[cdxToken]
+	oauthMode := p.oauthCreds != nil
+	var lease context.Context
+	if found != nil {
+		lease = found.context
+	}
 	p.mu.RUnlock()
 
-	if found == nil || time.Now().After(found.ExpiresAt) || found.Identity.Provider == "anthropic" {
+	if found == nil || lease == nil || lease.Err() != nil || time.Now().After(found.ExpiresAt) || found.Identity.Provider == "anthropic" {
 		http.Error(w, "token invalid or expired", http.StatusUnauthorized)
 		return
 	}
-	p.refreshMu.Lock()
-	defer p.refreshMu.Unlock()
-	// A refresh queued behind another request must recheck revocation.
-	p.mu.RLock()
-	current := p.tokens[found.ContainerName]
-	p.mu.RUnlock()
-	if current == nil || current.Token != cdxToken || time.Now().After(current.ExpiresAt) {
-		http.Error(w, "token invalid or expired", http.StatusUnauthorized)
-		return
-	}
-
-	p.mu.RLock()
-	if p.oauthCreds == nil {
-		p.mu.RUnlock()
+	if !oauthMode {
 		http.Error(w, "not in OAuth mode", http.StatusBadRequest)
 		return
 	}
-	refreshToken := p.oauthCreds.RefreshToken
-	p.mu.RUnlock()
+
+	ctx, cancel := context.WithCancel(r.Context())
+	leaseCallbackDone := make(chan struct{})
+	stopLease := context.AfterFunc(lease, func() {
+		cancel()
+		_ = r.Body.Close()
+		close(leaseCallbackDone)
+	})
+	defer func() {
+		if !stopLease() {
+			<-leaseCallbackDone
+		}
+		cancel()
+	}()
+	r = r.WithContext(ctx)
 
 	// Parse the JSON body that Codex CLI sent.
 	// Only "refresh_token" is replaced; all other fields (grant_type, client_id, …)
 	// are kept as-is. The container's auth.json has refresh_token="" so Codex CLI
 	// sends an empty string here; the proxy substitutes the host's real token.
-	body, err := io.ReadAll(r.Body)
+	controller := http.NewResponseController(w)
+	deadlineSet := controller.SetReadDeadline(time.Now().Add(openAIRefreshBodyTimeout)) == nil
+	defer func() {
+		if deadlineSet {
+			_ = controller.SetReadDeadline(time.Time{})
+		}
+	}()
+	body, err := io.ReadAll(io.LimitReader(r.Body, openAIRefreshBodyLimit+1))
+	if deadlineSet {
+		_ = controller.SetReadDeadline(time.Time{})
+		deadlineSet = false
+	}
 	if err != nil {
+		if lease.Err() != nil {
+			http.Error(w, "token invalid or expired", http.StatusUnauthorized)
+			return
+		}
+		if r.Context().Err() != nil {
+			http.Error(w, "request body timeout", http.StatusRequestTimeout)
+			return
+		}
 		http.Error(w, "reading request body", http.StatusBadRequest)
+		return
+	}
+	if int64(len(body)) > openAIRefreshBodyLimit {
+		http.Error(w, "request body too large", http.StatusRequestEntityTooLarge)
 		return
 	}
 	var reqBody map[string]interface{}
@@ -90,6 +126,27 @@ func (p *Proxy) handleOAuthTokenRefresh(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "request body must be a JSON object", http.StatusBadRequest)
 		return
 	}
+	if r.Context().Err() != nil {
+		http.Error(w, "token invalid or expired", http.StatusUnauthorized)
+		return
+	}
+
+	p.openAIRefreshMu.Lock()
+	defer p.openAIRefreshMu.Unlock()
+	// A refresh queued behind another request must recheck the exact lease and
+	// use the most recently rotated host refresh token.
+	p.mu.RLock()
+	current := p.tokensByValue[cdxToken]
+	valid := current == found && lease.Err() == nil && time.Now().Before(found.ExpiresAt) && p.oauthCreds != nil
+	var refreshToken string
+	if valid {
+		refreshToken = p.oauthCreds.RefreshToken
+	}
+	p.mu.RUnlock()
+	if !valid {
+		http.Error(w, "token invalid or expired", http.StatusUnauthorized)
+		return
+	}
 	// Replace only the refresh_token; leave grant_type, client_id, etc. unchanged.
 	reqBody["refresh_token"] = refreshToken
 
@@ -100,7 +157,9 @@ func (p *Proxy) handleOAuthTokenRefresh(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Forward to the real OpenAI OAuth endpoint with Content-Type: application/json.
-	req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, p.oauthTokenURL,
+	upstreamCtx, stopUpstream := context.WithTimeout(r.Context(), openAIRefreshUpstreamTimeout)
+	defer stopUpstream()
+	req, err := http.NewRequestWithContext(upstreamCtx, http.MethodPost, p.oauthTokenURL,
 		bytes.NewReader(newBody))
 	if err != nil {
 		http.Error(w, "creating refresh request", http.StatusInternalServerError)
@@ -115,9 +174,17 @@ func (p *Proxy) handleOAuthTokenRefresh(w http.ResponseWriter, r *http.Request) 
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, openAIRefreshResponseLimit+1))
 	if err != nil {
 		http.Error(w, "reading OAuth response", http.StatusInternalServerError)
+		return
+	}
+	if int64(len(respBody)) > openAIRefreshResponseLimit {
+		http.Error(w, "OAuth response too large", http.StatusBadGateway)
+		return
+	}
+	if lease.Err() != nil || r.Context().Err() != nil {
+		http.Error(w, "token invalid or expired", http.StatusUnauthorized)
 		return
 	}
 
@@ -138,7 +205,6 @@ func (p *Proxy) handleOAuthTokenRefresh(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "OAuth response missing access token", http.StatusBadGateway)
 		return
 	}
-
 	// Persist the next generation before exposing it to other requests.
 	p.mu.RLock()
 	next := *p.oauthCreds
@@ -153,6 +219,12 @@ func (p *Proxy) handleOAuthTokenRefresh(w http.ResponseWriter, r *http.Request) 
 	if newRefresh, ok := tokenResp["refresh_token"].(string); ok && newRefresh != "" {
 		next.RefreshToken = newRefresh
 	}
+	p.refreshMu.Lock()
+	defer p.refreshMu.Unlock()
+	if lease.Err() != nil || r.Context().Err() != nil {
+		http.Error(w, "token invalid or expired", http.StatusUnauthorized)
+		return
+	}
 	if err := p.persistOAuthState("openai", &next); err != nil {
 		http.Error(w, "saving OAuth refresh failed", http.StatusBadGateway)
 		return
@@ -160,6 +232,10 @@ func (p *Proxy) handleOAuthTokenRefresh(w http.ResponseWriter, r *http.Request) 
 	p.mu.Lock()
 	*p.oauthCreds = next
 	p.mu.Unlock()
+	if lease.Err() != nil || r.Context().Err() != nil {
+		http.Error(w, "token invalid or expired", http.StatusUnauthorized)
+		return
+	}
 
 	// Construct a fresh response: deleting known secret fields would still leak
 	// future token fields or nested diagnostics returned by the issuer.

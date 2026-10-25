@@ -35,6 +35,23 @@ func (b *Backend) recover(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+		if r.PrimaryOutputLimit != primaryOutputLimit {
+			// A pre-limit binary logger is owned by the shim and cannot be
+			// reconfigured in place. Stop its task before accepting management
+			// traffic, cap retained history, and require the next explicit start
+			// to create a logger with the current policy.
+			if err = b.stop(ctx, r, c, 0); err != nil {
+				return fmt.Errorf("stopping worker %s for output-policy migration: %w", r.ID, err)
+			}
+			if err = enforceOutputRetention(b.path(r.ID), primaryOutputLimit); err != nil {
+				return fmt.Errorf("capping worker %s output during policy migration: %w", r.ID, err)
+			}
+			r.PrimaryOutputLimit = primaryOutputLimit
+			if err = b.save(r); err != nil {
+				return fmt.Errorf("saving worker %s output-policy migration: %w", r.ID, err)
+			}
+			continue
+		}
 		if r.Quarantined {
 			if err = b.stop(ctx, r, c, 0); err != nil {
 				return fmt.Errorf("complete quarantined worker stop %s: %w", r.ID, err)
@@ -57,11 +74,21 @@ func (b *Backend) recover(ctx context.Context) error {
 		h.io = task.IO()
 		if r.Host.Runtime != "runc" && r.Config.Tty {
 			if _, err := os.Lstat(filepath.Join(b.path(r.ID), "terminal.fifo")); err == nil {
-				terminal, err := openTerminalIO(b.path(r.ID), &loggingIO{})
+				terminal, err := openTerminalIO(b.path(r.ID), &loggingIO{}, primaryOutputLimit)
 				if err != nil {
 					return err
 				}
 				h.io = terminal
+			} else if !os.IsNotExist(err) {
+				return err
+			}
+		} else if r.Host.Runtime == "runc" && r.Config.OpenStdin && !r.Config.Tty {
+			if _, err := os.Lstat(filepath.Join(b.path(r.ID), "output.fifo")); err == nil {
+				output, err := openRuncStdinIO(b.path(r.ID), &loggingIO{}, primaryOutputLimit)
+				if err != nil {
+					return err
+				}
+				h.io = output
 			} else if !os.IsNotExist(err) {
 				return err
 			}

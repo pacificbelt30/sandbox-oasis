@@ -67,6 +67,15 @@ func run() error {
 		if err != nil {
 			return err
 		}
+		if info.Size() > maxBytes {
+			if err = log.Truncate(maxBytes); err != nil {
+				return err
+			}
+			info, err = log.Stat()
+			if err != nil {
+				return err
+			}
+		}
 		writer = &limitedLog{file: log, remaining: max(0, maxBytes-info.Size())}
 	}
 	var wg sync.WaitGroup
