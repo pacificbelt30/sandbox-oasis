@@ -28,36 +28,41 @@ func newStatusCommand() *cobra.Command {
 	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
 		ctx, cancel := context.WithTimeout(cmd.Context(), 30*time.Second)
 		defer cancel()
-		report := diagnostics.Report{}
-		report.Add("version", buildinfo.Version, "", nil)
-		profileStatus(ctx, &report, checkConnection)
-		runtime := runtimeReport(ctx)
-		report.Checks = append(report.Checks, runtime.Checks...)
-		proxyStatus(ctx, &report)
-		manager, err := sandbox.NewManager(managementConfig())
-		if err == nil {
-			defer func() { _ = manager.Close() }()
-			workers, listErr := manager.ListContext(ctx, true)
-			report.Add("workers", fmt.Sprintf("%d retained workers/sessions", len(workers)), "Run oaiso ps -a and oaiso vm ps -a.", listErr)
-		} else {
-			report.Add("workers", "", "Check the local node socket.", fmt.Errorf("worker manager is unavailable"))
-		}
-		if checkUpdates {
-			latest, err := releaseinfo.Latest(ctx)
-			detail := ""
-			if err == nil {
-				detail = "latest stable: " + latest.Tag + "; installed: " + buildinfo.Version
-			}
-			report.Add("updates", detail, "Review the release and installation plan before updating.", err)
-		} else {
-			report.Checks = append(report.Checks, diagnostics.Check{Name: "updates", Status: "unchecked", Detail: "No external release request was made.", Fix: "Run oaiso status --check-updates."})
-		}
+		report := collectStatusReport(ctx, checkConnection, checkUpdates)
 		if err := report.Write(cmd.OutOrStdout(), asJSON); err != nil {
 			return err
 		}
 		return report.Err()
 	}
 	return cmd
+}
+
+func collectStatusReport(ctx context.Context, checkConnection, checkUpdates bool) diagnostics.Report {
+	report := diagnostics.Report{}
+	report.Add("version", buildinfo.Version, "", nil)
+	profileStatus(ctx, &report, checkConnection)
+	runtime := runtimeReport(ctx)
+	report.Checks = append(report.Checks, runtime.Checks...)
+	proxyStatus(ctx, &report)
+	manager, err := sandbox.NewManager(managementConfig())
+	if err == nil {
+		defer func() { _ = manager.Close() }()
+		workers, listErr := manager.ListContext(ctx, true)
+		report.Add("workers", fmt.Sprintf("%d retained workers/sessions", len(workers)), "Run oaiso ps -a and oaiso vm ps -a.", listErr)
+	} else {
+		report.Add("workers", "", "Check the local node socket.", fmt.Errorf("worker manager is unavailable"))
+	}
+	if checkUpdates {
+		latest, err := releaseinfo.Latest(ctx)
+		detail := ""
+		if err == nil {
+			detail = "latest stable: " + latest.Tag + "; installed: " + buildinfo.Version
+		}
+		report.Add("updates", detail, "Review the release and installation plan before updating.", err)
+	} else {
+		report.Checks = append(report.Checks, diagnostics.Check{Name: "updates", Status: "unchecked", Detail: "No external release request was made.", Fix: "Run oaiso status --check-updates."})
+	}
+	return report
 }
 
 func profileStatus(ctx context.Context, report *diagnostics.Report, checkConnection bool) {

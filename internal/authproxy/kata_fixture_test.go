@@ -27,6 +27,7 @@ func runKataFixtureProxy() int {
 	}
 	f := flag.NewFlagSet("fixture-proxy", flag.ContinueOnError)
 	var cfg Config
+	cfg.EventWriter = os.Stdout
 	var socket, role string
 	var block bool
 	f.StringVar(&cfg.ListenAddr, "listen", "", "")

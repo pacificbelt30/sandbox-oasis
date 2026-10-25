@@ -479,3 +479,5 @@ oaiso run --user 1000:1000
 - [Auth Proxy 技術仕様](../auth-proxy.md) — 認証の仕組み
 - [ネットワーク仕様](../network.md) — 専用ワーカーネットワークと2種類のプロキシの構成
 - [設定リファレンス](../configuration.md) — config.toml の設定項目
+
+- `--observe-dir PATH`: 未リリースmain。起動時間を秘密を除いた形式で保存。[診断の保存](../guides/observability.md)。

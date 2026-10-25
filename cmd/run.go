@@ -83,6 +83,7 @@ func init() {
 
 	f := runCmd.Flags()
 	bindUsageFlags(runCmd)
+	f.StringVar(&runObserveDir, "observe-dir", "", "Save secret-free launch timings to a private local diagnostic directory")
 	f.SetInterspersed(false) // After IMAGE, flags belong to COMMAND as in docker run.
 	f.StringVar(&runOpts.Runtime, "runtime", sandbox.RuntimeKata, "Worker isolation: kata (default, requires Linux/KVM) or explicit runc compatibility mode; never falls back automatically")
 	f.StringVar(&runOpts.KataRuntime, "kata-runtime", sandbox.DefaultKataRuntime, "Kata v2 runtime registration on the dedicated containerd node")
@@ -813,7 +814,7 @@ func applyRunConfigDefaults(cmd *cobra.Command) {
 
 func runSingle(mgr *sandbox.Manager, sigCh <-chan os.Signal) error {
 	opts := runOpts
-	containerID, err := workerapp.Launch(context.Background(), mgr, opts)
+	containerID, err := workerapp.Launch(context.Background(), diagnosticRunner{runner: mgr, directory: runObserveDir}, opts)
 	if err != nil {
 		return fmt.Errorf("starting container: %w", err)
 	}
@@ -874,7 +875,7 @@ func runParallel(mgr *sandbox.Manager, sigCh <-chan os.Signal) error {
 		if opts.UseWorktree {
 			o.NewBranch = true
 		}
-		containerID, err := workerapp.Launch(context.Background(), mgr, o)
+		containerID, err := workerapp.Launch(context.Background(), diagnosticRunner{runner: mgr, directory: runObserveDir}, o)
 		if err != nil {
 			if containerID != "" {
 				containerIDs = append(containerIDs, containerID)

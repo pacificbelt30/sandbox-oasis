@@ -376,3 +376,5 @@ oaiso run --template mytool
 - [Auth Proxy Specification](../auth-proxy.md)
 - [Network Specification](../network.md)
 - [Configuration Reference](../configuration.md)
+
+- `--observe-dir PATH`: Unreleased main. Save redacted launch timings. [Diagnostics](../guides/observability.md).

@@ -5,6 +5,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"os/exec"
@@ -21,6 +22,9 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/pacificbelt30/codex-dock/internal/authproxy"
 	"github.com/pacificbelt30/codex-dock/internal/engine"
+	"github.com/pacificbelt30/codex-dock/internal/launchtiming"
+	"github.com/pacificbelt30/codex-dock/internal/observability"
+	"github.com/pacificbelt30/codex-dock/internal/workeregress"
 	"github.com/pacificbelt30/codex-dock/internal/workerpolicy"
 	"github.com/pacificbelt30/codex-dock/pkg/cxd/identity"
 )
@@ -74,9 +78,17 @@ func TestKataNetworkRevocation(t *testing.T) {
 			env = append(env, "OPENAI_API_KEY=sk-network-fixture-invalid", "ANTHROPIC_API_KEY=sk-ant-network-fixture-invalid")
 			host.Mounts = []mount.Mount{{Type: mount.TypeBind, Source: usageDirectory, Target: "/run/cxd-usage"}}
 		}
+		labels := map[string]string{"io.codex-dock.proxy-layout": "network-acceptance"}
+		if !auth {
+			rules, err := workeregress.ParseProxyRules(args)
+			if err != nil {
+				t.Fatal(err)
+			}
+			labels["io.codex-dock.forward-policy"] = workeregress.ID(rules)
+		}
 		created, err := node.ContainerCreate(ctx, &container.Config{Image: fixtureImage, Cmd: args,
 			Env: env, User: strconv.Itoa(os.Getuid()) + ":" + strconv.Itoa(os.Getgid()),
-			Labels: map[string]string{"io.codex-dock.proxy-layout": "network-acceptance"}, ExposedPorts: ports},
+			Labels: labels, ExposedPorts: ports},
 			host, nil, nil, name)
 		if err != nil {
 			t.Fatal(err)
@@ -130,8 +142,10 @@ func TestKataNetworkRevocation(t *testing.T) {
 	m := &Manager{cli: node, proxy: proxy, proxyAdminURL: adminURL, httpProxyURL: "http://" + httpName + ":18082", stateDir: state}
 	t.Cleanup(func() { _ = m.Close() })
 	name := prefix + "-worker"
-	id, err := m.RunContext(ctx, RunOptions{Name: name, ProjectDir: project, Image: os.Getenv("CODEX_DOCK_KATA_TEST_IMAGE"), Runtime: RuntimeKata,
+	launchCtx, timer := launchtiming.Begin(ctx)
+	id, err := m.RunContext(launchCtx, RunOptions{Name: name, ProjectDir: project, Image: os.Getenv("CODEX_DOCK_KATA_TEST_IMAGE"), Runtime: RuntimeKata,
 		ContainerUser: strconv.Itoa(os.Getuid()) + ":" + strconv.Itoa(os.Getgid()), Detach: true, ExecCmd: "exec python3 -u /workspace/network.py"})
+	total, phases := timer.Finish()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -176,6 +190,51 @@ func TestKataNetworkRevocation(t *testing.T) {
 	waitConnections(authObserver, 2)
 	waitConnections(egressObserver, 3)
 	t.Log("verified: guest HTTP/CONNECT reject private IPv4/IPv6, mapped metadata and forbidden port; redirect to metadata rejected; public IPv4/IPv6 CONNECT echo and streams established")
+	t.Run("diagnostic-capture-export", func(t *testing.T) {
+		directory := t.TempDir()
+		if err := os.Chmod(directory, 0700); err != nil {
+			t.Fatal(err)
+		}
+		journal := observability.Journal{Directory: directory}
+		if err := journal.Append(observability.Launch(id, total, phases, false)); err != nil {
+			t.Fatal(err)
+		}
+		// Status may report missing independent credentials in this synthetic test;
+		// the verified worker memory and retained denial export must still succeed.
+		config := filepath.Join(t.TempDir(), "config.toml")
+		content := fmt.Sprintf("[proxy]\nadmin_url = %q\ncontainer_url = %q\nadmin_secret = %q\n", adminURL, "http://"+authName+":18080", "network-acceptance-admin")
+		if err := os.WriteFile(config, []byte(content), 0600); err != nil {
+			t.Fatal(err)
+		}
+		output, captureErr := exec.CommandContext(ctx, binary, "--config", config, "observe", "capture", "--directory", directory, "--worker", id).CombinedOutput()
+		if captureErr != nil && !bytes.Contains(output, []byte("diagnostics saved with failed or unavailable checks")) {
+			t.Fatalf("capture: %s %v", output, captureErr)
+		}
+		output, err := exec.CommandContext(ctx, binary, "observe", "export", "--directory", directory).CombinedOutput()
+		if err != nil {
+			t.Fatalf("export: %s %v", output, err)
+		}
+		records, err := journal.Read()
+		if err != nil {
+			t.Fatal(err)
+		}
+		kinds := map[string]bool{}
+		for _, r := range records {
+			kinds[r.Kind] = true
+			if r.Kind == "resources" && (r.Memory == nil || r.Memory.Current <= 0 || r.Memory.HostLimit <= 0) {
+				t.Fatal("live Kata memory missing", r)
+			}
+		}
+		for _, kind := range []string{"status", "resources", "denial", "launch"} {
+			if !kinds[kind] {
+				t.Fatal("missing diagnostic kind", kind, string(output))
+			}
+		}
+		if bytes.Contains(output, []byte("network-acceptance-admin")) || bytes.Contains(output, []byte("Bearer ")) || bytes.Contains(output, []byte(project)) {
+			t.Fatal("sensitive diagnostic data exported")
+		}
+		t.Log("PASS: real Kata status, proxy denials, host memory and launch phases saved/exported without credential or workspace values")
+	})
 	if err := proxy.RevokeTokenChecked(name); err != nil {
 		t.Fatal(err)
 	}

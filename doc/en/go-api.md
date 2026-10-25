@@ -312,3 +312,7 @@ go build -o /var/tmp/oaiso-embedding ./examples/embedding
 - Unreleased main: `LaunchRequest.UsagePolicy` specifies request/concurrency/body-byte/observed-token caps; query with `Usage(ctx, workerID)`. Set `CaseProxyOptions.UsageStateDir` to a 0700 directory outside workspaces. [Usage limits](guides/usage-limits.md).
 
 - Unreleased main: `LaunchRequest.Lifecycle.ProtectMain` protects the primary process from idle reaping. `Heartbeat(ctx, workerID, ttl)` renews/releases a 0–5 minute activity lease without extending maximum lifetime. [Contract and examples](sandbox-features.md#primary-process-protection-and-activity-leases).
+
+## Retaining diagnostic results
+
+- Unreleased main: `SaveLaunchObservation` and `ReadObservations` save/read launch timings. See [format and limits](guides/observability.md). Handle storage failure separately from the launch result.
