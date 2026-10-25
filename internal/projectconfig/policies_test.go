@@ -3,6 +3,7 @@ package projectconfig
 import (
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -43,5 +44,29 @@ func TestPortablePolicyValidationRejectsUnsafeOrUnknownSettings(t *testing.T) {
 				t.Fatal("invalid project policy accepted")
 			}
 		})
+	}
+}
+
+func TestPortableUsageLimitsAreValidatedAndPreserved(t *testing.T) {
+	for _, limit := range []int{20, -1} {
+		root := t.TempDir()
+		text := "[run]\nmax_requests = " + strconv.Itoa(limit) + "\nmax_concurrent = 2\nmax_transfer_bytes = 10000\nmax_observed_tokens = 100\n"
+		if err := os.WriteFile(filepath.Join(root, Filename), []byte(text), 0600); err != nil {
+			t.Fatal(err)
+		}
+		cfg, err := Load(root)
+		if limit < 0 {
+			if err == nil {
+				t.Fatal("negative usage budget accepted")
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		p, err := cfg.UsagePolicy()
+		if err != nil || p.MaxRequests != 20 || p.MaxConcurrent != 2 || p.MaxBytes != 10000 || p.MaxTokens != 100 {
+			t.Fatalf("usage limits lost: %+v %v", p, err)
+		}
 	}
 }

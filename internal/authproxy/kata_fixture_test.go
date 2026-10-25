@@ -33,6 +33,7 @@ func runKataFixtureProxy() int {
 	f.StringVar(&cfg.AdminListenAddr, "admin-listen", "", "")
 	f.StringVar(&cfg.AdminSecret, "admin-secret", "", "")
 	f.StringVar(&cfg.CaseID, "case-id", "", "")
+	f.StringVar(&cfg.UsageStateDir, "usage-state-dir", "", "")
 	f.StringVar(&socket, "credential-store-socket", "", "")
 	f.StringVar(&role, "role", "auth", "")
 	f.BoolVar(&block, "block-private", false, "")
@@ -104,6 +105,11 @@ func runKataFixtureProxy() int {
 			Input  json.RawMessage `json:"input"`
 		}
 		_ = json.NewDecoder(r.Body).Decode(&body)
+		if string(body.Input) == `"usage-budget"` {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = io.WriteString(w, `{"usage":{"input_tokens":2,"output_tokens":3,"total_tokens":5}}`)
+			return
+		}
 		if body.Stream && len(body.Input) > 0 {
 			if r.Method != http.MethodPost || r.URL.Path != "/codex/responses" || r.Header.Get("Authorization") != "Bearer fixture-access-initial" {
 				http.Error(w, "fixture transport/auth mismatch", 400)

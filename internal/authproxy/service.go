@@ -51,3 +51,12 @@ type PolicyIssuer interface {
 type PolicyRestorer interface {
 	RestoreTokenWithPolicy(string, string, int, identity.Identity, *identity.ModelPolicy) error
 }
+
+type UsageIssuer interface {
+	PrepareUsage(string, identity.Identity, *identity.UsagePolicy) error
+	IssueTokenWithUsage(string, int, identity.Identity, *identity.ModelPolicy, *identity.UsagePolicy) (string, error)
+	SupportsTokenUsagePolicy() bool
+}
+type UsageRestorer interface {
+	RestoreTokenWithUsage(string, string, int, identity.Identity, *identity.ModelPolicy, *identity.UsagePolicy) error
+}

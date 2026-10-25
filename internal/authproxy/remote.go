@@ -33,6 +33,7 @@ type RemoteProxy struct {
 	modelAuthorization bool
 	modelPolicyActive  bool
 	tokenModelPolicy   bool
+	tokenUsagePolicy   bool
 	httpClient         *http.Client
 	adminSecretHeader  string
 }
@@ -67,6 +68,7 @@ func NewRemoteProxyContext(ctx context.Context, adminURL, containerURL, adminSec
 	r.modelAuthorization = mode["model_authorization"]
 	r.modelPolicyActive = mode["model_policy_active"]
 	r.tokenModelPolicy = mode["token_model_policy"]
+	r.tokenUsagePolicy = mode["token_usage_policy"]
 	return r, nil
 }
 
@@ -88,6 +90,16 @@ func (r *RemoteProxy) IssueTokenWithIdentity(containerName string, ttlSec int, i
 	return r.IssueTokenWithPolicy(containerName, ttlSec, id, nil)
 }
 func (r *RemoteProxy) IssueTokenWithPolicy(containerName string, ttlSec int, id identity.Identity, policy *identity.ModelPolicy) (string, error) {
+	return r.IssueTokenWithUsage(containerName, ttlSec, id, policy, nil)
+}
+
+func (r *RemoteProxy) IssueTokenWithUsage(containerName string, ttlSec int, id identity.Identity, policy *identity.ModelPolicy, limits *identity.UsagePolicy) (string, error) {
+	if err := limits.Validate(); err != nil {
+		return "", err
+	}
+	if limits != nil && !r.tokenUsagePolicy {
+		return "", fmt.Errorf("auth proxy does not support durable execution usage limits")
+	}
 	if err := policy.Validate(); err != nil {
 		return "", err
 	}
@@ -97,7 +109,7 @@ func (r *RemoteProxy) IssueTokenWithPolicy(containerName string, ttlSec int, id 
 	if !id.Empty() && !r.identityMode {
 		return "", fmt.Errorf("auth proxy does not support token identity; rebuild it before launching this worker")
 	}
-	body, _ := json.Marshal(map[string]interface{}{"container": containerName, "ttl": ttlSec, "identity": id, "model_policy": policy})
+	body, _ := json.Marshal(map[string]interface{}{"container": containerName, "ttl": ttlSec, "identity": id, "model_policy": policy, "usage_policy": limits})
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, r.adminURL+"/admin/issue", bytes.NewReader(body))
 	if err != nil {
 		return "", err

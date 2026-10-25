@@ -209,6 +209,8 @@ forward_allow_ports = [80, 443]
 | `deny_read` / `deny_write` | 空配列 | `--deny-read` / `--deny-write` |
 | `max_lifetime` / `idle_timeout` / `retention` | `"0s"` | 同名ハイフン形式。例：`"30m"` / `"2h"`。`reap` が必要 |
 | `protect_main` | `false` | 未リリースmain。`--protect-main`。メイン処理をidle回収から保護 |
+| `max_requests` / `max_concurrent` | `0` | 未リリースmain。`--max-requests` / `--max-concurrent` |
+| `max_transfer_bytes` / `max_observed_tokens` | `0` | 未リリースmain。`--max-transfer-bytes` / `--max-observed-tokens`。[上限の条件](guides/usage-limits.md) |
 | `environment_lock` | 未指定 | `--environment-lock` |
 | `image_id` | 未指定 | `--image-id` |
 | `start_hooks` | 空配列 | `--start-hook` |

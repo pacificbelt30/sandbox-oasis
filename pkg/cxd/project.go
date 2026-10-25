@@ -113,6 +113,10 @@ func (c *Client) PrepareProject(ctx context.Context, dir, requestID string, log 
 			req.Agent = cfg.Run.Agent
 		}
 		req.Filesystem, req.Lifecycle, req.Environment, _ = cfg.Policies()
+		req.UsagePolicy, err = cfg.UsagePolicy()
+		if err != nil {
+			return LaunchRequest{}, err
+		}
 		req.PolicyPreset = cfg.Run.PolicyPreset
 		req.Model, req.Profile, req.ApprovalMode = cfg.Run.Model, cfg.Run.ProfileSize, cfg.Run.ApprovalMode
 		req.ReadOnly = cfg.Run.ReadOnly != nil && *cfg.Run.ReadOnly

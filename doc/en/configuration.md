@@ -198,6 +198,8 @@ Under `[run]`:
 | `deny_read` / `deny_write` | Empty | `--deny-read` / `--deny-write` |
 | `max_lifetime` / `idle_timeout` / `retention` | `"0s"` | Matching hyphenated flags; `"30m"`, `"2h"`; requires `reap` |
 | `protect_main` | `false` | Unreleased main. `--protect-main`; protect the primary process from idle collection |
+| `max_requests` / `max_concurrent` | `0` | Unreleased main. `--max-requests` / `--max-concurrent` |
+| `max_transfer_bytes` / `max_observed_tokens` | `0` | Unreleased main. `--max-transfer-bytes` / `--max-observed-tokens`. [Limits](guides/usage-limits.md) |
 | `environment_lock` | Unset | `--environment-lock` |
 | `image_id` | Unset | `--image-id` |
 | `start_hooks` | Empty | `--start-hook` |

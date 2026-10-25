@@ -40,6 +40,9 @@ type CaseProxyOptions struct {
 	AdminSecret string
 	// AllowedModels optionally enforces exact upstream model IDs for this case.
 	AllowedModels []string
+	// UsageStateDir optionally mounts owner-private durable counters into this
+	// auth proxy only. Required before requesting per-execution usage limits.
+	UsageStateDir string
 }
 
 type CaseProxy struct {
@@ -53,6 +56,22 @@ var caseProxyName = regexp.MustCompile(`^[a-z][a-z0-9-]{0,62}$`)
 // EnsureCaseProxy starts an auth proxy with no host HOME credential mounts.
 // The store socket is mounted only into this proxy, never into worker VMs.
 func EnsureCaseProxy(ctx context.Context, opts CaseProxyOptions) (CaseProxy, error) {
+	if opts.UsageStateDir != "" {
+		if !filepath.IsAbs(opts.UsageStateDir) || filepath.Clean(opts.UsageStateDir) != opts.UsageStateDir {
+			return CaseProxy{}, fmt.Errorf("usage directory must be a clean absolute path")
+		}
+		if err := os.MkdirAll(opts.UsageStateDir, 0700); err != nil {
+			return CaseProxy{}, err
+		}
+		info, err := os.Lstat(opts.UsageStateDir)
+		if err != nil {
+			return CaseProxy{}, err
+		}
+		owner, ok := info.Sys().(*syscall.Stat_t)
+		if !ok || owner.Uid != uint32(os.Geteuid()) || !info.IsDir() || info.Mode().Perm()&0077 != 0 {
+			return CaseProxy{}, fmt.Errorf("usage directory must be owner-private (0700)")
+		}
+	}
 	if err := authproxy.ValidateAllowedModels(opts.AllowedModels); err != nil {
 		return CaseProxy{}, err
 	}
@@ -108,12 +127,19 @@ func EnsureCaseProxy(ctx context.Context, opts CaseProxyOptions) (CaseProxy, err
 			return CaseProxy{}, fmt.Errorf("case proxy name already belongs to another image, layout or case")
 		}
 		mounted := false
+		usageDirectory := ""
 		if existing.HostConfig != nil {
 			for _, m := range existing.HostConfig.Mounts {
+				if m.Target == "/run/cxd-usage" && !m.ReadOnly {
+					usageDirectory = m.Source
+				}
 				if m.Source == opts.StoreSocket && m.Target == "/run/cxd-credential-store.sock" && m.ReadOnly {
 					mounted = true
 				}
 			}
+		}
+		if usageDirectory != opts.UsageStateDir {
+			return CaseProxy{}, fmt.Errorf("case proxy usage directory differs; drain workers before replacement")
 		}
 		if !sameModelPolicy(existing.Config.Cmd, opts.AllowedModels) {
 			return CaseProxy{}, fmt.Errorf("case proxy model policy differs; drain workers before replacement")
@@ -151,6 +177,10 @@ func EnsureCaseProxy(ctx context.Context, opts CaseProxyOptions) (CaseProxy, err
 		cfg.Cmd = append(cfg.Cmd, "--allow-model", model)
 	}
 	host := &container.HostConfig{Runtime: "runc", CapDrop: []string{"ALL"}, SecurityOpt: []string{"no-new-privileges:true"}, NetworkMode: container.NetworkMode(network.EgressNetworkName), Mounts: []mount.Mount{{Type: mount.TypeBind, Source: opts.StoreSocket, Target: "/run/cxd-credential-store.sock", ReadOnly: true}}, PortBindings: nat.PortMap{port: []nat.PortBinding{{HostIP: "127.0.0.1", HostPort: strconv.Itoa(opts.AdminPort)}}}}
+	if opts.UsageStateDir != "" {
+		cfg.Cmd = append(cfg.Cmd, "--usage-state-dir", "/run/cxd-usage")
+		host.Mounts = append(host.Mounts, mount.Mount{Type: mount.TypeBind, Source: opts.UsageStateDir, Target: "/run/cxd-usage"})
+	}
 	created, err := cli.ContainerCreate(ctx, cfg, host, nil, nil, opts.Name)
 	if err != nil {
 		return CaseProxy{}, err

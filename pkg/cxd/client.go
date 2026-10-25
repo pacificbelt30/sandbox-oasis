@@ -147,6 +147,7 @@ type LaunchRequest struct {
 	TokenTTL           time.Duration
 	Identity           identity.Identity
 	ModelPolicy        *identity.ModelPolicy `json:",omitempty"`
+	UsagePolicy        *identity.UsagePolicy `json:",omitempty"`
 	TemporaryStorage   []TemporaryStorage    `json:",omitempty"`
 }
 
@@ -188,6 +189,10 @@ func (c *Client) Create(ctx context.Context, req LaunchRequest) (Worker, error) 
 }
 
 func (c *Client) launch(ctx context.Context, req LaunchRequest, createOnly bool) (Worker, error) {
+	if err := req.UsagePolicy.Validate(); err != nil {
+		return Worker{}, err
+	}
+	req.UsagePolicy = req.UsagePolicy.Clone()
 	if err := req.ModelPolicy.Validate(); err != nil {
 		return Worker{}, err
 	}
@@ -332,6 +337,9 @@ func (c *Client) launch(ctx context.Context, req LaunchRequest, createOnly bool)
 	if req.ModelPolicy != nil && !proxy.SupportsTokenModelPolicy() {
 		return Worker{}, errors.Join(fmt.Errorf("auth proxy does not support token model policy"), c.abortClaim(key, claim.Lease, ""))
 	}
+	if req.UsagePolicy != nil && !proxy.SupportsTokenUsagePolicy() {
+		return Worker{}, errors.Join(fmt.Errorf("auth proxy does not support durable execution usage limits"), c.abortClaim(key, claim.Lease, ""))
+	}
 	if proxy.IsCaseProxy() && req.Identity.Empty() {
 		return Worker{}, errors.Join(fmt.Errorf("case proxy requires a token identity"), c.abortClaim(key, claim.Lease, ""))
 	}
@@ -360,7 +368,7 @@ func (c *Client) launch(ctx context.Context, req LaunchRequest, createOnly bool)
 		ReadOnly: req.ReadOnly, ReadOnlyRootFS: req.ReadOnlyRootFS, NoGitMetadata: req.NoGitMetadata,
 		NoInternet: req.NoInternet, WatchPolling: req.WatchPolling,
 		ContainerUser: req.User, TokenTTL: int(req.TokenTTL / time.Second), Detach: true,
-		TokenIdentity: req.Identity, TokenModelPolicy: req.ModelPolicy, TemporaryStorage: req.TemporaryStorage,
+		TokenIdentity: req.Identity, TokenModelPolicy: req.ModelPolicy, TokenUsagePolicy: req.UsagePolicy, TemporaryStorage: req.TemporaryStorage,
 	}
 	for _, mount := range req.Mounts {
 		launch.Mounts = append(launch.Mounts, sandbox.MountSpec{Source: mount.Source, Target: mount.Target, ReadOnly: mount.ReadOnly})

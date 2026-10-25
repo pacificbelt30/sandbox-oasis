@@ -10,16 +10,19 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/containerd/errdefs"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/mount"
 	dockernetwork "github.com/docker/docker/api/types/network"
 	"github.com/docker/go-connections/nat"
 	"github.com/pacificbelt30/codex-dock/internal/authproxy"
 	"github.com/pacificbelt30/codex-dock/internal/engine"
 	"github.com/pacificbelt30/codex-dock/internal/workerpolicy"
+	"github.com/pacificbelt30/codex-dock/pkg/cxd/identity"
 )
 
 //go:embed testdata/network-revocation.py
@@ -54,18 +57,27 @@ func TestKataNetworkRevocation(t *testing.T) {
 		}
 	})
 	observerPort, adminPort := nat.Port("18083/tcp"), nat.Port("18081/tcp")
+	usageDirectory := t.TempDir()
+	if err := os.Chmod(usageDirectory, 0700); err != nil {
+		t.Fatal(err)
+	}
 	start := func(name string, args []string, auth bool) (string, string) {
 		t.Helper()
 		ports := nat.PortSet{observerPort: {}}
 		bindings := nat.PortMap{observerPort: {{HostIP: "127.0.0.1"}}}
+		env := []string{"CXD_KATA_NETWORK_FIXTURE=1"}
+		host := &container.HostConfig{Runtime: "runc", NetworkMode: container.NetworkMode(egress.ID), PortBindings: bindings, CapDrop: []string{"ALL"}, SecurityOpt: []string{"no-new-privileges:true"}}
 		if auth {
 			ports[adminPort] = struct{}{}
 			bindings[adminPort] = []nat.PortBinding{{HostIP: "127.0.0.1"}}
+			args = append(args, "--usage-state-dir", "/run/cxd-usage")
+			env = append(env, "OPENAI_API_KEY=sk-network-fixture-invalid", "ANTHROPIC_API_KEY=sk-ant-network-fixture-invalid")
+			host.Mounts = []mount.Mount{{Type: mount.TypeBind, Source: usageDirectory, Target: "/run/cxd-usage"}}
 		}
 		created, err := node.ContainerCreate(ctx, &container.Config{Image: fixtureImage, Cmd: args,
-			Env:    []string{"CXD_KATA_NETWORK_FIXTURE=1", "OPENAI_API_KEY=sk-network-fixture-invalid", "ANTHROPIC_API_KEY=sk-ant-network-fixture-invalid"},
+			Env: env, User: strconv.Itoa(os.Getuid()) + ":" + strconv.Itoa(os.Getgid()),
 			Labels: map[string]string{"io.codex-dock.proxy-layout": "network-acceptance"}, ExposedPorts: ports},
-			&container.HostConfig{Runtime: "runc", NetworkMode: container.NetworkMode(egress.ID), PortBindings: bindings}, nil, nil, name)
+			host, nil, nil, name)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -197,4 +209,103 @@ func TestKataNetworkRevocation(t *testing.T) {
 		t.Fatal("quarantine lost workspace:", err)
 	}
 	t.Log("PASS: real Kata token revocation and quarantine close upstream peers, preserve workspace, forbid restart and report confirmed stop correctly")
+
+	t.Run("execution-usage-persistence", func(t *testing.T) {
+		limits := &identity.UsagePolicy{MaxRequests: 2, MaxConcurrent: 1, MaxBytes: 1 << 20, MaxTokens: 20}
+		options := RunOptions{Name: prefix + "-usage", ProjectDir: t.TempDir(), Image: os.Getenv("CODEX_DOCK_KATA_TEST_IMAGE"), Runtime: RuntimeKata,
+			ContainerUser: strconv.Itoa(os.Getuid()) + ":" + strconv.Itoa(os.Getgid()), NoInternet: true, Detach: true, ExecCmd: "exec sleep infinity", TokenUsagePolicy: limits}
+		worker, err := m.RunContext(ctx, options)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() {
+			if err := m.RemoveContext(context.Background(), worker, true); err != nil {
+				t.Error(err)
+			}
+		})
+		inspect, err := node.ContainerInspect(ctx, worker)
+		if err != nil {
+			t.Fatal(err)
+		}
+		token, _ := envValue(inspect.Config.Env, "CODEX_TOKEN")
+		endpoint, _ := envValue(inspect.Config.Env, "OPENAI_BASE_URL")
+		if token == "" || endpoint == "" {
+			t.Fatal("missing proxy placeholder/endpoint")
+		}
+		probe := func(expected []int) {
+			t.Helper()
+			input, _ := json.Marshal(map[string]any{"url": endpoint, "token": token, "expected": expected})
+			script := `import sys,json,time,urllib.request,urllib.error
+v=json.load(sys.stdin)
+for expected in v['expected']:
+ for attempt in range(50):
+  r=urllib.request.Request(v['url']+'/responses',data=b'{"input":"usage-budget"}',headers={'Authorization':'Bearer '+v['token'],'Content-Type':'application/json'})
+  try:
+   with urllib.request.urlopen(r,timeout=10) as response:
+    status=response.status; response.read()
+  except urllib.error.HTTPError as e: status=e.code; e.close()
+  if status==429 and expected==200: time.sleep(.02); continue
+  break
+ assert status==expected,(status,expected)
+print('usage limits PASS')`
+			var output bytes.Buffer
+			code, err := m.Exec(ctx, worker, []string{"python3", "-c", script}, bytes.NewReader(input), &output, &output)
+			if err != nil || code != 0 {
+				t.Fatalf("usage request: exit=%d err=%v %s", code, err, &output)
+			}
+		}
+		probe([]int{200, 200, 429})
+		stats, err := proxy.UsageContext(ctx, options.Name)
+		if err != nil || stats.Requests != 2 || stats.Tokens != 10 || stats.Active != 0 || stats.Indeterminate {
+			t.Fatalf("usage snapshot: %+v %v", stats, err)
+		}
+		// A stop/start of both the actual VM and proxy must preserve the budget.
+		if err := m.StopContext(ctx, worker, 5); err != nil {
+			t.Fatal(err)
+		}
+		timeout := 5
+		if err := node.ContainerStop(ctx, authName, container.StopOptions{Timeout: &timeout}); err != nil {
+			t.Fatal(err)
+		}
+		if err := node.ContainerStart(ctx, authName, container.StartOptions{}); err != nil {
+			t.Fatal(err)
+		}
+		for attempt := 0; attempt < 100; attempt++ {
+			_, err = authproxy.NewRemoteProxy(adminURL, "http://"+authName+":18080", "network-acceptance-admin")
+			if err == nil {
+				break
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := m.StartContext(ctx, worker); err != nil {
+			t.Fatal(err)
+		}
+		probe([]int{429})
+		stats, err = proxy.UsageContext(ctx, options.Name)
+		if err != nil || stats.Requests != 2 || stats.Tokens != 10 {
+			t.Fatalf("proxy/worker restart reset budget: %+v %v", stats, err)
+		}
+		bad := options
+		bad.Name += "-forbidden-share"
+		bad.ProjectDir = usageDirectory
+		bad.TokenUsagePolicy = nil
+		if forbidden, err := m.RunContext(ctx, bad); err == nil {
+			_ = m.RemoveContext(context.Background(), forbidden, true)
+			t.Fatal("worker received writable usage authority")
+		} else if !strings.Contains(err.Error(), "usage state") {
+			t.Fatalf("share denied for unrelated reason: %v", err)
+		}
+		unsafeProxy, err := node.ContainerCreate(ctx, &container.Config{Image: fixtureImage, Labels: map[string]string{"io.codex-dock.proxy-layout": "usage-negative-fixture"}},
+			&container.HostConfig{Runtime: "runc", NetworkMode: container.NetworkMode(egress.ID), Mounts: []mount.Mount{{Type: mount.TypeBind, Source: options.ProjectDir, Target: "/run/cxd-usage"}}}, nil, nil, prefix+"-unsafe-ledger")
+		if err == nil {
+			_ = node.ContainerRemove(context.Background(), unsafeProxy.ID, container.RemoveOptions{Force: true})
+			t.Fatal("new ledger overlapped a live worker share")
+		} else if !strings.Contains(err.Error(), "usage state") {
+			t.Fatalf("ledger denied for unrelated reason: %v", err)
+		}
+		t.Log("PASS: real Kata request/token usage, denied excess request, proxy+worker restart persistence and private-ledger share denial")
+	})
 }

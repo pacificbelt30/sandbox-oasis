@@ -315,4 +315,6 @@ go build -o /var/tmp/oaiso-embedding ./examples/embedding
 - `Policy` の `Quarantined` は永続化済みの隔離要求、`QuarantinePending` は停止未確認を表します。
 - `Quarantine` のエラーを成功として扱わないでください。
 
+- 未リリースmain：`LaunchRequest.UsagePolicy`で要求数・同時数・本文量・観測tokenの上限を指定し、`Usage(ctx, workerID)`で照会できます。`CaseProxyOptions.UsageStateDir`はworkspace外の0700ディレクトリを指定。[利用上限](guides/usage-limits.md)。
+
 - 未リリースmain：`LaunchRequest.Lifecycle.ProtectMain`でメイン処理をidle回収から保護。`Heartbeat(ctx, workerID, ttl)`で0〜5分の活動通知を更新・解除できます。最大寿命は延長しません。[条件と実行例](sandbox-features.md#メイン処理と活動通知によるidle回収の防止)。

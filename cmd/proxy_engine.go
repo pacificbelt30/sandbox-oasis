@@ -40,9 +40,28 @@ func hasProfileMount(host *container.HostConfig, directory string) bool {
 // The proxy spec has one source of truth for credentials, policy, and roles.
 // Convert its structured option vector to the node DTO; no shell/CLI is run.
 func proxyConfiguration(a proxyRunArgs) (*container.Config, *container.HostConfig, error) {
+	if a.usageStateDir != "" {
+		if a.role != authproxy.RoleAuth || !filepath.IsAbs(a.usageStateDir) || filepath.Clean(a.usageStateDir) != a.usageStateDir {
+			return nil, nil, fmt.Errorf("usage state requires an absolute private auth-proxy directory")
+		}
+		if err := os.MkdirAll(a.usageStateDir, 0700); err != nil {
+			return nil, nil, err
+		}
+		info, err := os.Lstat(a.usageStateDir)
+		if err != nil {
+			return nil, nil, err
+		}
+		owner, ok := info.Sys().(*syscall.Stat_t)
+		if !ok || owner.Uid != uint32(os.Geteuid()) || !info.IsDir() || info.Mode().Perm()&0077 != 0 {
+			return nil, nil, fmt.Errorf("usage state must be owner-private (0700)")
+		}
+	}
 	args := buildProxyRunArgs(a)
 	c := &container.Config{OpenStdin: a.profileFingerprint != "", User: "0:0", Labels: map[string]string{}}
 	h := &container.HostConfig{Runtime: "runc", CapDrop: []string{"ALL"}, SecurityOpt: []string{"no-new-privileges:true"}, PortBindings: nat.PortMap{}}
+	if a.usageStateDir != "" {
+		c.User = fmt.Sprintf("%d:%d", os.Geteuid(), os.Getegid())
+	}
 	if a.brokerFile != "" {
 		if a.role != "auth" {
 			return nil, nil, fmt.Errorf("credential broker routes require auth role")
@@ -124,6 +143,10 @@ func proxyConfiguration(a proxyRunArgs) (*container.Config, *container.HostConfi
 			c.Env = append(c.Env, value)
 		case "-v":
 			parts := strings.Split(value, ":")
+			if len(parts) == 3 && parts[1] == "/run/cxd-usage" && parts[2] == "rw" && parts[0] == a.usageStateDir {
+				h.Mounts = append(h.Mounts, mount.Mount{Type: mount.TypeBind, Source: parts[0], Target: parts[1]})
+				continue
+			}
 			if len(parts) == 3 && parts[1] == "/run/cxd-admin-secret" && parts[2] == "ro" {
 				source, err := filepath.Abs(parts[0])
 				if err != nil {

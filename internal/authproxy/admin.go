@@ -31,6 +31,7 @@ func (p *Proxy) handleAdminIssue(w http.ResponseWriter, r *http.Request) {
 		TTL         int                   `json:"ttl"`
 		Identity    identity.Identity     `json:"identity"`
 		ModelPolicy *identity.ModelPolicy `json:"model_policy,omitempty"`
+		UsagePolicy *identity.UsagePolicy `json:"usage_policy,omitempty"`
 	}
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 96<<10)).Decode(&req); err != nil {
 		http.Error(w, "invalid json", http.StatusBadRequest)
@@ -43,7 +44,7 @@ func (p *Proxy) handleAdminIssue(w http.ResponseWriter, r *http.Request) {
 	if req.TTL <= 0 {
 		req.TTL = p.cfg.TokenTTL
 	}
-	t, err := p.IssueTokenWithPolicy(req.Container, req.TTL, req.Identity, req.ModelPolicy)
+	t, err := p.IssueTokenWithUsage(req.Container, req.TTL, req.Identity, req.ModelPolicy, req.UsagePolicy)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -120,6 +121,7 @@ func (p *Proxy) handleAdminMode(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = json.NewEncoder(w).Encode(map[string]bool{
 		"worker_token_auth":    true,
+		"token_usage_policy":   p.usageLedger != nil,
 		"model_authorization":  true,
 		"model_policy_active":  len(p.cfg.AllowedModels) != 0,
 		"credential_broker":    true,

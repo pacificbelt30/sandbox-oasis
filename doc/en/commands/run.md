@@ -133,6 +133,8 @@ oaiso run --profile-size small --agent codex
 | `--readiness-timeout` | 0 (effective 60s) | Hook/probe deadline |
 | `--max-lifetime` / `--idle-timeout` / `--retention` | `0` | Lifetime, idle, exit retention; durations such as `30m` or `2h`; requires `reap` |
 | `--protect-main` | `false` | Unreleased main. Protect a live primary process from idle collection; maximum lifetime still applies |
+| `--max-requests` / `--max-concurrent` | `0` | Unreleased main. Per-execution request/concurrency caps at the auth proxy |
+| `--max-transfer-bytes` / `--max-observed-tokens` | `0` | Unreleased main. Combined body-byte/observed-token caps. [Precision and conditions](../guides/usage-limits.md) |
 | `--proxy-admin-url` | `http://127.0.0.1:18081` | Host admin API |
 | `--proxy-container-url` | `http://codex-auth-proxy:18080` | Worker fixed AI routes |
 | `--http-proxy-url` | `http://codex-http-proxy:18082` | Worker general egress |

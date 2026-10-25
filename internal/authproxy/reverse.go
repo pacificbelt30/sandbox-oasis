@@ -23,6 +23,11 @@ func (p *Proxy) reverseProxy(w http.ResponseWriter, r *http.Request, stripPrefix
 	if !p.authorizeModel(w, r) {
 		return
 	}
+	w, r, finishUsage, permitted := p.meterUsage(w, r)
+	if !permitted {
+		return
+	}
+	defer finishUsage()
 	if stripPrefix == "/anthropic" {
 		if err := p.refreshAnthropicOAuthIfNeeded(r.Context()); err != nil {
 			// Do not expose upstream response bodies, tokens or store errors.
@@ -81,9 +86,12 @@ func (p *Proxy) reverseProxy(w http.ResponseWriter, r *http.Request, stripPrefix
 		return
 	}
 	inject(req.Header)
+	if budget, _ := r.Context().Value(usagePolicyKey{}).(*tokenUsage); budget != nil && budget.policy.MaxTokens > 0 {
+		req.Header.Set("Accept-Encoding", "identity")
+	}
 
 	client := p.httpClient
-	if p.modelPolicyActive(r) {
+	if budget, _ := r.Context().Value(usagePolicyKey{}).(*tokenUsage); p.modelPolicyActive(r) || budget != nil {
 		copy := *client
 		copy.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
 		client = &copy

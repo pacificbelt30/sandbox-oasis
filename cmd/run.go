@@ -82,6 +82,7 @@ func init() {
 	rootCmd.AddCommand(runCmd)
 
 	f := runCmd.Flags()
+	bindUsageFlags(runCmd)
 	f.SetInterspersed(false) // After IMAGE, flags belong to COMMAND as in docker run.
 	f.StringVar(&runOpts.Runtime, "runtime", sandbox.RuntimeKata, "Worker isolation: kata (default, requires Linux/KVM) or explicit runc compatibility mode; never falls back automatically")
 	f.StringVar(&runOpts.KataRuntime, "kata-runtime", sandbox.DefaultKataRuntime, "Kata v2 runtime registration on the dedicated containerd node")

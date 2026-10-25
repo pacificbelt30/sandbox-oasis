@@ -59,5 +59,5 @@ func applyOptionalRunDefaults(cmd *cobra.Command) error {
 	if runReadiness != "" {
 		runOpts.Environment.Readiness = []string{"sh", "-c", runReadiness}
 	}
-	return nil
+	return applyUsageRunDefaults(cmd)
 }

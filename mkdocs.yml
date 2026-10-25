@@ -51,6 +51,7 @@ nav:
           - 起動方法と対応状況: guides/agents.md
           - Claude Code: claude-code.md
       - ファイル共有とworktree: workspace.md
+      - 実行ごとの利用上限: guides/usage-limits.md
       - 認証:
           - 認証方式とプロファイル: guides/authentication.md
           - 暗号化して保存する: guides/encrypted-credentials.md
@@ -121,6 +122,7 @@ nav:
           - Agents:
               - Launch methods and support: en/guides/agents.md
               - Claude Code: en/claude-code.md
+          - Per-execution usage limits: en/guides/usage-limits.md
           - Authentication:
               - Authentication and profiles: en/guides/authentication.md
               - Encrypted storage: en/guides/encrypted-credentials.md

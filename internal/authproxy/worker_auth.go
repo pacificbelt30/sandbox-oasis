@@ -41,15 +41,23 @@ func (p *Proxy) workerRequest(r *http.Request, allowAPIKey bool) (*http.Request,
 	p.mu.RLock()
 	var lease context.Context
 	var policy *identity.ModelPolicy
+	var budget *tokenUsage
 	if rec := p.tokensByValue[token]; rec != nil && time.Now().Before(rec.ExpiresAt) && rec.context != nil && rec.context.Err() == nil && p.brokerProviderAllowed(rec.Identity.Provider, r.URL.Path) {
 		lease = rec.context
 		policy = rec.ModelPolicy
+		if rec.UsagePolicy != nil {
+			budget = &tokenUsage{key: rec.usageKey, policy: rec.UsagePolicy}
+		}
 	}
 	p.mu.RUnlock()
 	if lease == nil {
 		return nil, nil, false
 	}
-	ctx, cancel := context.WithCancel(context.WithValue(r.Context(), modelPolicyKey{}, policy))
+	parent := context.WithValue(r.Context(), modelPolicyKey{}, policy)
+	if budget != nil {
+		parent = context.WithValue(parent, usagePolicyKey{}, budget)
+	}
+	ctx, cancel := context.WithCancel(parent)
 	stop := context.AfterFunc(lease, cancel)
 	return r.WithContext(ctx), func() { stop(); cancel() }, true
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/pacificbelt30/codex-dock/internal/workeregress"
 	"github.com/pacificbelt30/codex-dock/internal/workerpolicy"
+	"github.com/pacificbelt30/codex-dock/pkg/cxd/identity"
 	"os"
 	"path/filepath"
 	"strings"
@@ -30,6 +31,10 @@ type Config struct {
 		MaxLifetime        string     `toml:"max_lifetime"`
 		IdleTimeout        string     `toml:"idle_timeout"`
 		ProtectMain        bool       `toml:"protect_main"`
+		MaxRequests        int64      `toml:"max_requests"`
+		MaxConcurrent      int64      `toml:"max_concurrent"`
+		MaxTransferBytes   int64      `toml:"max_transfer_bytes"`
+		MaxObservedTokens  int64      `toml:"max_observed_tokens"`
 		Retention          string     `toml:"retention"`
 		StartHooks         [][]string `toml:"start_hooks"`
 		Readiness          []string   `toml:"readiness"`
@@ -58,7 +63,8 @@ var projectKeys = map[string]map[string]bool{
 	"run": {
 		"image": true, "template": true, "agent": true, "model": true, "profile_size": true,
 		"approval_mode": true, "watch_polling": true,
-		"protect_main":  true,
+		"protect_main": true,
+		"max_requests": true, "max_concurrent": true, "max_transfer_bytes": true, "max_observed_tokens": true,
 		"policy_preset": true, "deny_read": true, "deny_write": true, "max_lifetime": true, "idle_timeout": true, "retention": true, "start_hooks": true, "readiness": true, "readiness_timeout": true,
 		"read_only": true, "read_only_rootfs": true, "no_git_metadata": true, "no_internet": true, "egress_allow_domains": true,
 	},
@@ -109,6 +115,9 @@ func Load(dir string) (*Config, error) {
 		return nil, fmt.Errorf("invalid project config %s: %w", path, err)
 	}
 	cfg.Root = root
+	if _, err := cfg.UsagePolicy(); err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
 	if _, _, _, err := cfg.Policies(); err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
@@ -266,4 +275,12 @@ func (c *Config) Policies() (workerpolicy.Filesystem, workerpolicy.Lifecycle, wo
 		return f, l, e, err
 	}
 	return f, l, e, e.Validate()
+}
+
+func (c *Config) UsagePolicy() (*identity.UsagePolicy, error) {
+	policy := identity.UsagePolicy{MaxRequests: c.Run.MaxRequests, MaxConcurrent: c.Run.MaxConcurrent, MaxBytes: c.Run.MaxTransferBytes, MaxTokens: c.Run.MaxObservedTokens}
+	if policy == (identity.UsagePolicy{}) {
+		return nil, nil
+	}
+	return &policy, policy.Validate()
 }

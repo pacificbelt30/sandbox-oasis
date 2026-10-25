@@ -132,6 +132,11 @@ func (p *Proxy) handleBroker(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "route scope denied", http.StatusForbidden)
 		return
 	}
+	w, r, finishUsage, allowed := p.meterUsage(w, r)
+	if !allowed {
+		return
+	}
+	defer finishUsage()
 	secret, err := route.Secret(r.Context())
 	if err != nil || secret == "" || strings.ContainsAny(secret, "\r\n") {
 		http.Error(w, "credential unavailable", http.StatusServiceUnavailable)

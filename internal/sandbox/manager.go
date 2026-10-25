@@ -136,6 +136,16 @@ func (m *Manager) RunContext(parent context.Context, opts RunOptions) (container
 		return "", err
 	}
 	opts.TemporaryStorage = storage
+	if err := opts.TokenUsagePolicy.Validate(); err != nil {
+		return "", err
+	}
+	if opts.TokenUsagePolicy != nil {
+		issuer, ok := m.proxy.(authproxy.UsageIssuer)
+		if !ok || !issuer.SupportsTokenUsagePolicy() {
+			return "", fmt.Errorf("execution usage limits require a compatible auth proxy with durable usage storage")
+		}
+		opts.TokenUsagePolicy = opts.TokenUsagePolicy.Clone()
+	}
 	if err := opts.Filesystem.Validate(); err != nil {
 		return "", err
 	}
@@ -402,6 +412,13 @@ func (m *Manager) RunContext(parent context.Context, opts RunOptions) (container
 			}
 			labels[labelPrefix+"token-model-policy"] = string(encoded)
 		}
+		if opts.TokenUsagePolicy != nil {
+			encoded, err := json.Marshal(opts.TokenUsagePolicy)
+			if err != nil {
+				return "", err
+			}
+			labels[labelPrefix+"token-usage-policy"] = string(encoded)
+		}
 		if !opts.TokenIdentity.Empty() {
 			encoded, err := json.Marshal(opts.TokenIdentity)
 			if err != nil {
@@ -481,6 +498,15 @@ func (m *Manager) RunContext(parent context.Context, opts RunOptions) (container
 	// collision must not replace or revoke another worker's token.
 	tokenIssued = m.proxy != nil && isolation != RuntimeKata
 	if isolation == RuntimeKata && m.proxy != nil {
+		if opts.TokenUsagePolicy != nil {
+			issuer, ok := m.proxy.(authproxy.UsageIssuer)
+			if !ok {
+				return "", fmt.Errorf("auth proxy does not support usage preparation")
+			}
+			if err := issuer.PrepareUsage(name, opts.TokenIdentity, opts.TokenUsagePolicy); err != nil {
+				return "", err
+			}
+		}
 		token, err := randomID(32)
 		if err != nil {
 			return "", err
@@ -1139,7 +1165,13 @@ func (m *Manager) buildEnv(name string, opts RunOptions, installScript string) (
 		token := opts.pendingPlaceholder
 		if token == "" {
 			var err error
-			if opts.TokenModelPolicy != nil {
+			if opts.TokenUsagePolicy != nil {
+				issuer, ok := m.proxy.(authproxy.UsageIssuer)
+				if !ok || !issuer.SupportsTokenUsagePolicy() {
+					return nil, fmt.Errorf("auth proxy does not support execution usage limits")
+				}
+				token, err = issuer.IssueTokenWithUsage(name, opts.TokenTTL, opts.TokenIdentity, opts.TokenModelPolicy, opts.TokenUsagePolicy)
+			} else if opts.TokenModelPolicy != nil {
 				issuer, ok := m.proxy.(authproxy.PolicyIssuer)
 				if !ok {
 					return nil, fmt.Errorf("auth proxy does not support token model policy")
@@ -1168,7 +1200,7 @@ func (m *Manager) buildEnv(name string, opts RunOptions, installScript string) (
 		wantClaude := (opts.Agent == AgentClaude || opts.Agent == AgentNone) && (opts.TokenIdentity.Provider == "" || opts.TokenIdentity.Provider == "anthropic")
 
 		if wantCodex {
-			restricted := opts.TokenModelPolicy != nil
+			restricted := opts.TokenModelPolicy != nil || opts.TokenUsagePolicy != nil
 			if source, ok := m.proxy.(interface{ ModelPolicyActive() bool }); ok {
 				restricted = restricted || source.ModelPolicyActive()
 			}

@@ -134,6 +134,8 @@ oaiso run --profile-size small --agent codex
 | `--readiness-timeout` | 0（実効60秒） | hook・probeの期限 |
 | `--max-lifetime` / `--idle-timeout` / `--retention` | `0` | 寿命・idle・終了後保持。`30m` / `2h` など。`reap` の実行が必要 |
 | `--protect-main` | `false` | 未リリースmain。メイン処理の実行中はidle回収しない。最大寿命は適用 |
+| `--max-requests` / `--max-concurrent` | `0` | 未リリースmain。実行ごとの要求数／同時数を認証Proxyで制限 |
+| `--max-transfer-bytes` / `--max-observed-tokens` | `0` | 未リリースmain。本文合計量／観測tokenで制限。[正確さと条件](../guides/usage-limits.md) |
 | `--proxy-admin-url` | `http://127.0.0.1:18081` | ホスト管理API |
 | `--proxy-container-url` | `http://codex-auth-proxy:18080` | ワーカー向け固定AI経路 |
 | `--http-proxy-url` | `http://codex-http-proxy:18082` | ワーカー向け一般egress |

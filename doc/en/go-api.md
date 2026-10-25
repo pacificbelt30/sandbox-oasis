@@ -309,4 +309,6 @@ go build -o /var/tmp/oaiso-embedding ./examples/embedding
 - `Policy.Quarantined` means the prohibition was persisted; `QuarantinePending` means its stop is unconfirmed.
 - Never treat an error from `Quarantine` as success.
 
+- Unreleased main: `LaunchRequest.UsagePolicy` specifies request/concurrency/body-byte/observed-token caps; query with `Usage(ctx, workerID)`. Set `CaseProxyOptions.UsageStateDir` to a 0700 directory outside workspaces. [Usage limits](guides/usage-limits.md).
+
 - Unreleased main: `LaunchRequest.Lifecycle.ProtectMain` protects the primary process from idle reaping. `Heartbeat(ctx, workerID, ttl)` renews/releases a 0–5 minute activity lease without extending maximum lifetime. [Contract and examples](sandbox-features.md#primary-process-protection-and-activity-leases).

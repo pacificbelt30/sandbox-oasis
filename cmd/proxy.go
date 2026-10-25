@@ -46,6 +46,7 @@ var (
 	proxyRole             string
 	proxyBlockPrivate     bool
 	proxyOAuthStateDir    string
+	proxyUsageStateDir    string
 	proxyCredentialSocket string
 	proxyCaseID           string
 	proxyAllowedModels    []string
@@ -167,6 +168,7 @@ var proxyServeCmd = &cobra.Command{
 			ForwardPolicy:        forwardPolicyRules(),
 			BlockPrivate:         proxyBlockPrivate,
 			OAuthStateDir:        proxyOAuthStateDir,
+			UsageStateDir:        proxyUsageStateDir,
 		})
 		if err != nil {
 			return err
@@ -333,6 +335,7 @@ func startProxyContainer(ctx context.Context) error {
 		adminSecretFile:    adminSecretFile,
 		blockPrivate:       true, // defense-in-depth on its fixed upstreams
 		mountCreds:         proxyCredentialSocket == "" && profile == "",
+		usageStateDir:      managedUsageDirectory(home, proxyRunName, adminSecret),
 		oauthStateDir:      stateDir,
 		credentialSocket:   proxyCredentialSocket,
 		caseID:             proxyCaseID,
@@ -577,6 +580,7 @@ func init() {
 	proxyServeCmd.Flags().StringVar(&proxyBrokerFile, "credential-routes", "", "Private JSON file of fixed credential routes")
 	proxyServeCmd.Flags().BoolVar(&proxyBlockPrivate, "block-private", false, "Refuse outbound connections to private/LAN/link-local addresses (RFC1918, 127/8, 169.254/16, ULA, CGNAT)")
 	proxyServeCmd.Flags().StringVar(&proxyOAuthStateDir, "oauth-state-dir", "", "Writable private directory for rotated OAuth credentials")
+	proxyServeCmd.Flags().StringVar(&proxyUsageStateDir, "usage-state-dir", "", "Exclusive owner-private directory for durable execution usage limits")
 	proxyServeCmd.Flags().StringVar(&proxyCredentialSocket, "credential-store-socket", "", "Private Unix socket for a host-managed credential store")
 	proxyServeCmd.Flags().StringVar(&proxyCaseID, "case-id", "", "Credential case selected for this auth proxy instance")
 	proxyServeCmd.Flags().StringVar(&proxyProfileStoreDir, "profile-store-dir", "", "Private independent profile directory (auth proxy container only)")
@@ -644,6 +648,7 @@ type proxyRunArgs struct {
 	anthropicKeyPath string // ~/.config/codex-dock/anthropic-apikey
 	claudeCredsPath  string // ~/.claude/.credentials.json
 	oauthStateDir    string // private writable host directory
+	usageStateDir    string // private durable request/usage counters; never shared with workers
 	credentialSocket string // private host Unix socket, mounted only into auth proxy
 	caseID           string
 	allowedModels    []string
@@ -724,6 +729,9 @@ func buildProxyRunArgs(a proxyRunArgs) []string {
 	if a.credentialSocket != "" {
 		args = append(args, "-v", a.credentialSocket+":/run/cxd-credential-store.sock:ro")
 	}
+	if a.usageStateDir != "" {
+		args = append(args, "-v", a.usageStateDir+":/run/cxd-usage:rw")
+	}
 
 	args = append(args, a.image, "proxy", "serve", "--listen", a.listenAddr)
 	if a.profileName != "" {
@@ -761,6 +769,9 @@ func buildProxyRunArgs(a proxyRunArgs) []string {
 	}
 	if a.oauthStateDir != "" {
 		args = append(args, "--oauth-state-dir", proxyCredentialHome+"/.local/state/codex-dock/oauth")
+	}
+	if a.usageStateDir != "" {
+		args = append(args, "--usage-state-dir", "/run/cxd-usage")
 	}
 	if a.credentialSocket != "" {
 		args = append(args, "--credential-store-socket", "/run/cxd-credential-store.sock", "--case-id", a.caseID)

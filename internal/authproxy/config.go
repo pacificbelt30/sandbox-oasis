@@ -21,6 +21,9 @@ const (
 
 // Config configures the Auth Proxy.
 type Config struct {
+	// UsageStateDir is an exclusive owner-private durable execution ledger.
+	// Limits are unavailable without it; never place this directory in workers.
+	UsageStateDir string
 	// AllowedModels restricts fixed AI routes to exact model IDs. Empty keeps
 	// legacy forwarding. Unsupported endpoints and WebSockets are denied.
 	AllowedModels        []string

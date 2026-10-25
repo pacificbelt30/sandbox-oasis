@@ -4,9 +4,11 @@
 
 | 項目 | 結果・範囲 |
 |---|---|
+| 実行ごとの利用上限（10月25日） | build・全Go race・vet・lint・MkDocs strictが成功。実Kata通信スイート54.78秒。要求上限・token加算・超過拒否・ProxyとVMの再起動後の維持・台帳共有の拒否を確認 |
 | メイン処理・活動通知 | 未リリースmain。全Go race・build・vet・lint、MkDocs strictが成功。実Kataの追加制御スイートが59.93秒で成功 |
 | 実Kataの確認内容 | node再起動後のメイン処理保護、活動通知でのidle回収防止、通知解除後のidle停止、最大寿命による実行中の停止。秘密・管理socketをVMへ追加共有しない |
 
+- 利用上限の証跡：`.kata-verification/setup-e2e/a6ee0873b45e/`。初回は旧認証モードのProxy起動で失敗。保護されたadmin設定がある場合だけ台帳を有効にして修正し、新規導入・更新・復旧も再検証。外部API推論・実課金額の確認は含みません。
 - 証跡：`.kata-verification/setup-e2e/29115c5f7a27/`、`.kata-verification/p1-existing-20261024/`。
 - [メイン処理と活動通知の使い方](sandbox-features.md#メイン処理と活動通知によるidle回収の防止)。公開配布物は更新していません。
 

@@ -71,6 +71,30 @@ func (m *Manager) restoreWorkerToken(v container.InspectResponse) error {
 			return err
 		}
 	}
+	if raw := v.Config.Labels[labelPrefix+"token-usage-policy"]; raw != "" {
+		var limits identity.UsagePolicy
+		if err := json.Unmarshal([]byte(raw), &limits); err != nil {
+			return fmt.Errorf("invalid saved usage policy")
+		}
+		if err := limits.Validate(); err != nil {
+			return err
+		}
+		var model *identity.ModelPolicy
+		if raw := v.Config.Labels[labelPrefix+"token-model-policy"]; raw != "" {
+			model = &identity.ModelPolicy{}
+			if err := json.Unmarshal([]byte(raw), model); err != nil {
+				return fmt.Errorf("invalid saved model policy")
+			}
+			if err := model.Validate(); err != nil {
+				return err
+			}
+		}
+		restorer, ok := p.(authproxy.UsageRestorer)
+		if !ok {
+			return fmt.Errorf("auth proxy does not support usage policy restore")
+		}
+		return restorer.RestoreTokenWithUsage(strings.TrimPrefix(v.Name, "/"), token, ttl, id, model, &limits)
+	}
 	if raw := v.Config.Labels[labelPrefix+"token-model-policy"]; raw != "" {
 		var policy identity.ModelPolicy
 		if err := json.Unmarshal([]byte(raw), &policy); err != nil {

@@ -248,6 +248,12 @@ func (b *Backend) load(ctx context.Context, value string) (*record, cd.Container
 	if found == nil {
 		return nil, nil, fmt.Errorf("container %s: %w", value, errdefs.ErrNotFound)
 	}
+	return b.loadOwned(ctx, found)
+}
+
+// loadOwned avoids repeating name/ID discovery when an owned container was
+// already selected from containerd's namespace-filtered inventory.
+func (b *Backend) loadOwned(ctx context.Context, found cd.Container) (*record, cd.Container, error) {
 	data, err := os.ReadFile(filepath.Join(b.path(found.ID()), "record.json"))
 	if err != nil {
 		return nil, nil, err
@@ -329,6 +335,9 @@ func (b *Backend) create(ctx context.Context, c container.Config, h container.Ho
 	}
 	if h.Runtime != "" && h.Runtime != "runc" && h.Runtime != "io.containerd.kata.v2" {
 		return "", fmt.Errorf("unknown runtime; no fallback")
+	}
+	if err := b.protectUsageMounts(ctx, &record{Config: c, Host: h}); err != nil {
+		return "", err
 	}
 	img, ic, err := b.image(ctx, c.Image)
 	if err != nil {

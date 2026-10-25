@@ -15,12 +15,15 @@ import (
 
 	"github.com/pacificbelt30/codex-dock/internal/networkpolicy"
 	"github.com/pacificbelt30/codex-dock/internal/policyevents"
+	"github.com/pacificbelt30/codex-dock/internal/usage"
 	"github.com/pacificbelt30/codex-dock/pkg/cxd/credentialstore"
 	"github.com/pacificbelt30/codex-dock/pkg/cxd/identity"
 )
 
 // Proxy is the Auth Proxy server that issues short-lived tokens to containers.
 type Proxy struct {
+	usageLedger           *usage.Ledger
+	usageBindings         map[string]string
 	rootCAs               *x509.CertPool
 	upstreamProxy         *url.URL
 	cfg                   Config
@@ -85,7 +88,22 @@ func (p *Proxy) ProfileConnectionVersion() string { return p.caseConnectionVersi
 // NewProxy creates a new Auth Proxy.
 // In OAuth mode (detected via IsOAuthAuth), credentials are loaded from
 // ~/.codex/auth.json. In API key mode, the API key is loaded as usual.
-func NewProxy(cfg Config) (*Proxy, error) {
+func NewProxy(cfg Config) (result *Proxy, initErr error) {
+	if cfg.isEgress() && cfg.UsageStateDir != "" {
+		return nil, fmt.Errorf("execution usage limits belong on the auth proxy")
+	}
+	if cfg.UsageStateDir != "" && (cfg.AdminSecret == "" || cfg.AdminListenAddr == "") {
+		return nil, fmt.Errorf("usage limits require a separate protected admin listener")
+	}
+	defer func() {
+		if result != nil && cfg.UsageStateDir != "" {
+			result.usageLedger, initErr = usage.Open(cfg.UsageStateDir)
+			if initErr != nil {
+				result.httpClient.CloseIdleConnections()
+				result = nil
+			}
+		}
+	}()
 	if cfg.ProfileName != "" && (cfg.CredentialStore == nil || cfg.BrokerOnly || cfg.isEgress()) {
 		return nil, fmt.Errorf("independent profile requires an auth-role credential store")
 	}
@@ -342,6 +360,8 @@ func (p *Proxy) Start() error {
 	adminMux.HandleFunc("/admin/revoke-run", p.handleAdminRevokeRun)
 	adminMux.HandleFunc("/admin/revoke-case", p.handleAdminRevokeCase)
 	adminMux.HandleFunc("/admin/mode", p.handleAdminMode)
+	adminMux.HandleFunc("/admin/usage", p.handleAdminUsage)
+	adminMux.HandleFunc("/admin/usage/prepare", p.handleAdminPrepareUsage)
 
 	if p.cfg.AdminListenAddr != "" {
 		// Serve /admin/* on a dedicated listener so workers cannot reach token
@@ -372,6 +392,8 @@ func (p *Proxy) Start() error {
 		mux.HandleFunc("/admin/revoke-run", p.handleAdminRevokeRun)
 		mux.HandleFunc("/admin/revoke-case", p.handleAdminRevokeCase)
 		mux.HandleFunc("/admin/mode", p.handleAdminMode)
+		mux.HandleFunc("/admin/usage", p.handleAdminUsage)
+		mux.HandleFunc("/admin/usage/prepare", p.handleAdminPrepareUsage)
 	}
 
 	// Worker-facing handler: CONNECT/absolute-form requests are handled by the
@@ -463,6 +485,9 @@ func (p *Proxy) Stop() {
 	}
 	if p.adminServer != nil {
 		_ = p.adminServer.Shutdown(ctx)
+	}
+	if p.usageLedger != nil {
+		_ = p.usageLedger.Close()
 	}
 }
 

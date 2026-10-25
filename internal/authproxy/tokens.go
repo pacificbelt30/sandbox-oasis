@@ -20,6 +20,8 @@ type tokenRecord struct {
 	IssuedAt      time.Time
 	Identity      identity.Identity
 	ModelPolicy   *identity.ModelPolicy
+	UsagePolicy   *identity.UsagePolicy
+	usageKey      string
 	context       context.Context
 	cancel        context.CancelFunc
 }
@@ -41,6 +43,10 @@ func (p *Proxy) IssueTokenWithIdentity(containerName string, ttlSec int, id iden
 }
 
 func (p *Proxy) IssueTokenWithPolicy(containerName string, ttlSec int, id identity.Identity, policy *identity.ModelPolicy) (string, error) {
+	return p.IssueTokenWithUsage(containerName, ttlSec, id, policy, nil)
+}
+
+func (p *Proxy) IssueTokenWithUsage(containerName string, ttlSec int, id identity.Identity, policy *identity.ModelPolicy, limits *identity.UsagePolicy) (string, error) {
 	if err := policy.Validate(); err != nil {
 		return "", err
 	}
@@ -58,6 +64,10 @@ func (p *Proxy) IssueTokenWithPolicy(containerName string, ttlSec int, id identi
 	rec := newTokenRecord(containerName, token, ttlSec)
 	rec.Identity = id
 	rec.ModelPolicy = policy.Clone()
+	if err := p.bindTokenUsage(rec, limits); err != nil {
+		rec.cancel()
+		return "", err
+	}
 
 	p.mu.Lock()
 	if p.caseRevoked || p.revokedRuns[id] {
@@ -66,6 +76,12 @@ func (p *Proxy) IssueTokenWithPolicy(containerName string, ttlSec int, id identi
 		return "", fmt.Errorf("credential case or run was revoked")
 	}
 	p.replaceTokenLocked(rec)
+	if rec.UsagePolicy != nil {
+		if p.usageBindings == nil {
+			p.usageBindings = make(map[string]string)
+		}
+		p.usageBindings[containerName] = rec.usageKey
+	}
 	p.mu.Unlock()
 
 	if p.cfg.Verbose {

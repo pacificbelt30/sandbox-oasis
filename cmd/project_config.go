@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/pacificbelt30/codex-dock/pkg/cxd/identity"
 	"os"
 	"path/filepath"
 	"sort"
@@ -28,6 +29,28 @@ func applyProjectRunConfig(cmd *cobra.Command, cfg *ProjectConfig) {
 		runPolicyPreset = cfg.Run.PolicyPreset
 	}
 	f, l, e, _ := cfg.Policies()
+	if limits, err := cfg.UsagePolicy(); err == nil && limits != nil {
+		if runOpts.TokenUsagePolicy == nil {
+			runOpts.TokenUsagePolicy = &identity.UsagePolicy{}
+		}
+		for _, setting := range []struct {
+			flag   string
+			value  int64
+			target *int64
+		}{
+			{"max-requests", limits.MaxRequests, &runOpts.TokenUsagePolicy.MaxRequests},
+			{"max-concurrent", limits.MaxConcurrent, &runOpts.TokenUsagePolicy.MaxConcurrent},
+			{"max-transfer-bytes", limits.MaxBytes, &runOpts.TokenUsagePolicy.MaxBytes},
+			{"max-observed-tokens", limits.MaxTokens, &runOpts.TokenUsagePolicy.MaxTokens},
+		} {
+			if !flags.Changed(setting.flag) && setting.value > 0 && (*setting.target == 0 || setting.value < *setting.target) {
+				*setting.target = setting.value
+			}
+		}
+		if *runOpts.TokenUsagePolicy == (identity.UsagePolicy{}) {
+			runOpts.TokenUsagePolicy = nil
+		}
+	}
 	if !flags.Changed("protect-main") && l.ProtectMain {
 		runOpts.Lifecycle.ProtectMain = true
 	}
