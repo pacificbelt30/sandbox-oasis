@@ -322,3 +322,7 @@ go build -o /var/tmp/oaiso-embedding ./examples/embedding
 ## 診断結果の保存
 
 - 未リリースmain：`SaveLaunchObservation`・`ReadObservations`で起動時間を保存・読出し。[保存形式・制限](guides/observability.md)を参照。保存失敗は起動結果とは別に処理してください。
+
+## disk checkpoint
+
+- 未リリースmain：`Checkpoint`・`Checkpoints`・`InspectCheckpoint`・`RestoreCheckpoint`・`RemoveCheckpoint`。[保存範囲・容量・復元条件](guides/disk-checkpoint.md)を確認してください。

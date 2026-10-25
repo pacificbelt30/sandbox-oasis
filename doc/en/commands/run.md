@@ -378,3 +378,5 @@ oaiso run --template mytool
 - [Configuration Reference](../configuration.md)
 
 - `--observe-dir PATH`: Unreleased main. Save redacted launch timings. [Diagnostics](../guides/observability.md).
+
+- `--checkpoint ID`: Unreleased main. Start a new Kata VM from a [disk checkpoint](../guides/disk-checkpoint.md), with new mounts/authentication/policies.

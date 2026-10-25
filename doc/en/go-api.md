@@ -316,3 +316,7 @@ go build -o /var/tmp/oaiso-embedding ./examples/embedding
 ## Retaining diagnostic results
 
 - Unreleased main: `SaveLaunchObservation` and `ReadObservations` save/read launch timings. See [format and limits](guides/observability.md). Handle storage failure separately from the launch result.
+
+## Disk checkpoints
+
+- Unreleased main: `Checkpoint`, `Checkpoints`, `InspectCheckpoint`, `RestoreCheckpoint`, `RemoveCheckpoint`. See [saved state, capacity and restore conditions](guides/disk-checkpoint.md).

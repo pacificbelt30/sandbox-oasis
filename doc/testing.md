@@ -1,5 +1,27 @@
 # テストと動作確認
 
+## disk checkpoint（2026-10-25）
+
+| 項目 | 結果・範囲 |
+|---|---|
+| 対象 | 未リリースmain。同じnodeの停止済みKata rootfsを保存、新規VMへ復元 |
+| 自動検査 | 除外パスとsymlink先、認証ファイルへのhard link、特殊ファイル、容量超過・取消、旧nodeへの変更拒否、runc／不適合entrypointの拒否、公開前のmetadata検査を確認 |
+| 実Kata | `TestKataDiskCheckpoint`が99.57秒で成功。稼働中の保存拒否、容量超過で未公開、node再起動後の保持、保存元の再起動・変更、新規VMのSDK／CLI復元、使用中checkpointの削除拒否を確認 |
+| 保存範囲 | `/opt`内の内容・symlinkを保持。workspace・追加共有・home・一時領域・追加除外・そのhard linkは復元されず、イメージ設定へ元の認証値をコピーしない |
+| 品質 | build・全Go race・vet・lint、配置関連Python 22試験、CLI名・help・completion、MkDocs strictが成功 |
+| 導入・更新 | 使い捨てnodeで新規導入、稼働中更新の拒否、正常更新、起動失敗の自動復旧、明示rollbackと回収が成功 |
+
+- 証跡：`.kata-verification/disk-checkpoint-20261025/`、`.kata-verification/setup-e2e/4afffeceef79/`。最初の試験は試験用admin secretの長さ、次は読み取り禁止パスの指定範囲で停止。既存の認証・path検証は維持し、試験条件を修正しました。
+- キャッシュを再利用したオフライン導入。公開配布物・共有ホストの稼働サービスは更新していません。別nodeへの転送、RAM保存、実提供元の推論・実課金、全Kataスイートの再受入は対象外です。
+- [保存範囲・容量・操作・互換性](guides/disk-checkpoint.md)。
+
+再試験は[導入・更新・復旧の準備](#新規導入更新復旧を検証する)に従い、対応する2bundle・Proxy・受入バイナリを作成します。
+
+- checkpoint用ワーカー：`deploy/kata/Dockerfile.checkpoint-fixture`を使い、現在のentrypointを含む標準イメージを`BASE_IMAGE`へ指定。使い捨てnodeの既定UID/GIDは1000です。
+- イメージアーカイブにそのワーカーを含め、`scripts/verify-setup.py --worker-image oaiso-checkpoint-worker:verification --acceptance-run '^TestKataDiskCheckpoint$'`で試験範囲を指定します。node再起動のcontrollerもこの手順で準備されます。
+- 自分の復元先ワーカーを回収してから、checkpointを削除します。試験には分離した環境を使います。
+
+
 ## 既存機能P1の強化（2026-10-24）
 
 | 項目 | 結果・範囲 |

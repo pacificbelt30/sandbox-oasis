@@ -143,7 +143,7 @@ func Serve(ctx context.Context, cfg Config, socket string, gid int) error {
 			switch req.Action {
 			case "validate":
 				err = g.Validate(ctx, req.Runtime)
-				reply.Info = NodeInfo{ProtocolVersion: 2, Profile: Profile, Endpoint: cfg.Endpoint, Stamp: g.Stamp(), Launcher: g.Launcher(), Root: cfg.CgroupRoot, SharedFSCache: "none", BuildVersion: buildinfo.Version, Capabilities: []string{"request-status-v1", "request-cleanup-v1", "resource-profiles-v1", "operator-resource-profiles-v1", "filesystem-policy-v1", "idle-activity-v1", "idle-safe-v1", "create-before-start-v1", "exec-options-v1", "background-jobs-v1", "exec-pty-resize-v1", "image-digest-v1", "worker-quarantine-v1"}, Protected: append(g.ProtectedPaths(), socket)}
+				reply.Info = NodeInfo{ProtocolVersion: 2, Profile: Profile, Endpoint: cfg.Endpoint, Stamp: g.Stamp(), Launcher: g.Launcher(), Root: cfg.CgroupRoot, SharedFSCache: "none", BuildVersion: buildinfo.Version, Capabilities: []string{"disk-checkpoint-v1", "request-status-v1", "request-cleanup-v1", "resource-profiles-v1", "operator-resource-profiles-v1", "filesystem-policy-v1", "idle-activity-v1", "idle-safe-v1", "create-before-start-v1", "exec-options-v1", "background-jobs-v1", "exec-pty-resize-v1", "image-digest-v1", "worker-quarantine-v1"}, Protected: append(g.ProtectedPaths(), socket)}
 				if g.temporaryStorage {
 					reply.Info.Capabilities = append(reply.Info.Capabilities, "bounded-tmpfs-v1")
 				}

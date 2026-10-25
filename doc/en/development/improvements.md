@@ -36,7 +36,7 @@
 |---|---|---|---|
 | P1 | Machine-readable embedding contract | Public Go resources, request IDs, states, errors and capabilities | Version mismatch, cancellation, lost response, retry and cleanup tests; no public management socket |
 | P1 | Thin Python/TypeScript SDKs | Same-host create/execute/inspect/cleanup | Preserve Go retry/authority/failure semantics; no secrets in argv/stdout |
-| P2 | Disk checkpoints | Save workspace disk state and restore into a new environment | Not RAM preservation; define mounts, concurrent writes, size, secret exclusion and restore compatibility |
+| P2 | Disk checkpoints | **Completed (Unreleased main)**. [Stopped rootfs capture/new VM restore](../guides/disk-checkpoint.md), CLI/Go API | Not RAM preservation; define mounts, concurrent writes, size, secret exclusion and restore compatibility |
 | P2 | Prestarted environments | Small benefit-assessment prototype | No unassigned credentials/user data; revalidate at allocation; require acceptable standby memory and measured ≥20% benefit |
 | P2 | Further resource controls | Connections, transfer, file descriptors and I/O limits | Distinct from existing CPU/memory/PID/body limits; preserve legitimate long streams and contain noisy workloads |
 

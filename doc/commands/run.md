@@ -481,3 +481,5 @@ oaiso run --user 1000:1000
 - [設定リファレンス](../configuration.md) — config.toml の設定項目
 
 - `--observe-dir PATH`: 未リリースmain。起動時間を秘密を除いた形式で保存。[診断の保存](../guides/observability.md)。
+
+- `--checkpoint ID`: 未リリースmain。[disk checkpoint](../guides/disk-checkpoint.md)から新しいKata VMを起動。workspace・認証・実行規則は新規設定。

@@ -229,6 +229,12 @@ func runWorker(cmd *cobra.Command, args []string) error {
 	if image != "" {
 		runOpts.Image = image
 	}
+	if selected, _ := cmd.Flags().GetString("checkpoint"); selected != "" && (image != "" || runEnvironmentLock != "") {
+		return fmt.Errorf("--checkpoint cannot be combined with a positional image or --environment-lock")
+	}
+	if err := applyCheckpointRun(cmd); err != nil {
+		return err
+	}
 	if _, _, err := sandbox.ResolveRuntime(runOpts.Runtime, runOpts.KataRuntime); err != nil {
 		return err
 	}
@@ -379,7 +385,10 @@ func runWorker(cmd *cobra.Command, args []string) error {
 
 	// Auto-build the sandbox image when it is not present locally, or when it
 	// is stale relative to its template's Dockerfile (see imageNeedsBuild).
-	needsBuild, reason, err := imageNeedsBuild(sbMgr, runOpts.Image, buildCfg)
+	needsBuild, reason := false, ""
+	if selected, _ := cmd.Flags().GetString("checkpoint"); selected == "" {
+		needsBuild, reason, err = imageNeedsBuild(sbMgr, runOpts.Image, buildCfg)
+	}
 	if err != nil {
 		return fmt.Errorf("checking image %s: %w", runOpts.Image, err)
 	}

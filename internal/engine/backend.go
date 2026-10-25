@@ -63,13 +63,15 @@ type Options struct {
 	Tools       map[string]string
 }
 type Backend struct {
-	client *cd.Client
-	opts   Options
-	mu     sync.Mutex
-	hubs   map[string]*hub
-	execs  map[string]*execution
-	ports  map[string][]net.Listener
-	closed bool
+	client        *cd.Client
+	opts          Options
+	checkpointMu  sync.Mutex
+	checkpointing map[string]bool
+	mu            sync.Mutex
+	hubs          map[string]*hub
+	execs         map[string]*execution
+	ports         map[string][]net.Listener
+	closed        bool
 }
 type record struct {
 	ID, Name                string
@@ -341,6 +343,9 @@ func (b *Backend) create(ctx context.Context, c container.Config, h container.Ho
 	}
 	img, ic, err := b.image(ctx, c.Image)
 	if err != nil {
+		return "", err
+	}
+	if err := validateCheckpointImage(ic, h.Runtime); err != nil {
 		return "", err
 	}
 	if expected := c.Labels["codex-dock.image-id"]; expected != "" && img.Target().Digest.String() != expected {
@@ -841,11 +846,15 @@ func (b *Backend) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			failure(w, err)
 			return
 		}
-		features := [][2]string{{"cxd.worker-policy", "1"}, {"cxd.idle-safe", "1"}, {"cxd.main-activity", "1"}, {"cxd.exec-options", "1"}, {"cxd.jobs", "1"}, {"cxd.quarantine", "1"}}
+		features := [][2]string{{"cxd.disk-checkpoint", "1"}, {"cxd.worker-policy", "1"}, {"cxd.idle-safe", "1"}, {"cxd.main-activity", "1"}, {"cxd.exec-options", "1"}, {"cxd.jobs", "1"}, {"cxd.quarantine", "1"}}
 		if b.opts.TemporaryStorage {
 			features = append(features, [2]string{"cxd.temporary-storage", "1"})
 		}
 		reply(w, system.Info{DriverStatus: features, OSType: "linux", CgroupDriver: "cgroupfs", CgroupVersion: "2", Runtimes: map[string]system.RuntimeWithStatus{"io.containerd.kata.v2": {Runtime: system.Runtime{Type: b.opts.Runtime}}, "runc": {Runtime: system.Runtime{Type: "io.containerd.runc.v2"}}}})
+		return
+	}
+	if path == "/checkpoints" || strings.HasPrefix(path, "/checkpoints/") {
+		b.checkpointHTTP(w, r, ctx, path)
 		return
 	}
 	if path == "/images/check" && r.Method == "GET" {
@@ -999,6 +1008,10 @@ func (b *Backend) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	rec, c, err := b.load(ctx, value)
 	if err != nil {
 		failure(w, err)
+		return
+	}
+	if b.checkpointing[rec.ID] && action != "json" {
+		failure(w, fmt.Errorf("worker checkpoint is active: %w", errdefs.ErrConflict))
 		return
 	}
 	switch action {

@@ -1,0 +1,14 @@
+# Test-only worker for TestKataDiskCheckpoint. Use a matching canonical base.
+ARG BASE_IMAGE=codex-dock:kata-guard
+FROM ${BASE_IMAGE}
+ARG FIXTURE_UID=1000
+ARG FIXTURE_GID=1000
+USER 0
+# No Claude invocation is needed in this suite. Reduce the full-disk archive;
+# setup acceptance still checks that Codex exists and entrypoint matches.
+RUN rm -rf /usr/local/lib/node_modules/@anthropic-ai /opt/oaiso-test-claude-* \
+    && mkdir -p /opt/disk-state /opt/external \
+    && printf masked-secret-must-not-copy > /opt/disk-state/masked \
+    && ln /opt/disk-state/masked /opt/disk-state/masked-alias \
+    && chown ${FIXTURE_UID}:${FIXTURE_GID} /opt/disk-state
+USER ${FIXTURE_UID}:${FIXTURE_GID}
