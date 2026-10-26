@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/pacificbelt30/codex-dock/internal/agentpolicy"
 	"github.com/pacificbelt30/codex-dock/pkg/cxd/identity"
 )
 
@@ -34,6 +35,43 @@ func TestBuildEnvDirectCodexArguments(t *testing.T) {
 		if decoded[i] != args[i] {
 			t.Errorf("argument %d = %q; want %q", i, decoded[i], args[i])
 		}
+	}
+}
+
+func TestBuildEnvAgentPolicyIsStructured(t *testing.T) {
+	m := newTestManager(&fakeProxy{endpoint: "http://codex-auth-proxy:18080", anthropic: true})
+	policy, err := agentpolicy.Resolve(agentpolicy.Empty(), "approve-for-me")
+	if err != nil {
+		t.Fatal(err)
+	}
+	env, err := m.buildEnv("policy-worker", RunOptions{Agent: AgentCodex, AgentPolicy: policy, TokenTTL: 60}, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if value, _ := envValue(env, agentpolicy.EnvProfile); value != "approve-for-me" {
+		t.Fatalf("profile = %q", value)
+	}
+	raw, ok := envValue(env, agentpolicy.EnvCodexConfig)
+	if !ok {
+		t.Fatal("Codex policy JSON missing")
+	}
+	var config agentpolicy.CodexConfig
+	if err := json.Unmarshal([]byte(raw), &config); err != nil {
+		t.Fatal(err)
+	}
+	if config.ApprovalsReviewer != "auto_review" {
+		t.Fatalf("config = %#v", config)
+	}
+	raw, ok = envValue(env, agentpolicy.EnvClaudeArgs)
+	if !ok {
+		t.Fatal("Claude policy argv missing")
+	}
+	var args []string
+	if err := json.Unmarshal([]byte(raw), &args); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Join(args, " ") != "--permission-mode auto" {
+		t.Fatalf("Claude policy argv = %q", args)
 	}
 }
 

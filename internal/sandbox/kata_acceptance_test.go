@@ -21,6 +21,7 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/go-connections/nat"
+	"github.com/pacificbelt30/codex-dock/internal/agentpolicy"
 	"github.com/pacificbelt30/codex-dock/internal/authproxy"
 	"github.com/pacificbelt30/codex-dock/internal/engine"
 	"github.com/pacificbelt30/codex-dock/internal/kataguard"
@@ -153,6 +154,59 @@ func TestKataAcceptance(t *testing.T) {
 	if err := m.CheckRuntime(ctx, RunOptions{KataRuntime: runtimeName}); err != nil {
 		t.Fatal(err)
 	}
+	t.Run("host-agent-policy", func(t *testing.T) {
+		file := agentpolicy.Empty()
+		file.Profiles["kata-policy"] = agentpolicy.Profile{
+			Extends: "approve-for-me",
+			Codex: agentpolicy.CodexSettings{
+				WebSearch:          agentpolicy.String("disabled"),
+				HistoryPersistence: agentpolicy.String("none"),
+				HistoryMaxBytes:    agentpolicy.Int64(0),
+			},
+		}
+		policy, err := agentpolicy.Resolve(file, "kata-policy")
+		if err != nil {
+			t.Fatal(err)
+		}
+		id, err := m.Run(RunOptions{
+			Name: prefix + "-agent-policy", Image: workerImage, KataRuntime: runtimeName,
+			ProjectDir: t.TempDir(), ContainerUser: fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid()),
+			NoInternet: true, AgentPolicy: policy,
+			ExecCmd: `grep -Fx 'approvals_reviewer = "auto_review"' "$HOME/.codex/config.toml" && grep -Fx 'web_search = "disabled"' "$HOME/.codex/config.toml" && grep -Fx 'history.persistence = "none"' "$HOME/.codex/config.toml" && grep -Fx 'history.max_bytes = 0' "$HOME/.codex/config.toml" && printf 'AGENT_POLICY_OK\n'`,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			if err := m.Remove(id, true); err != nil {
+				t.Error(err)
+			}
+		}()
+		select {
+		case err := <-m.Wait(id):
+			if err != nil {
+				t.Fatal(err)
+			}
+		case <-time.After(30 * time.Second):
+			t.Fatal("agent-policy worker did not exit")
+		}
+		info, err := c.ContainerInspect(ctx, id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if info.Config == nil || info.Config.Labels[labelPrefix+"agent-policy"] != "kata-policy" {
+			t.Fatalf("agent-policy label missing: %#v", info.Config)
+		}
+		logs, err := c.ContainerLogs(ctx, id, container.LogsOptions{ShowStdout: true, ShowStderr: true, Tail: "all"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		data, readErr := io.ReadAll(logs)
+		_ = logs.Close()
+		if readErr != nil || !bytes.Contains(data, []byte("AGENT_POLICY_OK")) {
+			t.Fatalf("agent-policy configuration was not applied: %q %v", data, readErr)
+		}
+	})
 	t.Run("primary-terminal-exit-and-restart", func(t *testing.T) {
 		id, err := m.Run(RunOptions{Name: prefix + "-terminal", Image: workerImage, KataRuntime: runtimeName,
 			ProjectDir: t.TempDir(), ContainerUser: fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid()),
@@ -324,6 +378,12 @@ while True:
 		}
 		if row, err := kataguard.ResolveVM(snapshot, w1); err != nil || row.State != "running" {
 			t.Fatalf("CLI VM list mismatch: %+v %v", row, err)
+		}
+		connect := exec.CommandContext(ctx, binary, "connect", "--shell", "sh", w1)
+		connect.Stdin = strings.NewReader("printf 'CONNECT_EXEC_OK\\n'\nexit\n")
+		connected, err := connect.CombinedOutput()
+		if err != nil || !bytes.Contains(connected, []byte("CONNECT_EXEC_OK")) {
+			t.Fatalf("connect CLI did not complete a separate PTY session: %v %q", err, connected)
 		}
 	}
 	t.Log("verified: VM inventory and public vm ps CLI attest host PIDs and resource envelope")

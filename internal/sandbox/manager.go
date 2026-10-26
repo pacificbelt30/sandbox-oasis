@@ -388,6 +388,9 @@ func (m *Manager) RunContext(parent context.Context, opts RunOptions) (container
 		labelRuntime:                     registration,
 		labelPrefix + "resource-profile": profile.Name,
 	}
+	if opts.AgentPolicy.Name != "" {
+		labels[labelPrefix+"agent-policy"] = opts.AgentPolicy.Name
+	}
 	if opts.RequestKey != "" {
 		if len(opts.RequestKey) != 64 || len(opts.RequestFingerprint) != 64 || len(opts.AllocationID) != 32 {
 			return "", fmt.Errorf("invalid external request identity")
@@ -994,7 +997,7 @@ func (m *Manager) InspectContext(ctx context.Context, reference string) (Worker,
 	if v.ContainerJSONBase == nil || v.Config == nil || v.Config.Labels[labelManaged] != "true" {
 		return Worker{}, fmt.Errorf("worker %q is not managed", reference)
 	}
-	w := Worker{ID: v.ID, Name: strings.TrimPrefix(v.Name, "/"), Image: v.Config.Image, Branch: v.Config.Labels[labelBranch], Task: v.Config.Labels[labelTask]}
+	w := Worker{ID: v.ID, Name: strings.TrimPrefix(v.Name, "/"), Image: v.Config.Image, Branch: v.Config.Labels[labelBranch], Task: v.Config.Labels[labelTask], AgentPolicy: v.Config.Labels[labelPrefix+"agent-policy"]}
 	if v.State != nil {
 		w.Status = v.State.Status
 		if t, err := time.Parse(time.RFC3339Nano, v.State.StartedAt); err == nil && !t.IsZero() {
@@ -1024,12 +1027,13 @@ func (m *Manager) ListContext(ctx context.Context, all bool) ([]Worker, error) {
 	workers := make([]Worker, 0, len(containers))
 	for _, c := range containers {
 		w := Worker{
-			ID:     c.ID,
-			Name:   strings.TrimPrefix(c.Names[0], "/"),
-			Status: c.State,
-			Image:  c.Image,
-			Branch: c.Labels[labelBranch],
-			Task:   c.Labels[labelTask],
+			ID:          c.ID,
+			Name:        strings.TrimPrefix(c.Names[0], "/"),
+			Status:      c.State,
+			Image:       c.Image,
+			Branch:      c.Labels[labelBranch],
+			Task:        c.Labels[labelTask],
+			AgentPolicy: c.Labels[labelPrefix+"agent-policy"],
 		}
 		if c.Created > 0 {
 			t := time.Unix(c.Created, 0)
@@ -1323,6 +1327,13 @@ func (m *Manager) buildEnv(name string, opts RunOptions, installScript string) (
 	}
 	if opts.ApprovalMode != "" && opts.ApprovalMode != ApprovalModeSuggest {
 		env = append(env, "CODEX_APPROVAL_MODE="+string(opts.ApprovalMode))
+	}
+	if opts.AgentPolicy.Name != "" {
+		policyEnv, err := opts.AgentPolicy.Environment()
+		if err != nil {
+			return nil, err
+		}
+		env = append(env, policyEnv...)
 	}
 	if opts.AgentsMD != "" {
 		env = append(env, "CODEX_AGENTS_MD="+opts.AgentsMD)

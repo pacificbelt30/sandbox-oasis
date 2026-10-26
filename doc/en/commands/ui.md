@@ -18,16 +18,24 @@ Launches a terminal UI for real-time monitoring and management of all workers.
 |---|---|
 | `↑` / `↓` | Select worker |
 | `Enter` | Fetch the selected worker's last 200 log lines |
+| `C` | Open a separate login shell; `exit` returns to this TUI |
+| `X` | Run a command and show output plus exit status |
+| `/` | Filter text or `status:` / `branch:` / `task:` / `image:` / `policy:`; prefix `!` to exclude |
+| `O` | Cycle name, status, age, branch, and policy ordering |
+| `V` | Show lifecycle and metadata changes observed while the TUI is open |
 | `S` | Stop selected worker with a 10-second grace period |
 | `D` | Force-remove selected worker |
 | `A` | Stop all running workers in the list |
 | `R` | Restart a stopped worker |
 | `E` | Fetch selected worker's proxy denial history |
 | `P` | Open proxy settings |
+| `B` | Open credential broker settings |
+| `?` / `H` | Open dashboard help |
 | `Q` | Quit; from log/denial view, return to the list |
 
 - Letter keys accept either case.
-- Stop, remove and stop-all execute without confirmation dialogs; save required artifacts first.
+- Remove and stop-all ask for confirmation; save required artifacts first.
+- Connect creates a separate exec session instead of attaching to the primary agent. Exiting the shell leaves the agent and worker running.
 - Logs and denials are fetched on opening, not followed. For live following, use `logs --follow` or `policy events --worker WORKER --follow`.
 - Authentication uses the same global settings as the CLI; [configure the profile and admin secret](../guides/authentication.md) first.
 
@@ -68,3 +76,4 @@ Saved. Recreate the desired proxies/workers explicitly to apply the new settings
 
 - [Worker Management](worker.md)
 - [`oaiso run`](run.md)
+- [Host-managed agent policies](../guides/agent-policies.md)

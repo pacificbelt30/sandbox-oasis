@@ -69,6 +69,10 @@ debug = false
 # -----------------------------------------------------------------------------
 [run]
 
+# Host-managed Codex/Claude defaults from agent-policies.toml.
+# Inspect with: oaiso agent-policy show NAME
+# agent_policy = "approve-for-me"
+
 # Agent started by a plain `oaiso run`: shell, codex, or claude.
 # Change it with `oaiso default codex` (or `oaiso default codex --local`).
 # agent = "shell"

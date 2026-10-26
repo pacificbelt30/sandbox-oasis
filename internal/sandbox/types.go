@@ -1,9 +1,11 @@
 package sandbox
 
 import (
-	"github.com/pacificbelt30/codex-dock/internal/workerpolicy"
 	"io"
 	"time"
+
+	"github.com/pacificbelt30/codex-dock/internal/agentpolicy"
+	"github.com/pacificbelt30/codex-dock/internal/workerpolicy"
 
 	"github.com/pacificbelt30/codex-dock/pkg/cxd/identity"
 )
@@ -138,6 +140,7 @@ type RunOptions struct {
 	ExecCmd            string   // run this command instead of an interactive shell; ignored when Agent is set (the agent always takes priority)
 	Task               string
 	ApprovalMode       ApprovalMode
+	AgentPolicy        agentpolicy.Effective
 	Model              string
 	WatchPolling       bool
 	ReadOnly           bool
@@ -160,14 +163,15 @@ type RunOptions struct {
 
 // Worker represents a running or stopped codex-dock container.
 type Worker struct {
-	ID         string
-	Name       string
-	Status     string
-	Image      string
-	Branch     string
-	Task       string
-	StartedAt  *time.Time
-	FinishedAt *time.Time
+	ID          string
+	Name        string
+	Status      string
+	Image       string
+	Branch      string
+	Task        string
+	AgentPolicy string
+	StartedAt   *time.Time
+	FinishedAt  *time.Time
 }
 
 // LogOptions specifies options for fetching container logs.

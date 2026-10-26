@@ -31,6 +31,43 @@ codex_sandbox_config() {
     fi
 }
 
+# Render only schema-validated keys supplied by the host policy store. The host
+# passes JSON, not TOML, and this renderer owns every output key, preventing a
+# profile value from injecting an arbitrary Codex setting or table.
+codex_policy_config() {
+    [[ -z "${OAISO_CODEX_POLICY_JSON:-}" ]] && return 0
+    python3 - <<'PYCODEXPOLICY'
+import json, os
+
+data = json.loads(os.environ["OAISO_CODEX_POLICY_JSON"])
+strings = {
+    "approvals_reviewer": "approvals_reviewer",
+    "sandbox_mode": "sandbox_mode",
+    "model_reasoning_effort": "model_reasoning_effort",
+    "model_reasoning_summary": "model_reasoning_summary",
+    "web_search": "web_search",
+    "service_tier": "service_tier",
+    "file_opener": "file_opener",
+}
+if os.environ.get("CODEX_DOCK_VERIFIED_KATA") == "1":
+    strings.pop("sandbox_mode", None)
+for source, target in strings.items():
+    value = data.get(source)
+    if value:
+        print(f"{target} = {json.dumps(value)}")
+if data.get("hide_agent_reasoning"):
+    print("hide_agent_reasoning = true")
+if data.get("allow_login_shell"):
+    print("allow_login_shell = true")
+persistence = data.get("history_persistence")
+max_bytes = data.get("history_max_bytes")
+if persistence:
+    print(f"history.persistence = {json.dumps(persistence)}")
+if isinstance(max_bytes, int) and max_bytes >= 0:
+    print(f"history.max_bytes = {max_bytes}")
+PYCODEXPOLICY
+}
+
 resolve_codex_home() {
     local candidate
     for candidate in "${HOME:-}" "/var/tmp/codex-home" "/tmp/codex-home"; do
@@ -116,6 +153,7 @@ print(json.dumps(out))
 openai_base_url = "${CODEX_AUTH_PROXY_URL}/v1"
 check_for_update_on_startup = false
 $(codex_sandbox_config)
+$(codex_policy_config)
 chatgpt_base_url = "${CODEX_AUTH_PROXY_URL}/chatgpt/"
 
 [features]
@@ -147,6 +185,7 @@ EOF
 openai_base_url = "${CODEX_AUTH_PROXY_URL}/v1"
 check_for_update_on_startup = false
 $(codex_sandbox_config)
+$(codex_policy_config)
 
 [features]
 apps = false
@@ -221,6 +260,16 @@ build_codex_args() {
 
 build_claude_args() {
     CLAUDE_ARGS=()
+    if [[ -n "${OAISO_CLAUDE_POLICY_ARGS_JSON:-}" ]]; then
+        mapfile -d '' -t CLAUDE_ARGS < <(python3 - <<'PYCLAUDEPOLICY'
+import json, os, sys
+for arg in json.loads(os.environ["OAISO_CLAUDE_POLICY_ARGS_JSON"]):
+    if not isinstance(arg, str) or "\0" in arg:
+        raise SystemExit("invalid Claude policy argument")
+    sys.stdout.write(arg + "\0")
+PYCLAUDEPOLICY
+)
+    fi
     case "${CODEX_APPROVAL_MODE:-suggest}" in
         auto-edit)        CLAUDE_ARGS+=("--permission-mode" "acceptEdits") ;;
         full-auto|danger) CLAUDE_ARGS+=("--dangerously-skip-permissions") ;;

@@ -3,11 +3,14 @@ package ui
 import (
 	"context"
 	"fmt"
+	"os"
+	"time"
+
 	"github.com/pacificbelt30/codex-dock/internal/brokersettings"
 	"github.com/pacificbelt30/codex-dock/internal/engine"
+	"github.com/pacificbelt30/codex-dock/internal/instanceux"
 	"github.com/pacificbelt30/codex-dock/internal/policyevents"
 	"github.com/pacificbelt30/codex-dock/internal/workeregress"
-	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/pacificbelt30/codex-dock/internal/network"
@@ -42,23 +45,8 @@ func RunWithOptions(cfg sandbox.ManagerConfig, configPath string) error {
 	done := make(chan struct{})
 	defer close(done)
 
-	// Header
-	header := tview.NewTextView().
-		SetDynamicColors(true).
-		SetTextAlign(tview.AlignLeft)
-
-	// Container list table
-	table := tview.NewTable().
-		SetBorders(false).
-		SetSelectable(true, false).
-		SetFixed(1, 0)
-
-	setupTableHeader(table)
-
-	// Footer / help
-	footer := tview.NewTextView().
-		SetDynamicColors(true).
-		SetText("[yellow][↑↓][white] Select  [yellow][Enter][white] Logs  [yellow][S][white] Stop  [yellow][D][white] Delete  [yellow][R][white] Restart  [yellow][A][white] Stop All  [yellow][E][white] Denials  [yellow][P][white] Proxy settings  [yellow][B][white] Broker  [yellow][Q][white] Quit")
+	views := newDashboardViews()
+	table, footer := views.table, views.footer
 	reportError := func(err error) {
 		if err != nil {
 			app.QueueUpdateDraw(func() { footer.SetText("[red]" + tview.Escape(err.Error()) + "[-]") })
@@ -71,12 +59,12 @@ func RunWithOptions(cfg sandbox.ManagerConfig, configPath string) error {
 		SetScrollable(true)
 	logView.SetMaxLines(2000)
 	logView.SetTitle(" Logs ").SetBorder(true)
+	activityView := tview.NewTextView().SetDynamicColors(true).SetScrollable(true).SetWrap(false)
+	activityView.SetTitle(" Instance activity ").SetBorder(true)
+	activityView.SetText("[gray]Changes observed while this dashboard is open appear here.[-]")
+	tracker := instanceux.NewTracker(1000)
 
-	// Layout
-	mainFlex := tview.NewFlex().SetDirection(tview.FlexRow).
-		AddItem(header, 1, 0, false).
-		AddItem(table, 0, 1, true).
-		AddItem(footer, 1, 0, false)
+	mainFlex := dashboardBody(views)
 
 	pages := tview.NewPages().
 		AddPage("main", mainFlex, true, true).
@@ -84,6 +72,9 @@ func RunWithOptions(cfg sandbox.ManagerConfig, configPath string) error {
 			AddItem(logView, 0, 1, true).
 			AddItem(tview.NewTextView().SetText("[Q] Back"), 1, 0, false),
 			true, false)
+	pages.AddPage("activity", tview.NewFlex().SetDirection(tview.FlexRow).
+		AddItem(activityView, 0, 1, true).
+		AddItem(tview.NewTextView().SetText("[Q/Esc] Back  [C] Clear"), 1, 0, false), true, false)
 
 	if configPath != "" {
 		pages.AddPage("proxy", proxySettingsPage(configPath, func() { pages.SwitchToPage("main") }), true, false)
@@ -93,6 +84,7 @@ func RunWithOptions(cfg sandbox.ManagerConfig, configPath string) error {
 		pages.AddPage("broker", brokerSettingsPage(brokerPath, func() { pages.SwitchToPage("main") }), true, false)
 	}
 
+	model := instanceux.NewModel()
 	var workers []sandbox.Worker
 
 	refreshData := func() {
@@ -101,41 +93,14 @@ func RunWithOptions(cfg sandbox.ManagerConfig, configPath string) error {
 			reportError(err)
 			return
 		}
+		events := tracker.Observe(ws, time.Now())
 		app.QueueUpdateDraw(func() {
-			workers = ws
-			// Update header
-			running := 0
-			for _, w := range workers {
-				if w.Status == "running" {
-					running++
-				}
+			for _, event := range events {
+				_, _ = fmt.Fprintln(activityView, tview.Escape(instanceux.FormatEvent(event)))
 			}
-			header.SetText(fmt.Sprintf("[green]御AgentISOlation (Oaiso)[white]  [%d workers running / %d total]", running, len(workers)))
-
-			// Update table
-			for i := table.GetRowCount() - 1; i > 0; i-- {
-				table.RemoveRow(i)
-			}
-			for i, w := range workers {
-				uptime := "-"
-				if w.StartedAt != nil {
-					d := time.Since(*w.StartedAt)
-					uptime = formatDuration(d)
-				}
-				branch := w.Branch
-				if branch == "" {
-					branch = "-"
-				}
-				task := w.Task
-				if task == "" {
-					task = "(interactive)"
-				}
-				table.SetCell(i+1, 0, tview.NewTableCell(w.Name).SetExpansion(1))
-				table.SetCell(i+1, 1, tview.NewTableCell(branch).SetExpansion(1))
-				table.SetCell(i+1, 2, tview.NewTableCell(statusIcon(w.Status)+w.Status).SetExpansion(1))
-				table.SetCell(i+1, 3, tview.NewTableCell(uptime).SetExpansion(0))
-				table.SetCell(i+1, 4, tview.NewTableCell(truncate(task, 30)).SetExpansion(2))
-			}
+			model.Replace(ws)
+			workers = append(workers[:0], model.Visible...)
+			renderDashboard(views, model, time.Now())
 		})
 	}
 
@@ -157,12 +122,115 @@ func RunWithOptions(cfg sandbox.ManagerConfig, configPath string) error {
 		}()
 	}
 
+	showMain := func() {
+		pages.SwitchToPage("main")
+		app.SetFocus(table)
+		footer.SetText(dashboardHelp(false))
+	}
+
+	showHelp := func() {
+		pages.AddAndSwitchToPage("help", helpModal(func() { pages.RemovePage("help"); showMain() }), true)
+	}
+
+	confirm := func(question string, action func()) {
+		pages.AddAndSwitchToPage("confirm", confirmationModal(question, func() {
+			pages.RemovePage("confirm")
+			showMain()
+			action()
+		}, func() { pages.RemovePage("confirm"); showMain() }), true)
+	}
+
+	connectWorker := func(worker sandbox.Worker) {
+		if worker.Status != "running" {
+			reportError(fmt.Errorf("worker %s is %s; start it with R before connecting", worker.Name, worker.Status))
+			return
+		}
+		app.Suspend(func() {
+			_, err := instanceux.Connect(context.Background(), mgr, worker.ID, instanceux.ConnectOptions{
+				Shell: "auto", WorkingDir: "/workspace", Stdin: os.Stdin, Stdout: os.Stdout, Stderr: os.Stderr,
+			})
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "oaiso connect: %v\n", err)
+			}
+		})
+		refreshData()
+	}
+
+	runCommand := func(worker sandbox.Worker) {
+		form := commandForm(worker, func(command string) {
+			pages.RemovePage("command")
+			logView.Clear()
+			pages.SwitchToPage("logs")
+			go func() {
+				writer := &tviewWriter{view: logView, app: app}
+				code, err := mgr.ExecWithOptions(context.Background(), worker.ID, sandbox.ExecOptions{
+					Argv: []string{"/bin/sh", "-lc", command}, Stdout: writer, Stderr: writer, WorkingDir: "/workspace",
+				})
+				if err != nil {
+					_, _ = fmt.Fprintf(writer, "\n[red]Exec error: %v[-]\n", err)
+					return
+				}
+				_, _ = fmt.Fprintf(writer, "\n[yellow]Exit code: %d[-]\n", code)
+			}()
+		}, func() { pages.RemovePage("command"); showMain() })
+		pages.AddAndSwitchToPage("command", centered(form, 76, 9), true)
+		app.SetFocus(form)
+	}
+
+	views.filter.SetChangedFunc(func(text string) {
+		if err := model.SetQuery(text); err != nil {
+			footer.SetText("[red]" + tview.Escape(err.Error()) + "[-]")
+			return
+		}
+		workers = append(workers[:0], model.Visible...)
+		renderDashboard(views, model, time.Now())
+	})
+	views.filter.SetDoneFunc(func(key tcell.Key) {
+		if key == tcell.KeyEscape {
+			views.filter.SetText(model.Query.Raw)
+		}
+		app.SetFocus(table)
+	})
+
+	table.SetSelectionChangedFunc(func(row, _ int) {
+		index := row - 1
+		if index >= 0 && index < len(workers) {
+			model.SelectIndex(index)
+			renderDetail(views.detail, workers[index], time.Now())
+		}
+	})
+
 	// Key handling
 	table.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		row, _ := table.GetSelection()
 		idx := row - 1 // header offset
 
 		switch event.Rune() {
+		case '/':
+			app.SetFocus(views.filter)
+			return nil
+		case '?', 'h', 'H':
+			showHelp()
+			return nil
+		case 'o', 'O':
+			model.CycleSort()
+			workers = append(workers[:0], model.Visible...)
+			renderDashboard(views, model, time.Now())
+			return nil
+		case 'v', 'V':
+			pages.SwitchToPage("activity")
+			app.SetFocus(activityView)
+			return nil
+		case 'c', 'C':
+			if idx >= 0 && idx < len(workers) {
+				connectWorker(workers[idx])
+			}
+			return nil
+		case 'x', 'X':
+			if idx >= 0 && idx < len(workers) {
+				runCommand(workers[idx])
+			}
+			return nil
 		case 'e', 'E':
 			if idx >= 0 && idx < len(workers) {
 				logView.Clear()
@@ -198,10 +266,10 @@ func RunWithOptions(cfg sandbox.ManagerConfig, configPath string) error {
 
 		case 'd', 'D':
 			if idx >= 0 && idx < len(workers) {
-				go func(w sandbox.Worker) {
-					reportError(mgr.Remove(w.ID, true))
-					refreshData()
-				}(workers[idx])
+				selected := workers[idx]
+				confirm(fmt.Sprintf("Delete %s and its managed network?", selected.Name), func() {
+					go func(w sandbox.Worker) { reportError(mgr.Remove(w.ID, true)); refreshData() }(selected)
+				})
 			}
 
 		case 'r', 'R':
@@ -215,14 +283,16 @@ func RunWithOptions(cfg sandbox.ManagerConfig, configPath string) error {
 
 		case 'a', 'A':
 			selected := append([]sandbox.Worker(nil), workers...)
-			go func() {
-				for _, w := range selected {
-					if w.Status == "running" {
-						reportError(mgr.Stop(w.ID, 10))
+			confirm("Stop every running worker shown in this dashboard?", func() {
+				go func() {
+					for _, w := range selected {
+						if w.Status == "running" {
+							reportError(mgr.Stop(w.ID, 10))
+						}
 					}
-				}
-				refreshData()
-			}()
+					refreshData()
+				}()
+			})
 		}
 
 		switch event.Key() {
@@ -237,8 +307,21 @@ func RunWithOptions(cfg sandbox.ManagerConfig, configPath string) error {
 
 	// Log page key handling
 	logView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		if event.Rune() == 'q' || event.Rune() == 'Q' {
-			pages.SwitchToPage("main")
+		if event.Rune() == 'q' || event.Rune() == 'Q' || event.Key() == tcell.KeyEscape {
+			showMain()
+			return nil
+		}
+		return event
+	})
+	activityView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Rune() == 'c' || event.Rune() == 'C' {
+			tracker.Clear()
+			activityView.SetText("[gray]Activity cleared.[-]")
+			return nil
+		}
+		if event.Rune() == 'q' || event.Rune() == 'Q' || event.Key() == tcell.KeyEscape {
+			showMain()
+			return nil
 		}
 		return event
 	})
@@ -259,15 +342,6 @@ func RunWithOptions(cfg sandbox.ManagerConfig, configPath string) error {
 	}()
 
 	return app.SetRoot(pages, true).EnableMouse(true).Run()
-}
-
-func setupTableHeader(table *tview.Table) {
-	headers := []string{"NAME", "BRANCH", "STATUS", "UPTIME", "TASK"}
-	for i, h := range headers {
-		table.SetCell(0, i, tview.NewTableCell("[::b]"+h).
-			SetSelectable(false).
-			SetTextColor(tcell.ColorYellow))
-	}
 }
 
 func statusIcon(status string) string {

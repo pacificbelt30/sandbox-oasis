@@ -1,7 +1,7 @@
 {
   "captured_at": "2026-10-22T00:40:08.534560+00:00",
   "errors": [],
-  "manifest_sha256": "aa1e47a78d9505d62b5b39b693f542124e2333d7cff09dbe5140598e667f8c22",
+  "manifest_sha256": "1ee0977690abd44da7cf425b27cc87652cd20cd8cdf92b6a4d7a8db64160a94e",
   "schema": 2,
   "sources": {
     "anthropic-sdk-count-tokens": {
@@ -2375,7 +2375,7 @@
     },
     "codex-config": {
       "artifact_sha256": "ea611ee3f12a6df314b3e49585015ec6e2ebc7c3f072ccbf63c21306a4cdb5dc",
-      "contract_sha256": "6e0b87821e489c46ddd70cbd48c87db7d5a06a4bf49596f9c39ddd0b0253330c",
+      "contract_sha256": "a72bd10be0886b9d18ed7073ebc7dd2bff5f0610566f26935bd049cd66f4e653",
       "kind": "schema",
       "source": "https://raw.githubusercontent.com/openai/codex/943c70d8d203c61404744939eb64a1261acd5d97/codex-rs/core/config.schema.json",
       "tracking_source": "https://raw.githubusercontent.com/openai/codex/main/codex-rs/core/config.schema.json",

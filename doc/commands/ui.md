@@ -18,15 +18,14 @@ oaiso ui
 
 ```text
 ┌──────────────────────────────────────────────────────────────┐
-│ 御AgentISOlation (Oaiso)  [2 workers running / 3 total]        │
+│ 御AgentISOlation  2 running / 3 total  3 shown  sort=name     │
+│ Filter:                                                       │
 ├──────────────────────────────────────────────────────────────┤
-│  NAME              BRANCH      STATUS      UPTIME  TASK       │
-│  codex-brave-atl   feature-1   ✅ running  5m      テスト作成 │
-│▶ codex-calm-bea    main        ✅ running  2m      (interactive)│
-│  codex-old-comet   feature-2   ⏹ exited   8m      完了       │
+│ NAME       STATUS   POLICY          TASK       │ Instance     │
+│ worker-a   running  approve-for-me  テスト作成 │ Status ●     │
+│ worker-b   exited   review          完了       │ Branch main  │
 ├──────────────────────────────────────────────────────────────┤
-│ [↑↓] 選択  [Enter] ログ  [S] 停止  [D] 削除  [R] 再起動        │
-│ [A] 全停止  [E] 拒否履歴  [P] Proxy設定  [Q] 終了              │
+│ [Enter] Logs [C] Connect [/] Filter [V] Activity [?] Help    │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -38,16 +37,24 @@ oaiso ui
 |---|---|
 | `↑` / `↓` | ワーカーを選択 |
 | `Enter` | 選択したワーカーの直近200行のログを取得 |
+| `C` | 選択したワーカーへ新しいlogin shellで接続。`exit`でTUIへ復帰 |
+| `X` | 選択したワーカーでコマンドを実行し、出力と終了コードを表示 |
+| `/` | 名前または `status:` / `branch:` / `task:` / `image:` / `policy:` で絞り込み。`!` は除外 |
+| `O` | 名前、状態、新旧、ブランチ、ポリシーの並び順を切り替え |
+| `V` | TUI起動中に観測した起動・停止・削除・metadata変更を表示 |
 | `S` | 選択したワーカーを停止。停止待ち10秒 |
 | `D` | 選択したワーカーを強制削除 |
 | `A` | 一覧内の実行中ワーカーをすべて停止 |
 | `R` | 停止済みワーカーを再起動 |
 | `E` | 選択したワーカーのProxy拒否履歴を取得 |
 | `P` | Proxy設定画面を開く |
+| `B` | Credential Broker設定画面を開く |
+| `?` / `H` | ヘルプを開く |
 | `Q` | UIを終了。ログ／拒否履歴画面では一覧へ戻る |
 
 - 英字キー：大文字・小文字の両方を利用可。
-- 停止・削除・全停止：確認ダイアログなしで実行。必要な成果は先に保存。
+- 削除・全停止：確認ダイアログを表示。必要な成果は先に保存。
+- `C` の接続：メインAgentへattachせず別execを作成。shell終了後もAgentとワーカーは動作を継続。
 - ログと拒否履歴：開いた時点で取得。継続追跡は `oaiso logs WORKER --follow` / `oaiso policy events --worker WORKER --follow`。
 - 認証設定：通常のCLIと同じグローバル設定。独立プロファイルと管理シークレットを[先に設定](../guides/authentication.md)。
 
@@ -88,3 +95,4 @@ Saved. Recreate the desired proxies/workers explicitly to apply the new settings
 
 - [ワーカー管理コマンド](worker.md) — ps / stop / rm / logs
 - [`oaiso run`](run.md) — 並列ワーカーの起動
+- [ホスト管理のエージェントポリシー](../guides/agent-policies.md)

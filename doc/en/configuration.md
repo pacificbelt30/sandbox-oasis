@@ -57,6 +57,17 @@ approval_mode = "suggest"
 template = "plain"
 ```
 
+### Host-managed agent policies
+
+Codex- and Claude-specific defaults can live outside repositories in owner-private `~/.config/codex-dock/agent-policies/config.toml`:
+
+```toml
+[run]
+agent_policy = "approve-for-me"
+```
+
+Use `oaiso run --agent-policy NAME` for one run or global `--agent-policy-file PATH` for another store. See [host-managed agent policies](guides/agent-policies.md) for creation, auditing, and the complete allowlist. Repository `oaiso.toml` cannot set host-only fields.
+
 - For a custom image, commit a project Dockerfile and use matching `run.image` and `build.tag` values.
 - The project root is the build context.
 - A Dockerfile using `FROM codex-dock:latest` automatically builds the bundled base image on a fresh clone.

@@ -9,7 +9,10 @@
 ## `oaiso ps`
 
 ```bash
-oaiso ps [--all]
+oaiso ps --all --filter 'status:running !policy:restricted' --sort newest --wide
+oaiso ps --all --format json --pretty
+oaiso ps --all --save-snapshot ~/.local/state/oaiso/instances.json
+oaiso ps --all --compare-snapshot ~/.local/state/oaiso/instances.json
 ```
 
 Lists running (and optionally stopped) containers.
@@ -17,9 +20,9 @@ Lists running (and optionally stopped) containers.
 Example `oaiso ps -a` output; names, elapsed times, tasks and images are illustrative:
 
 ```text
-NAME               STATUS      UPTIME  BRANCH  TASK            IMAGE
-add-tests          ✅ running  5m      -       Add unit tests  codex-dock:latest
-codex-calm-beacon  ⏹ exited   2m      main    (interactive)   codex-dock:latest
+NAME               STATUS      UPTIME  BRANCH  TASK            IMAGE              POLICY
+add-tests          ✅ running  5m      -       Add unit tests  codex-dock:latest  approve-for-me
+codex-calm-beacon  ⏹ exited   2m      main    (interactive)   codex-dock:latest  interactive
 ```
 
 - `✅ running`: executing; does not establish task success.
@@ -27,6 +30,20 @@ codex-calm-beacon  ⏹ exited   2m      main    (interactive)   codex-dock:lates
 - `BRANCH` of `-`: no managed worktree branch metadata.
 - `UPTIME`: currently elapsed time since creation; it keeps increasing after exit and does not reset on restart.
 - No workers: only column headers are displayed.
+
+Filtering supports plain text and `name:`, `status:`, `branch:`, `task:`, `image:`, `id:`, or `policy:` predicates; prefix a predicate with `!` to exclude it. Output can be table, JSON, or CSV. Snapshots are owner-private JSON and comparison reports added, removed, started, stopped, restarted, and metadata-changed workers.
+
+## `oaiso connect`
+
+```bash
+oaiso connect worker-name
+oaiso connect --start --shell zsh worker-name
+```
+
+- Opens a new PTY exec session rather than attaching to the primary agent.
+- Exiting returns to the host while the worker and agent continue.
+- A stopped worker is rejected unless `--start` is explicit.
+- `--workdir` and repeatable `--env KEY=value` are available.
 
 ---
 

@@ -62,6 +62,17 @@ approval_mode = "suggest"
 template = "plain"
 ```
 
+### ホスト管理のエージェントポリシー
+
+Codex / Claude固有の既定値は、リポジトリと分離した `~/.config/codex-dock/agent-policies/config.toml` で管理できます。
+
+```toml
+[run]
+agent_policy = "approve-for-me"
+```
+
+一時的な選択は `oaiso run --agent-policy NAME`、別の保存先はグローバルな `--agent-policy-file PATH` を使います。ポリシーの作成・監査・全項目は[ホスト管理のエージェントポリシー](guides/agent-policies.md)を参照してください。`oaiso.toml` からホスト専用項目は変更できません。
+
 - 独自環境はプロジェクト内のDockerfileを指定します。
 - ビルドコンテキストはリポジトリのルートです。
 - `FROM codex-dock:latest` を使う場合、クローン先で不足するベースイメージも先に作ります。

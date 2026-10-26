@@ -17,13 +17,21 @@ oaiso ps [OPTIONS]
 | オプション | 省略形 | デフォルト | 説明 |
 |---|---|---|---|
 | `--all` | `-a` | `false` | 停止済みのコンテナも含めて表示 |
+| `--filter` | `-f` | | 文字列または `field:value` で絞り込み |
+| `--sort` | | `name` | `name` / `status` / `newest` / `oldest` / `branch` / `policy` |
+| `--format` | | `table` | `table` / `json` / `csv` |
+| `--wide` | `-w` | `false` | 全列を省略せず表示 |
+| `--columns` | | | 表示列をカンマ区切りで選択 |
+| `--summary` | | `false` | 状態・イメージ・ポリシー別の集計を表示 |
+| `--save-snapshot` | | | 現在の状態を0600のJSONへ保存 |
+| `--compare-snapshot` | | | 保存状態との差分だけを表示 |
 
 **`oaiso ps -a` の出力例（名前・経過時間・タスク・イメージは説明用）：**
 
 ```text
-NAME               STATUS      UPTIME  BRANCH  TASK            IMAGE
-add-tests          ✅ running  5m      -       Add unit tests  codex-dock:latest
-codex-calm-beacon  ⏹ exited   2m      main    (interactive)   codex-dock:latest
+NAME               STATUS      UPTIME  BRANCH  TASK            IMAGE              POLICY
+add-tests          ✅ running  5m      -       Add unit tests  codex-dock:latest  approve-for-me
+codex-calm-beacon  ⏹ exited   2m      main    (interactive)   codex-dock:latest  interactive
 ```
 
 - `✅ running`：実行中。タスク成功の意味ではない。
@@ -31,6 +39,25 @@ codex-calm-beacon  ⏹ exited   2m      main    (interactive)   codex-dock:lates
 - `BRANCH` の `-`：worktree用のブランチ情報なし。
 - `UPTIME`：現在の実装は作成からの経過時間。終了済みでも増え、再起動でリセットしない。
 - ワーカーがない場合：列見出しだけを表示。
+
+```bash
+oaiso ps -a --filter 'status:running !policy:restricted' --sort newest --wide
+oaiso ps -a --format json --pretty
+oaiso ps -a --save-snapshot ~/.local/state/oaiso/instances.json
+oaiso ps -a --compare-snapshot ~/.local/state/oaiso/instances.json
+```
+
+## `oaiso connect` — 対話shellで接続
+
+```bash
+oaiso connect worker-name
+oaiso connect --start --shell zsh worker-name
+```
+
+- メインAgentへattachせず、新しいPTY execを作ります。
+- `exit`するとホストへ戻り、Agentとワーカーは継続します。
+- 停止済みワーカーは既定では拒否し、`--start` のときだけ先に起動します。
+- `--workdir` と反復可能な `--env KEY=value` を指定できます。
 
 ---
 

@@ -18,6 +18,7 @@
 | [`oaiso completion`](commands/completion.md) | Tab 補完スクリプトの生成 | Bash・Zsh・Fish・PowerShell |
 | [`oaiso profile`](commands/run.md#資源プロファイル) | 資源プロファイルの表示・定義JSON生成 | `--node`・`--json`・`define --pids-limit` |
 | [`oaiso default`](configuration.md#プロジェクト設定) | `oaiso run` の既定エージェントを表示・変更 | グローバル設定または `--local` |
+| [`oaiso agent-policy`](guides/agent-policies.md) | Codex / Claudeのホスト管理既定値 | list / show / create / set / diff / audit / doctor |
 | `oaiso project init/check` | プロジェクト設定の作成と検証 | [設定リファレンス](configuration.md#プロジェクト設定) |
 | [`oaiso setup`](setup.md) | ホスト導入・更新・復旧 | 計画表示 / --apply / --rollback |
 | [`oaiso login`](commands/login.md) | 独立プロファイルで認証（開発版） | API・サブスク、認証専用Kata、初回設定 |
@@ -28,6 +29,7 @@
 | [`oaiso vm`](vm.md) | Kata VMの照合と管理 | ps / inspect / start / stop / rm / prune |
 | [`oaiso start`](commands/worker.md) | 停止済みワーカーの再起動 | 同じID・認証の復元 |
 | [`oaiso exec`](commands/worker.md#oaiso-exec--既存ワーカーでの実行) | 既存ワーカーでコマンドを実行 | `--timeout`・`-i`・`--json` |
+| [`oaiso connect`](commands/worker.md#oaiso-connect--対話shellで接続) | 既存ワーカーへ別PTYで接続 | `--start`・`--shell`・`--workdir` |
 | [`oaiso wait`](commands/worker.md#oaiso-wait--終了待ち) | ワーカーの終了を待つ | 終了コード・`--timeout`・`--json` |
 | [`oaiso proxy`](commands/proxy.md) | Auth Proxy の管理 | build / run / serve / stop / rm |
 | [`oaiso ps`](commands/worker.md#oaiso-ps--ワーカー一覧) | ワーカー一覧 | 実行中コンテナの表示 |
@@ -65,6 +67,7 @@
 | `--config` | | `~/.config/codex-dock/config.toml` | 設定ファイルのパス |
 | `--auth-profile` | | 未選択 | 独立プロファイル名。ホスト認証へfallbackしない |
 | `--auth-profile-dir` | | `~/.config/codex-dock/profiles` | プロファイル保存root |
+| `--agent-policy-file` | | `~/.config/codex-dock/agent-policies/config.toml` | ホスト管理のエージェント既定値 |
 | `--help` | `-h` | | ヘルプ。`codex` / `claude` では公式CLI側へ渡る |
 | `--version` | | | ルートの `oaiso --version` で製品の版を表示 |
 

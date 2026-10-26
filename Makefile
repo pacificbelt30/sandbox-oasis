@@ -19,7 +19,7 @@ TEMPLATES_DIR := $(CONFIG_DIR)/templates
 VERSION     ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 LDFLAGS     := -ldflags "-X $(MODULE)/internal/buildinfo.Version=$(VERSION)"
 
-.PHONY: all build node-bundle worker-guard io-logger install install-config install-templates install-all image proxy-image docker proxy-docker uninstall clean test security-fuzz contracts-check kata-e2e kata-api-e2e lint vet tidy help
+.PHONY: all build node-bundle worker-guard io-logger install install-config install-templates install-all image proxy-image docker proxy-docker uninstall clean test security-fuzz contracts-check kata-e2e kata-api-e2e lint vet tidy code-metrics help
 
 ## all: build binary and OCI images
 all: build image proxy-image
@@ -157,6 +157,10 @@ vet:
 ## tidy: tidy go modules
 tidy:
 	go mod tidy
+
+## code-metrics: require 50,000 tracked production code lines (excludes blanks, comments, docs and tests)
+code-metrics:
+	$(UV_RUN) python scripts/code-metrics.py --include-untracked --minimum 50000
 
 # Cross-compilation targets (mirrors CI)
 build-darwin-arm64:

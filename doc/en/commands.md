@@ -18,6 +18,7 @@
 | [`oaiso completion`](commands/completion.md) | Generate Tab completion scripts | Bash, Zsh, Fish, PowerShell |
 | [`oaiso profile`](commands/run.md#resource-profiles) | Inspect profiles or generate definition JSON | `--node`, `--json`, `define --pids-limit` |
 | [`oaiso default`](configuration.md#project-settings) | Show or change the agent started by `oaiso run` | Global config or `--local` |
+| [`oaiso agent-policy`](guides/agent-policies.md) | Host-managed Codex and Claude defaults | list / show / create / set / diff / audit / doctor |
 | `oaiso project init/check` | Create and validate repository-local settings | [Configuration](configuration.md#project-settings) |
 | [`oaiso setup`](../setup.md) | Install, update or restore the node | Plan, --apply, --rollback (Japanese guide) |
 | [`oaiso login`](commands/login.md) | Independent login (development) | API/subscription, dedicated Kata, initial configuration |
@@ -28,6 +29,7 @@
 | [`oaiso vm`](../vm.md) | Reconcile and manage Kata VMs | ps / inspect / start / stop / rm / prune |
 | [`oaiso start`](commands/worker.md) | Restart retained worker | Same ID, restored authentication |
 | [`oaiso exec`](commands/worker.md) | Run a command in an existing worker | Timeout, stdin, JSON result |
+| [`oaiso connect`](commands/worker.md#oaiso-connect) | Open a separate PTY in a worker | `--start`, `--shell`, `--workdir` |
 | [`oaiso wait`](commands/worker.md) | Wait for a worker to exit | Exit code, timeout, JSON result |
 | [`oaiso proxy`](commands/proxy.md) | Manage Auth Proxy | build / run / serve / stop / rm |
 | [`oaiso ps`](commands/worker.md#oaiso-ps) | List workers | Show running containers |
@@ -65,6 +67,7 @@
 | `--config` | | `~/.config/codex-dock/config.toml` | Config file path |
 | `--auth-profile` | | Unselected | Independent profile; never falls back to host credentials |
 | `--auth-profile-dir` | | `~/.config/codex-dock/profiles` | Profile storage root |
+| `--agent-policy-file` | | `~/.config/codex-dock/agent-policies/config.toml` | Host-managed agent defaults |
 | `--help` | `-h` | | Help; forwarded to the official CLI by `codex` and `claude` |
 | `--version` | | | Product version through root `oaiso --version` |
 

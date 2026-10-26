@@ -49,6 +49,7 @@ nav:
       - 導入から初回起動: guides/first-run.md
       - エージェント:
           - 起動方法と対応状況: guides/agents.md
+          - ホスト管理の既定値: guides/agent-policies.md
           - Claude Code: claude-code.md
       - ファイル共有とworktree: workspace.md
       - 実行ごとの利用上限: guides/usage-limits.md
@@ -134,6 +135,7 @@ nav:
           - Installation to first run: en/guides/first-run.md
           - Agents:
               - Launch methods and support: en/guides/agents.md
+              - Host-managed defaults: en/guides/agent-policies.md
               - Claude Code: en/claude-code.md
           - Per-execution usage limits: en/guides/usage-limits.md
           - Connection, bandwidth, FD and I/O limits: en/guides/resource-limits.md

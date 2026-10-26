@@ -111,6 +111,7 @@ func init() {
   full-auto Codex: --ask-for-approval never; Claude: skip permissions
   danger    bypass agent approvals and Codex's inner sandbox
             The worker runtime and host restrictions remain enforced.`)
+	f.StringVar(&agentPolicyName, "agent-policy", "", "Host-managed agent policy (default: selected policy, normally interactive)")
 	f.BoolVar(&fullAutoFlag, "full-auto", false, "Deprecated: use --approval-mode full-auto")
 	if err := f.MarkDeprecated("full-auto", "use --approval-mode full-auto instead"); err != nil {
 		panic(err)
@@ -171,6 +172,7 @@ func init() {
 	registerCompletion(runCmd, "agent", cobra.FixedCompletions([]cobra.Completion{"shell", "codex", "claude"}, cobra.ShellCompDirectiveNoFileComp))
 	registerCompletion(runCmd, "runtime", cobra.FixedCompletions([]cobra.Completion{"kata", "runc"}, cobra.ShellCompDirectiveNoFileComp))
 	registerCompletion(runCmd, "approval-mode", cobra.FixedCompletions([]cobra.Completion{"suggest", "auto-edit", "full-auto", "danger"}, cobra.ShellCompDirectiveNoFileComp))
+	registerCompletion(runCmd, "agent-policy", completeAgentPolicies)
 	registerCompletion(runCmd, "shell-type", cobra.FixedCompletions([]cobra.Completion{"bash", "zsh"}, cobra.ShellCompDirectiveNoFileComp))
 	registerCompletion(runCmd, "user", cobra.FixedCompletions([]cobra.Completion{"current", "codex", "dir"}, cobra.ShellCompDirectiveNoFileComp))
 	registerCompletion(runCmd, "template", completeTemplates)
@@ -185,6 +187,9 @@ func runWorker(cmd *cobra.Command, args []string) error {
 	}
 	projectCfg, err := loadProjectConfig(projectDir)
 	if err != nil {
+		return err
+	}
+	if err := applyAgentPolicyDefaults(cmd); err != nil {
 		return err
 	}
 	applyRunConfigDefaults(cmd)
@@ -423,6 +428,25 @@ func runWorker(cmd *cobra.Command, args []string) error {
 	}
 
 	return runSingle(sbMgr, sigCh)
+}
+
+func applyAgentPolicyDefaults(cmd *cobra.Command) error {
+	effective, err := resolveHostAgentPolicy()
+	if err != nil {
+		return fmt.Errorf("loading host agent policy: %w", err)
+	}
+	runOpts.AgentPolicy = effective
+	flags := cmd.Flags()
+	if !runOpts.DirectAgent && !flags.Changed("agent") && effective.Agent != "" {
+		agentFlag = effective.Agent
+	}
+	if !flags.Changed("model") && effective.Model != "" {
+		runOpts.Model = effective.Model
+	}
+	if !flags.Changed("approval-mode") && effective.ApprovalMode != "" {
+		approvalModeFlag = effective.ApprovalMode
+	}
+	return nil
 }
 
 func projectBuildConfigForRun(cmd *cobra.Command, cfg *ProjectConfig) *ProjectConfig {

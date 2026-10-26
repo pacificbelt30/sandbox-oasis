@@ -25,7 +25,18 @@
         "#/properties/features/properties/enable_request_compression",
         "#/properties/features/properties/responses_websockets",
         "#/properties/features/properties/responses_websockets_v2",
-        "#/properties/chatgpt_base_url"
+        "#/properties/chatgpt_base_url",
+        "#/properties/approval_policy",
+        "#/properties/approvals_reviewer",
+        "#/properties/sandbox_mode",
+        "#/properties/model_reasoning_effort",
+        "#/properties/model_reasoning_summary",
+        "#/properties/web_search",
+        "#/properties/service_tier",
+        "#/properties/history",
+        "#/properties/file_opener",
+        "#/properties/hide_agent_reasoning",
+        "#/properties/allow_login_shell"
       ]
     },
     {

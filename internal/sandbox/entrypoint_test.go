@@ -147,6 +147,52 @@ func TestDirectCodexUsesKataSandboxConfigAsDefault(t *testing.T) {
 	}
 }
 
+func TestEntrypointRendersAllowlistedCodexPolicy(t *testing.T) {
+	entrypoint, err := os.ReadFile("../../docker/sandbox/entrypoint.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	prefix, _, ok := strings.Cut(string(entrypoint), "# ── Package installation")
+	if !ok {
+		t.Fatal("could not isolate policy renderer")
+	}
+	command := exec.Command("bash", "-c", prefix+"\ncodex_policy_config\n")
+	command.Env = []string{
+		"PATH=/usr/bin:/bin",
+		`OAISO_CODEX_POLICY_JSON={"approvals_reviewer":"auto_review","web_search":"disabled","history_persistence":"none","history_max_bytes":4096,"unknown":"injected"}`,
+	}
+	output, err := command.Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(output)
+	for _, want := range []string{`approvals_reviewer = "auto_review"`, `web_search = "disabled"`, `history.persistence = "none"`, `history.max_bytes = 4096`} {
+		if !strings.Contains(text, want) {
+			t.Errorf("policy output missing %q: %s", want, text)
+		}
+	}
+	if strings.Contains(text, "unknown") || strings.Contains(text, "injected") {
+		t.Fatalf("unknown policy key escaped allowlist: %s", text)
+	}
+}
+
+func TestEntrypointVerifiedKataOverridesPolicySandbox(t *testing.T) {
+	entrypoint, err := os.ReadFile("../../docker/sandbox/entrypoint.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	prefix, _, _ := strings.Cut(string(entrypoint), "# ── Package installation")
+	command := exec.Command("bash", "-c", prefix+"\ncodex_sandbox_config\ncodex_policy_config\n")
+	command.Env = []string{"PATH=/usr/bin:/bin", "CODEX_DOCK_VERIFIED_KATA=1", `OAISO_CODEX_POLICY_JSON={"sandbox_mode":"read-only"}`}
+	output, err := command.Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if text := string(output); strings.Count(text, "sandbox_mode") != 1 || !strings.Contains(text, `danger-full-access`) {
+		t.Fatalf("verified Kata sandbox output = %q", text)
+	}
+}
+
 func TestEntrypointDirectClaudePreservesArgumentsAndApprovesOnlyPlaceholder(t *testing.T) {
 	source, err := os.ReadFile("../../docker/sandbox/entrypoint.sh")
 	if err != nil {
