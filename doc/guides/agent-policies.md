@@ -2,7 +2,7 @@
 
 > **日本語** | [English](../en/guides/agent-policies.md)
 
-利用可能：**未リリース（main）**。
+利用可能：**v0.0.6以降**。
 
 Codex / Claude Code の承認、推論、履歴などの既定値をホスト側でまとめて管理できます。ポリシーは `~/.config/codex-dock/agent-policies/config.toml` に `0600` で保存され、リポジトリからは変更できません。
 

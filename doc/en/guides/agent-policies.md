@@ -2,7 +2,7 @@
 
 > [日本語](../../guides/agent-policies.md) | **English**
 
-Available: **unreleased (`main`)**.
+Available: **v0.0.6 and later**.
 
 Oaiso can keep Codex and Claude Code defaults for approvals, reasoning, history, and related behavior on the host. Policies live in owner-private `~/.config/codex-dock/agent-policies/config.toml`; repositories cannot change host-only fields.
 

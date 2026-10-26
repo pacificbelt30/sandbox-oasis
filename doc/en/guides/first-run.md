@@ -16,7 +16,7 @@ curl -fsSL https://github.com/pacificbelt30/sandbox-oasis/releases/latest/downlo
 
 - No Go, Make or source checkout is required. The script prepares uv/Python.
 - Setup also installs missing D-Bus, GNOME Keyring and `secret-tool` dependencies.
-- To pin the release, use the [v0.0.5 installation example](../installation.md#download-and-review-a-pinned-release).
+- To pin the release, use the [v0.0.6 installation example](../installation.md#download-and-review-a-pinned-release).
 - For main source builds, see the [toolchain guide](../development/toolchain.md) and [source installation](../../setup.md).
 
 ## 2. Log in again and check the host

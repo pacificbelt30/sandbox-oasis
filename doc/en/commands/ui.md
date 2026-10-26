@@ -14,6 +14,8 @@ Launches a terminal UI for real-time monitoring and management of all workers.
 
 ## Key Bindings
 
+The `C`, `X`, `/`, `O`, and `V` instance actions are available in v0.0.6 and later.
+
 | Key | Action on the worker list |
 |---|---|
 | `↑` / `↓` | Select worker |

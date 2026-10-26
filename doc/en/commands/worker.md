@@ -16,6 +16,7 @@ oaiso ps --all --compare-snapshot ~/.local/state/oaiso/instances.json
 ```
 
 Lists running (and optionally stopped) containers.
+Filtering, ordering, structured output, and snapshot comparison are available in v0.0.6 and later.
 
 Example `oaiso ps -a` output; names, elapsed times, tasks and images are illustrative:
 
@@ -34,6 +35,8 @@ codex-calm-beacon  ⏹ exited   2m      main    (interactive)   codex-dock:lates
 Filtering supports plain text and `name:`, `status:`, `branch:`, `task:`, `image:`, `id:`, or `policy:` predicates; prefix a predicate with `!` to exclude it. Output can be table, JSON, or CSV. Snapshots are owner-private JSON and comparison reports added, removed, started, stopped, restarted, and metadata-changed workers.
 
 ## `oaiso connect`
+
+Available: **v0.0.6 and later**.
 
 ```bash
 oaiso connect worker-name

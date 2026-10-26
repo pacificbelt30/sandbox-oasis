@@ -9,6 +9,7 @@
 ## `oaiso ps` — ワーカー一覧
 
 実行中のコンテナを一覧表示します。
+絞り込み・並び替え・構造化出力・snapshot比較はv0.0.6以降で利用できます。
 
 ```bash
 oaiso ps [OPTIONS]
@@ -48,6 +49,8 @@ oaiso ps -a --compare-snapshot ~/.local/state/oaiso/instances.json
 ```
 
 ## `oaiso connect` — 対話shellで接続
+
+利用可能：**v0.0.6以降**。
 
 ```bash
 oaiso connect worker-name
