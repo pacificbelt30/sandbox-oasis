@@ -1171,6 +1171,7 @@ func (m *Manager) buildEnv(name string, opts RunOptions, installScript string) (
 	env := []string{
 		"CODEX_DOCK_VERIFIED_KATA=0",
 		"CODEX_SANDBOX=1",
+		"TERM=xterm-256color",
 		"DOCK_AGENT=" + string(opts.Agent),
 		"DOCK_SHELL=" + string(shellType),
 	}

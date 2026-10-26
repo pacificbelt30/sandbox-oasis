@@ -38,6 +38,16 @@ func TestBuildEnvDirectCodexArguments(t *testing.T) {
 	}
 }
 
+func TestBuildEnvDeclaresInteractiveTerminalCapabilities(t *testing.T) {
+	env, err := (&Manager{}).buildEnv("terminal", RunOptions{Agent: AgentNone}, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if value, ok := envValue(env, "TERM"); !ok || value != "xterm-256color" {
+		t.Fatalf("TERM = %q, %t; want xterm-256color", value, ok)
+	}
+}
+
 func TestBuildEnvAgentPolicyIsStructured(t *testing.T) {
 	m := newTestManager(&fakeProxy{endpoint: "http://codex-auth-proxy:18080", anthropic: true})
 	policy, err := agentpolicy.Resolve(agentpolicy.Empty(), "approve-for-me")

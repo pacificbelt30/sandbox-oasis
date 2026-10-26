@@ -385,8 +385,25 @@ while True:
 		if err != nil || !bytes.Contains(connected, []byte("CONNECT_EXEC_OK")) {
 			t.Fatalf("connect CLI did not complete a separate PTY session: %v %q", err, connected)
 		}
+		probe := exec.CommandContext(ctx, "python3", "-c", connectTerminalProbe, binary, w1)
+		terminal, err := probe.CombinedOutput()
+		if err != nil {
+			t.Fatalf("connect interactive terminal probe: %v %q", err, terminal)
+		}
+		for _, marker := range [][]byte{
+			[]byte("KEYS_1b1b5b41031a09"),
+			[]byte("SIZE_91x33"),
+			[]byte("\x1b[1;38;5;196mANSI_RED_BOLD\x1b[0m"),
+			[]byte("UNICODE_装飾_┌─┐_✓"),
+			[]byte("TERM_xterm-256color"),
+		} {
+			if !bytes.Contains(terminal, marker) {
+				t.Fatalf("connect terminal output lost marker %q: %q", marker, terminal)
+			}
+		}
+		t.Log("verified connect terminal bytes: Esc=1b Up=1b5b41 Ctrl-C=03 Ctrl-Z=1a Tab=09, size=91x33, ANSI SGR=1;38;5;196, Unicode preserved, TERM=xterm-256color")
 	}
-	t.Log("verified: VM inventory and public vm ps CLI attest host PIDs and resource envelope")
+	t.Log("verified: VM inventory, public CLI, raw special keys, PTY size, ANSI styling and Unicode output")
 	guestBootID := strings.TrimSpace(kataExec(t, ctx, c, w1, false, []string{"cat", "/proc/sys/kernel/random/boot_id"}))
 	if guestBootID == "" || guestBootID == hostBootID {
 		t.Fatal("worker shares the host kernel boot ID; VM boundary not established")
@@ -621,8 +638,71 @@ while True:
 		t.Fatal(err)
 	}
 	t.Log("verified: vm stop/start/rm, stopped-worker prune protection, orphan discovery and exact allocation recovery")
-	t.Log("PASS: guest kernel isolation, real proxy/token setup, CLI binaries, workspace/Git/extra mounts, PTY, parallel network separation, host/admin denial, no-internet and stop/restart/removal. External AI inference and interactive keyboard shortcuts are separate manual checks.")
+	t.Log("PASS: guest kernel isolation, real proxy/token setup, CLI binaries, workspace/Git/extra mounts, PTY special-key bytes/resize/ANSI/Unicode, parallel network separation, host/admin denial, no-internet and stop/restart/removal. External AI inference and physical terminal rendering are separate manual checks.")
 }
+
+const connectTerminalProbe = `import base64
+import fcntl
+import os
+import pty
+import select
+import struct
+import subprocess
+import sys
+import termios
+import time
+
+guest = '''import os, termios, tty
+previous = termios.tcgetattr(0)
+try:
+    tty.setraw(0)
+    os.write(1, b"PROBE_READY" + bytes([10]))
+    data = b""
+    while len(data) < 7:
+        data += os.read(0, 7 - len(data))
+finally:
+    termios.tcsetattr(0, termios.TCSADRAIN, previous)
+size = os.get_terminal_size(0)
+os.write(1, bytes.fromhex("1b5b313b33383b353b3139366d") + b"ANSI_RED_BOLD" + bytes.fromhex("1b5b306d0a"))
+os.write(1, "UNICODE_装飾_┌─┐_✓".encode() + bytes([10]))
+os.write(1, ("KEYS_" + data.hex() + " SIZE_%dx%d TERM_%s" % (size.columns, size.lines, os.environ.get("TERM", ""))).encode() + bytes([10]))
+'''
+encoded = base64.b64encode(guest.encode()).decode()
+master, slave = pty.openpty()
+fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 33, 91, 0, 0))
+process = subprocess.Popen([sys.argv[1], "connect", "--shell", "sh", sys.argv[2]], stdin=slave, stdout=slave, stderr=slave, close_fds=True)
+os.close(slave)
+output = bytearray()
+deadline = time.monotonic() + 20
+def collect_until(marker):
+    while time.monotonic() < deadline and marker not in output:
+        readable, _, _ = select.select([master], [], [], 0.2)
+        if readable:
+            try:
+                output.extend(os.read(master, 65536))
+            except OSError:
+                break
+try:
+    time.sleep(0.5)
+    command = "python3 -c \"import base64;exec(base64.b64decode('%s'))\"\n" % encoded
+    os.write(master, command.encode())
+    collect_until(b"PROBE_READY")
+    if b"PROBE_READY" not in output:
+        raise RuntimeError("guest terminal did not enter raw mode")
+    os.write(master, bytes.fromhex("1b1b5b41031a09"))
+    collect_until(b"KEYS_1b1b5b41031a09")
+    os.write(master, b"exit" + bytes([13]))
+    process.wait(timeout=10)
+finally:
+    if process.poll() is None:
+        process.kill()
+        process.wait()
+    os.close(master)
+    sys.stdout.buffer.write(output)
+required = [b"KEYS_1b1b5b41031a09", b"SIZE_91x33", bytes.fromhex("1b5b313b33383b353b3139366d") + b"ANSI_RED_BOLD" + bytes.fromhex("1b5b306d"), "UNICODE_装飾_┌─┐_✓".encode(), b"TERM_xterm-256color"]
+if process.returncode != 0 or any(marker not in output for marker in required):
+    raise SystemExit(1)
+`
 
 func validateNamespaceReplacement(data []byte, cid string) error {
 	type namespaceIdentity struct {

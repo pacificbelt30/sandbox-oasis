@@ -71,11 +71,34 @@ func (m *Manager) ExecWithOptions(ctx context.Context, name string, opts ExecOpt
 			m.cancelExecution(created.ID)
 		}
 	}()
+	localTTY, err := openLocalTerminal(stdin, opts.TTY, func(width, height uint) error {
+		return m.cli.ContainerExecResize(ctx, created.ID, container.ResizeOptions{Width: width, Height: height})
+	})
+	if err != nil {
+		return 0, err
+	}
+	var terminalInputDone chan struct{}
+	if localTTY != nil {
+		terminalInputDone = make(chan struct{})
+		defer func() {
+			_ = localTTY.Close()
+			stream.Close()
+			<-terminalInputDone
+		}()
+	}
 
 	stop := context.AfterFunc(ctx, stream.Close)
 	defer stop()
 	if stdin != nil {
-		go func() { _, _ = io.Copy(stream.Conn, stdin); _ = stream.CloseWrite() }()
+		go func() {
+			if terminalInputDone != nil {
+				defer close(terminalInputDone)
+				_ = localTTY.copyTo(ctx, stream.Conn)
+			} else {
+				_, _ = io.Copy(stream.Conn, stdin)
+			}
+			_ = stream.CloseWrite()
+		}()
 	}
 	if stdout == nil {
 		stdout = io.Discard
