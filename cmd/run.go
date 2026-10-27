@@ -135,6 +135,7 @@ func init() {
 	f.StringVar(&runOpts.CloneDir, "clone-dir", "", "Create an independent local clone at a new absolute directory; retained for recovery")
 	f.BoolVar(&runOpts.ReadOnly, "read-only", false, "Mount project as read-only")
 	f.BoolVar(&runOpts.ReadOnlyRootFS, "read-only-rootfs", false, "Make the image rootfs read-only; use tmpfs for temporary files and agent HOME")
+	f.StringVar(&runOpts.AgentStateSize, "agent-state-size", "", "Private Codex SQLite disk for new writable Kata workers: auto (512MiB), off, or 64MiB–8GiB")
 	f.BoolVar(&runOpts.NoGitMetadata, "no-git-metadata", false, "Do not automatically share linked worktree Git metadata with the worker")
 	f.StringArrayVar(&mountFlags, "mount", nil, `Additional host directory to bind-mount into the container (repeatable).
   Format: <host-path>:<container-path>[:ro|rw]
@@ -763,6 +764,9 @@ func applyRunConfigDefaults(cmd *cobra.Command) {
 	}
 	if !flags.Changed("read-only-rootfs") && viper.IsSet("run.read_only_rootfs") {
 		runOpts.ReadOnlyRootFS = viper.GetBool("run.read_only_rootfs")
+	}
+	if !flags.Changed("agent-state-size") && viper.IsSet("run.agent_state_size") {
+		runOpts.AgentStateSize = viper.GetString("run.agent_state_size")
 	}
 	if !flags.Changed("no-git-metadata") && viper.IsSet("run.no_git_metadata") {
 		runOpts.NoGitMetadata = viper.GetBool("run.no_git_metadata")

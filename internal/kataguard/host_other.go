@@ -19,6 +19,7 @@ type Guard struct {
 	manifest         Manifest
 	profiles         []ResourceProfile
 	temporaryStorage bool
+	agentState       bool
 }
 
 func trustedOwner(info os.FileInfo) bool { return false }

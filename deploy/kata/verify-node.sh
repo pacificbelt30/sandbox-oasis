@@ -173,7 +173,7 @@ if [[ -x /acceptance.test ]]; then
   CODEX_DOCK_RESOURCE_WORKSPACE=/evidence/resource-workspaces \
   CODEX_DOCK_KATA_OWNER_FIXTURE=/home/kata-test/owner-fixture/project \
   CODEX_DOCK_NODE_RESTART_REQUEST_DIR=/run/setup-node-restart \
-  /acceptance.test -test.run "${CODEX_DOCK_KATA_ACCEPTANCE_RUN:-^TestKata(Acceptance|AuthenticationSession|EncryptedProfile|KeyringProfile|WorkspaceSharing|PolicyFeatures|PrimaryTerminal|GoAPI)$}" -test.v -test.count=1 -test.timeout=25m > /evidence/acceptance.txt 2>&1 &
+  /acceptance.test -test.run "${CODEX_DOCK_KATA_ACCEPTANCE_RUN:-^TestKata(Acceptance|AgentState|AuthenticationSession|EncryptedProfile|KeyringProfile|WorkspaceSharing|PolicyFeatures|PrimaryTerminal|GoAPI)$}" -test.v -test.count=1 -test.timeout=25m > /evidence/acceptance.txt 2>&1 &
  test_pid=$!
  while kill -0 "$test_pid" 2>/dev/null; do
   if [[ -f /run/setup-node-restart/request ]]; then
@@ -182,6 +182,9 @@ if [[ -x /acceptance.test ]]; then
    if [[ $action == namespace ]]; then
     [[ $cid =~ ^[0-9a-f]{64}$ ]]
     [[ -z $(ctr_node tasks list -q | awk -v cid="$cid" '$0==cid{print}') ]]
+    # Hold the original namespace alive until comparison; otherwise the
+    # kernel may legitimately reuse its inode for the replacement.
+    exec {old_namespace_fd}<"/run/netns/cdx-${cid:0:24}"
     python3 - "$cid" <<'PYBEFORE'
 import json, os, sys
 from pathlib import Path
@@ -191,6 +194,56 @@ Path('/run/setup-node-restart/before.json').write_text(json.dumps({'device': sta
 PYBEFORE
     ip netns del "cdx-${cid:0:24}"
     [[ ! -e /run/netns/cdx-${cid:0:24} ]]
+   elif [[ $action == crash || $action == metadata ]]; then
+    [[ $cid =~ ^[0-9a-f]{64}$ ]]
+    cli vm ps -a --json > /run/setup-node-restart/inventory.json
+    python3 - "$action" "$cid" <<'PYSTATE'
+import base64, json, os, re, sys, time
+from pathlib import Path
+action, cid = sys.argv[1:]
+inventory = json.loads(Path('/run/setup-node-restart/inventory.json').read_text())
+matches = [v for v in inventory['vms'] if v.get('container_id') == cid]
+assert len(matches) == 1
+vm = matches[0]
+Path('/evidence/agent-state-controller-inventory.json').write_text(json.dumps({'action': action, 'inventory': inventory}))
+assert vm['container_present'] and vm['name'].startswith('oaiso-state-'), vm
+if action == 'crash':
+    assert vm['tracked'] and vm['allocated'] and vm['populated'] and vm['host_verified'] and not vm.get('problems'), vm
+    allocation = vm['allocation']
+    assert re.fullmatch('[a-f0-9]{32}', allocation)
+    group = Path('/sys/fs/cgroup/codex-dock') / ('cdx-' + allocation)
+    assert str(group) == vm['cgroup'] and not group.is_symlink()
+    fd = os.open(group, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        kill = os.open('cgroup.kill', os.O_WRONLY | os.O_NOFOLLOW, dir_fd=fd)
+        try: os.write(kill, b'1')
+        finally: os.close(kill)
+        deadline = time.monotonic() + 10
+        while 'populated 1' in (group / 'cgroup.events').read_text():
+            assert time.monotonic() < deadline, 'owned VM envelope did not empty'
+            time.sleep(.05)
+    finally: os.close(fd)
+    Path('/evidence/agent-state-crash.json').write_text(json.dumps({'worker': cid, 'before': vm, 'empty': True}))
+else:
+    # Normal Stop releases its reservation, while retaining the worker/disk.
+    assert not vm['populated'] and vm['engine_state'] in ('created', 'exited', 'stopped'), vm
+    removed = []
+    root = Path('/run/kata-containers/shared/direct-volumes')
+    for folder in root.iterdir():
+        assert not folder.is_symlink()
+        metadata = folder / 'mountInfo.json'
+        assert not metadata.is_symlink()
+        info = json.loads(metadata.read_text())
+        image = Path(info['device'])
+        if image.parent.name != cid: continue
+        assert image.name == 'agent-state.ext4' and image.parent.parent.name == 'tasks'
+        source = image.parent / 'agent-state'
+        assert folder.name == base64.urlsafe_b64encode(str(source).encode()).decode()
+        assert info['volume-type'] == 'directvol' and info['fstype'] == 'ext4'
+        metadata.unlink(); folder.rmdir(); removed.append(str(folder))
+    assert len(removed) == 1
+    Path('/evidence/agent-state-metadata-reset.json').write_text(json.dumps({'worker': cid, 'removed': removed}))
+PYSTATE
    else
     [[ $action == restart ]]
    fi
@@ -216,6 +269,7 @@ proof = {'operation': 'namespace', 'container_id': cid, 'removed': True, 'before
 (root / 'complete.tmp').write_text(json.dumps(proof))
 os.replace(root / 'complete.tmp', root / 'complete')
 PYAFTER
+    exec {old_namespace_fd}<&-
    else
     printf ready > /run/setup-node-restart/complete.tmp
     mv /run/setup-node-restart/complete.tmp /run/setup-node-restart/complete
@@ -324,6 +378,14 @@ nft list tables > /evidence/final-nft-tables.txt
 python3 - <<'PYEMPTY'
 import json
 from pathlib import Path
+state_root = Path('/run/kata-containers/shared/direct-volumes')
+state_resources = {
+    'metadata': sorted(str(p) for p in state_root.iterdir()) if state_root.exists() else [],
+    'images': sorted(str(p) for p in Path('/var/lib/codex-dock-node/engine/tasks').glob('*/agent-state.ext4')),
+}
+Path('/evidence/final-agent-state.json').write_text(json.dumps(state_resources))
+if any(state_resources.values()):
+    raise SystemExit('private agent state remains; inspect final-agent-state.json')
 if json.loads(Path('/evidence/final-vms.json').read_text())['vms']:
     raise SystemExit('VM inventory is not empty; inspect final-vms.json')
 for name in ['final-containers.txt', 'final-tasks.txt', 'final-netns.txt']:

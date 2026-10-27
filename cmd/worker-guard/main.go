@@ -23,7 +23,7 @@ func main() {
 	}
 	switch os.Args[1] {
 	case "capabilities":
-		if err := json.NewEncoder(os.Stdout).Encode([]string{"temporary-storage-probe-v1", "worker-mtls-v1", "process-nofile-v1"}); err != nil {
+		if err := json.NewEncoder(os.Stdout).Encode([]string{"temporary-storage-probe-v1", "worker-mtls-v1", "process-nofile-v1", "agent-state-probe-v1"}); err != nil {
 			die(err)
 		}
 	case "transport-install":
@@ -37,6 +37,9 @@ func main() {
 	case "wait":
 		if len(os.Args) < 4 || os.Getpid() != 1 {
 			die(fmt.Errorf("expected PID 1, allocation nonce and command"))
+		}
+		if err := prepareAgentState(); err != nil {
+			die(err)
 		}
 		if err := os.MkdirAll("/run/codex-dock-control", 01777); err != nil {
 			die(err)

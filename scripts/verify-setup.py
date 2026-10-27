@@ -25,7 +25,7 @@ def main():
     parser.add_argument('--next-bundle', type=Path, required=True)
     parser.add_argument('--images', type=Path, required=True)
     parser.add_argument('--acceptance', type=Path, required=True)
-    parser.add_argument('--acceptance-run', default='^TestKata(Acceptance|AuthenticationSession|EncryptedProfile|KeyringProfile|WorkspaceSharing|PolicyFeatures|PrimaryTerminal|GoAPI)$',
+    parser.add_argument('--acceptance-run', default='^TestKata(Acceptance|AgentState|AuthenticationSession|EncryptedProfile|KeyringProfile|WorkspaceSharing|PolicyFeatures|PrimaryTerminal|GoAPI)$',
                         help='Go test name pattern for the real-Kata acceptance binary')
     parser.add_argument('--cache', type=Path, default=ROOT / '.kata-verification/setup-e2e/cache')
     parser.add_argument('--proxy-image', default='codex-dock-proxy:policy-verification')

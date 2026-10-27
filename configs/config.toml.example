@@ -69,6 +69,10 @@ debug = false
 # -----------------------------------------------------------------------------
 [run]
 
+# Private SQLite disk for new regular Kata workers (unreleased).
+# auto reserves 512MiB; use an integer 64MiB–8GiB, or off for custom storage.
+# agent_state_size = "auto"
+
 # Host-managed Codex/Claude defaults from agent-policies.toml.
 # Inspect with: oaiso agent-policy show NAME
 # agent_policy = "approve-for-me"

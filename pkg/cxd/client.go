@@ -141,6 +141,7 @@ type LaunchRequest struct {
 	NewBranch          bool
 	ReadOnly           bool
 	ReadOnlyRootFS     bool
+	AgentStateSize     string `json:",omitempty"`
 	NoGitMetadata      bool
 	NoInternet         bool
 	PolicyPreset       string `json:",omitempty"`
@@ -193,6 +194,9 @@ func (c *Client) Create(ctx context.Context, req LaunchRequest) (Worker, error) 
 }
 
 func (c *Client) launch(ctx context.Context, req LaunchRequest, createOnly bool) (Worker, error) {
+	if _, err := workerpolicy.AgentStateBytes(req.AgentStateSize); err != nil {
+		return Worker{}, err
+	}
 	if err := req.UsagePolicy.Validate(); err != nil {
 		return Worker{}, err
 	}
@@ -371,7 +375,8 @@ func (c *Client) launch(ctx context.Context, req LaunchRequest, createOnly bool)
 		Model: req.Model, ApprovalMode: sandbox.ApprovalMode(req.ApprovalMode),
 		Branch: req.Branch, UseWorktree: req.UseWorktree, NewBranch: req.NewBranch, ReuseBranchOnRetry: autoBranch && claim.Attempt > 1,
 		ReadOnly: req.ReadOnly, ReadOnlyRootFS: req.ReadOnlyRootFS, NoGitMetadata: req.NoGitMetadata,
-		NoInternet: req.NoInternet, WatchPolling: req.WatchPolling,
+		AgentStateSize: req.AgentStateSize,
+		NoInternet:     req.NoInternet, WatchPolling: req.WatchPolling,
 		ContainerUser: req.User, TokenTTL: int(req.TokenTTL / time.Second), Detach: true,
 		TokenIdentity: req.Identity, TokenModelPolicy: req.ModelPolicy, TokenUsagePolicy: req.UsagePolicy, TemporaryStorage: req.TemporaryStorage,
 	}

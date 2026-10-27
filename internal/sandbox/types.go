@@ -145,6 +145,7 @@ type RunOptions struct {
 	WatchPolling       bool
 	ReadOnly           bool
 	ReadOnlyRootFS     bool
+	AgentStateSize     string // auto (512MiB), off, or 64MiB–8GiB for new Kata workers.
 	NoGitMetadata      bool
 	NoInternet         bool
 	TokenTTL           int

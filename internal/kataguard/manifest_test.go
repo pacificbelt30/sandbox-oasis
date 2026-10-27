@@ -32,7 +32,7 @@ func TestManifestBindsDragonballContainerdAssets(t *testing.T) {
 	shim := write("opt/kata/bin/containerd-shim-kata-v2", "shim fixture")
 	dockerd := write("bin/dockerd", "daemon fixture")
 	logger := write("bin/codex-dock-io-logger", "logger fixture")
-	for _, tool := range []string{"ip", "nft", "sysctl", "runc", "containerd-shim-runc-v2"} {
+	for _, tool := range []string{"ip", "nft", "sysctl", "runc", "containerd-shim-runc-v2", "mke2fs"} {
 		path := write("bin/"+tool, "tool fixture")
 		if err := os.Chmod(path, 0700); err != nil {
 			t.Fatal(err)

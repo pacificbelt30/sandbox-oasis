@@ -26,7 +26,7 @@ Interaction design draws on [K9s search, Esc and help](https://k9scli.io/topics/
 
 | Priority | Item | Current state and remaining work | Acceptance |
 |---|---|---|---|
-| P0 | Durable Codex state and interactive startup | [SQLite startup fails with an ordinary HOME](../../testing.md#ux改善の検証2026-10-26). Temporary HOME does not meet persistence requirements | Preserve shared workspace coherence; design and verify VM disk storage across stop, restart, crashes, migration and cleanup |
+| P0 | Durable Codex state and interactive startup | **Implemented (unreleased main)**. [Per-worker database disk](../guides/agent-state.md) preserves ordinary HOME and shared workspace coherence | Stop/restart, crashes, disk-full recovery and cleanup checked on real Kata. Automatic migration of existing workers and history transfer to another worker remain out of scope |
 | P0 | Remaining dependency findings | **Dependency updates and applicability review completed (v0.0.4)**. [Findings](dependency-security.md) reduced from 15 to 2; both concern unused daemon features | Automated regressions pass. No finding exclusions; rationale recorded. Follow-up real Kata coverage uses the network/revocation suite |
 | P0 | Live-account authentication | Independent login, auth-only VM and encrypted storage implemented; live accounts/long refresh unverified | API/subscription, refresh conflicts, proxy restart, cancellation, active-stream revocation, no secrets in logs/files |
 | P0 | Network/revocation acceptance | **Additional coverage completed (v0.0.4)**. [Scope and reproduction](network-acceptance.md) | Automated DNS/failed-stop checks; real Kata traffic, active SSE/WS revocation and quarantine pass. CLI text/JSON distinguish unconfirmed stops |

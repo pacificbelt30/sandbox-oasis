@@ -91,8 +91,11 @@ func Serve(ctx context.Context, cfg Config, socket string, gid int) error {
 		return err
 	}
 	tools := map[string]string{}
-	for _, name := range []string{"ip", "nft", "sysctl", "runc", "runc-shim"} {
+	for _, name := range []string{"ip", "nft", "sysctl", "runc", "runc-shim", "mkfs"} {
 		tools[name] = g.manifest.Assets[name].Path
+	}
+	if !g.agentState {
+		delete(tools, "mkfs")
 	}
 	backend, err := engine.Open(engine.Options{Address: daemon.GRPC.Address, State: filepath.Join(cfg.StateDir, "engine"), Runtime: g.manifest.Assets["runtime"].Path, KataConfig: g.manifest.Assets["config"].Path, Retire: g.Retire, AbortCreate: g.AbortCreate, ConfirmStopped: g.ConfirmStopped, Tools: tools, Logger: g.manifest.Assets["logger"].Path, DNS: cfg.DNS, TemporaryStorage: g.temporaryStorage})
 	if err != nil {
@@ -208,6 +211,9 @@ func (g *Guard) nodeInfo(socket string) NodeInfo {
 	info := NodeInfo{ProtocolVersion: 2, Profile: Profile, Endpoint: g.config.Endpoint, Stamp: g.Stamp(), Launcher: g.Launcher(), Root: g.config.CgroupRoot, SharedFSCache: "none", BuildVersion: buildinfo.Version, Capabilities: []string{"verify-runtime-v1", "checkpoint-retention-v1", "disk-checkpoint-v1", "request-status-v1", "request-cleanup-v1", "resource-profiles-v1", "operator-resource-profiles-v1", "filesystem-policy-v1", "idle-activity-v1", "idle-safe-v1", "create-before-start-v1", "exec-options-v1", "background-jobs-v1", "exec-pty-resize-v1", "image-digest-v1", "worker-quarantine-v1"}, Protected: append(g.ProtectedPaths(), socket)}
 	if g.temporaryStorage {
 		info.Capabilities = append(info.Capabilities, "bounded-tmpfs-v1")
+	}
+	if g.agentState && g.manifest.Assets["mkfs"].Path != "" {
+		info.Capabilities = append(info.Capabilities, "agent-state-disk-v1")
 	}
 	if g.supportsPIDProfiles() {
 		info.Capabilities = append(info.Capabilities, "dynamic-pid-profiles-v1")

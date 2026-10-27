@@ -2,12 +2,16 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/pacificbelt30/codex-dock/internal/workerpolicy"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"time"
 )
 
 func applyOptionalRunDefaults(cmd *cobra.Command) error {
+	if _, err := workerpolicy.AgentStateBytes(runOpts.AgentStateSize); err != nil {
+		return err
+	}
 	flags := cmd.Flags()
 	if !flags.Changed("protect-main") {
 		runOpts.Lifecycle.ProtectMain = viper.GetBool("run.protect_main")

@@ -30,6 +30,7 @@ type Guard struct {
 	manifest         Manifest
 	profiles         []ResourceProfile
 	temporaryStorage bool
+	agentState       bool
 }
 
 func trustedOwner(info os.FileInfo) bool {
@@ -73,7 +74,7 @@ func New(c Config) (*Guard, error) {
 	if err != nil {
 		return nil, fmt.Errorf("loading node resource profiles: %w", err)
 	}
-	g := &Guard{config: c, manifest: m, profiles: profiles, temporaryStorage: launcherTemporaryStorage(m.Assets["launcher"].Path)}
+	g := &Guard{config: c, manifest: m, profiles: profiles, temporaryStorage: launcherTemporaryStorage(m.Assets["launcher"].Path), agentState: launcherFeature(m.Assets["launcher"].Path, "agent-state-probe-v1")}
 	for _, p := range profiles {
 		if p.PIDLimit != 512 && !g.supportsPIDProfiles() {
 			return nil, fmt.Errorf("non-512 PID profiles require prepared guest policy assets; update and reseal the guest image before enabling them")
@@ -535,7 +536,11 @@ func (g *Guard) releaseUnlocked(ctx context.Context, id, worker string) error {
 }
 
 func (g *Guard) ProtectedPaths() []string {
+	// Direct-volume metadata identifies private block images and is never a
+	// user-provided workspace or additional mount source.
+	storage := "/run/kata-containers/shared/direct-volumes"
 	paths := []string{g.config.Manifest, g.config.StateDir, g.config.CgroupRoot, "/proc", "/sys/fs/cgroup", "/dev/kvm", "/run/netns", "/run/codex-dock-buildkit", "/var/lib/codex-dock-buildkit", "/var/lib/codex-dock-setup", "/var/cache/codex-dock-setup", "/opt/codex-dock/releases"}
+	paths = append(paths, storage)
 	if g.config.ResourceProfiles != "" {
 		paths = append(paths, g.config.ResourceProfiles)
 	}

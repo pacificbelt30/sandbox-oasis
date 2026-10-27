@@ -66,6 +66,7 @@ type Options struct {
 	Tools          map[string]string
 }
 type Backend struct {
+	volumeRoot    string // Test override; production uses Kata's fixed direct-volume root.
 	client        *cd.Client
 	opts          Options
 	checkpointMu  sync.Mutex
@@ -77,6 +78,7 @@ type Backend struct {
 	closed        bool
 }
 type record struct {
+	AgentState              *agentStateDisk `json:",omitempty"`
 	ID, Name                string
 	Created                 time.Time
 	Config                  container.Config
@@ -524,6 +526,9 @@ func (b *Backend) create(ctx context.Context, c container.Config, h container.Ho
 		for _, file := range []string{"hosts", "resolv.conf", "hostname"} {
 			s.Mounts = append(s.Mounts, specs.Mount{Type: "bind", Source: filepath.Join(b.path(cid), file), Destination: "/etc/" + file, Options: []string{"bind", "ro"}})
 		}
+		if err := b.provisionAgentState(ctx, r, s); err != nil {
+			return err
+		}
 		r.Spec = *s
 		return b.save(r)
 	})
@@ -645,6 +650,9 @@ func (b *Backend) start(ctx context.Context, r *record, c cd.Container) error {
 		}
 		_ = old.Close()
 		delete(b.hubs, r.ID)
+	}
+	if err := b.ensureAgentState(r); err != nil {
+		return err
 	}
 	h, err := newHub()
 	if err != nil {
@@ -897,6 +905,9 @@ func (b *Backend) serveHTTP(w http.ResponseWriter, r *http.Request) {
 		features := [][2]string{{"cxd.disk-checkpoint", "1"}, {"cxd.checkpoint-retention", "1"}, {"cxd.worker-policy", "1"}, {"cxd.idle-safe", "1"}, {"cxd.main-activity", "1"}, {"cxd.exec-options", "1"}, {"cxd.jobs", "1"}, {"cxd.quarantine", "1"}}
 		if b.opts.TemporaryStorage {
 			features = append(features, [2]string{"cxd.temporary-storage", "1"})
+		}
+		if b.opts.Tools["mkfs"] != "" {
+			features = append(features, [2]string{"cxd.agent-state-disk", "1"})
 		}
 		reply(w, system.Info{DriverStatus: features, OSType: "linux", CgroupDriver: "cgroupfs", CgroupVersion: "2", Runtimes: map[string]system.RuntimeWithStatus{"io.containerd.kata.v2": {Runtime: system.Runtime{Type: b.opts.Runtime}}, "runc": {Runtime: system.Runtime{Type: "io.containerd.runc.v2"}}}})
 		return
@@ -1168,6 +1179,9 @@ func (b *Backend) serveHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		if err == nil {
 			err = b.removeNamespace(ctx, rec)
+		}
+		if err == nil {
+			err = b.removeAgentStateMetadata(rec)
 		}
 		if err == nil {
 			err = c.Delete(ctx, cd.WithSnapshotCleanup)

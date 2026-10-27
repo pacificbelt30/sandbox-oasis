@@ -13,6 +13,7 @@
 | Basic metadata | Permissions, numeric UID/GID, modification times and symlinks retained; hard links materialized as independent files |
 | Masked read-denied paths | Underlying files and hard-link aliases excluded even when original data remains on disk |
 | Workspace/additional shared mounts | Contents excluded; explicitly supply new host directories at restore; host data is never rolled back |
+| Private Codex database disk | Contents excluded; unreleased (`main`) [state storage](agent-state.md). Restored workers get an empty new disk |
 | `/home`, `/root` | Contents excluded, including credentials, history, caches and user-local dependencies; only top-level home directory skeletons/ownership retained |
 | `/run`, `/tmp`, `/var/tmp`, `/dev`, `/proc`, `/sys` | Contents excluded, including tmpfs, bootstrap files and kernel state |
 | `/var/log`, hosts/hostname/resolv.conf | Excluded; necessary runtime settings are generated for the new VM |

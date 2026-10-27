@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -129,6 +130,14 @@ func (m *Manager) Run(opts RunOptions) (containerID string, runErr error) {
 // the worker running merely because the caller stopped waiting.
 func (m *Manager) RunContext(parent context.Context, opts RunOptions) (containerID string, runErr error) {
 	launchtiming.Next(parent, "preflight")
+	opts.AgentStateSize = strings.ToLower(strings.TrimSpace(opts.AgentStateSize))
+	requestedStateDisk := opts.AgentStateSize != "" && opts.AgentStateSize != "off" && !opts.ReadOnlyRootFS && opts.Runtime != RuntimeRunc && !opts.authenticationSession
+	if _, err := workerpolicy.AgentStateBytes(opts.AgentStateSize); err != nil {
+		return "", err
+	}
+	if opts.AgentStateSize != "" && opts.AgentStateSize != "auto" && opts.AgentStateSize != "off" && (opts.ReadOnlyRootFS || opts.Runtime == RuntimeRunc || opts.authenticationSession) {
+		return "", fmt.Errorf("agent state disks require a writable-rootfs regular Kata worker")
+	}
 	storage, err := workerpolicy.NormalizeTemporaryStorage(opts.TemporaryStorage)
 	if err != nil {
 		return "", err
@@ -158,10 +167,15 @@ func (m *Manager) RunContext(parent context.Context, opts RunOptions) (container
 	}
 	ctx, cancel := context.WithTimeout(parent, 180*time.Second)
 	defer cancel()
-	if len(opts.Filesystem.DenyRead)+len(opts.Filesystem.DenyWrite) > 0 || opts.ReadOnlyRootFS || opts.Environment.ImageID != "" || opts.Lifecycle.IdleTimeout > 0 || opts.Lifecycle.ProtectMain || len(storage) > 0 {
+	if len(opts.Filesystem.DenyRead)+len(opts.Filesystem.DenyWrite) > 0 || opts.ReadOnlyRootFS || opts.Environment.ImageID != "" || opts.Lifecycle.IdleTimeout > 0 || opts.Lifecycle.ProtectMain || len(storage) > 0 || requestedStateDisk {
 		info, err := m.cli.Info(ctx)
 		if err != nil {
 			return "", err
+		}
+		if requestedStateDisk {
+			if !slices.Contains(info.DriverStatus, [2]string{"cxd.agent-state-disk", "1"}) {
+				return "", fmt.Errorf("agent state disk requires an updated, resealed Oaiso node")
+			}
 		}
 		if opts.Lifecycle.ProtectMain {
 			supported := false
@@ -384,6 +398,9 @@ func (m *Manager) RunContext(parent context.Context, opts RunOptions) (container
 		labelIsolation:                   isolation,
 		labelRuntime:                     registration,
 		labelPrefix + "resource-profile": profile.Name,
+	}
+	if opts.AgentStateSize != "" {
+		labels[workerpolicy.AgentStateLabel] = opts.AgentStateSize
 	}
 	if opts.AgentPolicy.Name != "" {
 		labels[labelPrefix+"agent-policy"] = opts.AgentPolicy.Name

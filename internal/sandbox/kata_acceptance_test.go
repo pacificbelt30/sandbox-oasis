@@ -495,6 +495,33 @@ while True:
 	t.Run("CodexToolExecution", func(t *testing.T) {
 		t.Log(kataExec(t, ctx, c, w1, false, []string{"python3", "-c", codexToolFixture}))
 	})
+	t.Run("CodexStateResumeAfterRestart", func(t *testing.T) {
+		probe := `import ctypes,json,os,pathlib,sqlite3
+assert ctypes.CDLL(None).prctl(38,1,0,0,0)==0
+root=pathlib.Path(os.environ['CODEX_SQLITE_HOME'])
+with sqlite3.connect(root/'state_5.sqlite') as db:
+ rows=db.execute('SELECT id,rollout_path FROM threads ORDER BY id').fetchall()
+ assert rows,'no persisted Codex thread'
+ for _,path in rows:
+  assert 'fixture complete' in pathlib.Path(path).read_text(),'fixture history missing'
+ assert db.execute('PRAGMA integrity_check').fetchone()[0]=='ok'
+ print(json.dumps(rows))`
+		before := kataExec(t, ctx, c, w1, false, []string{"python3", "-c", probe})
+		if err := m.Stop(w1, 0); err != nil {
+			t.Fatal(err)
+		}
+		if err := m.Start(w1); err != nil {
+			t.Fatal(err)
+		}
+		after := kataExec(t, ctx, c, w1, false, []string{"python3", "-c", probe})
+		if before != after {
+			t.Fatal("Codex thread metadata changed across VM restart", before, after)
+		}
+		t.Log(kataExec(t, ctx, c, w1, false, []string{"env", "OAISO_PROBE_CODEX_RESUME=1", "python3", "-c", agentInteractiveProbe}))
+	})
+	t.Run("InteractiveAgentsPersistentState", func(t *testing.T) {
+		t.Log(kataExec(t, ctx, c, w1, false, []string{"python3", "-c", agentInteractiveProbe}))
+	})
 	t.Run("InteractiveAgentsTemporaryHome", func(t *testing.T) {
 		// The coherent virtiofs rootfs does not support writable shared mmap.
 		// Exercise the existing, explicitly temporary HOME mode; do not silently

@@ -202,6 +202,7 @@ Under `[run]`:
 | `model` | Unset | `--model` |
 | `read_only` | `false` | `--read-only` |
 | `read_only_rootfs` | `false` | `--read-only-rootfs` |
+| `agent_state_size` | `auto` (512MiB) | `--agent-state-size`; [state storage](guides/agent-state.md), unreleased (`main`) |
 | `no_git_metadata` | `false` | `--no-git-metadata` |
 | `no_internet` | `false` | `--no-internet` |
 | `egress_allow_domains` | Empty | `--egress-allow-domain` |

@@ -116,6 +116,7 @@ oaiso run --profile-size small --agent codex
 | `--model` | `-m` | | Model name passed to the selected agent |
 | `--read-only` | | `false` | Mount project directory read-only |
 | `--read-only-rootfs` | | `false` | Make the image rootfs read-only; use tmpfs for HOME and temporary files |
+| `--agent-state-size` | | `auto` (512MiB) | [Private Codex database disk](../guides/agent-state.md): `off` or 64MiB–8GiB; unreleased (`main`) |
 | `--profile-size` | | `standard` | Kata VM resource profile (`standard`, `small`, or `compact`) |
 | `--no-git-metadata` | | `false` | Do not automatically share linked worktree Git metadata |
 | `--mount` | | | Additional host directory to mount (repeatable): `<host-path>:<container-path>[:ro\|rw]` ([details](#--mount)) |
@@ -326,6 +327,8 @@ mounts = ["/home/user/datasets:/data:ro", "./cache:/cache"]
 
 ## Codex SQLite startup error
 
+**Unreleased (`main`)** adds a [private database disk](../guides/agent-state.md) for newly created regular Kata workers on matching nodes. The limitation below applies to v0.0.6, old workers, and workers with this feature disabled.
+
 With the pinned Codex 0.163.0 tested on 2026-10-26, an ordinary Kata rootfs HOME fails to start the interactive UI with `disk I/O error (code: 5386)` for `state_5.sqlite`. The `virtio_fs_cache="none"` setting needed for coherent shared workspaces conflicts with SQLite WAL's writable shared mmap. See the [verification record](../../testing.md#ux改善の検証2026-10-26).
 
 For trials that do not require HOME settings or history to survive stopping the worker, explicitly select the existing temporary HOME mode. Install required packages in the image first. Shared files in `/workspace` retain their usual persistence.
@@ -334,7 +337,7 @@ For trials that do not require HOME settings or history to survive stopping the 
 oaiso run --read-only-rootfs
 ```
 
-This option is not applied automatically. If durable Codex state is required, wait for VM disk storage support instead of using this workaround. Changing the shared workspace cache settings is not an adopted workaround.
+This option is not applied automatically. For retained state, create a new worker on a matching node and review the [private disk lifetime](../guides/agent-state.md). Shared workspace cache settings are unchanged.
 
 ---
 

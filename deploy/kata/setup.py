@@ -47,7 +47,7 @@ LEGACY_FILES = [Path('/usr/local/bin/codex-dock'), Path('/usr/local/bin/cxd'),
 MANAGED = [*ACTIVE_MANAGED, *LEGACY_FILES]
 BUNDLE_FILES = ['oaiso', 'codex-dock-worker-guard', 'codex-dock-io-logger']
 PACKAGES = {'ip': 'iproute2', 'nft': 'nftables', 'sysctl': 'procps',
-            'gcc': 'gcc', 'debugfs': 'e2fsprogs', 'zstd': 'zstd',
+            'gcc': 'gcc', 'debugfs': 'e2fsprogs', 'mke2fs': 'e2fsprogs', 'zstd': 'zstd',
             'curl': 'curl', 'getent': 'libc-bin', 'usermod': 'passwd',
             'modprobe': 'kmod', 'tar': 'tar',
             'dbus-daemon': 'dbus-daemon', 'dbus-run-session': 'dbus-daemon',

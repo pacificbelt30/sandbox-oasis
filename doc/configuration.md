@@ -212,6 +212,7 @@ forward_allow_ports = [80, 443]
 | `model` | 未設定 | `--model` |
 | `read_only` | `false` | `--read-only` |
 | `read_only_rootfs` | `false` | `--read-only-rootfs` |
+| `agent_state_size` | `auto`（512MiB） | `--agent-state-size`。[状態保存](guides/agent-state.md)、未リリース（main） |
 | `no_git_metadata` | `false` | `--no-git-metadata` |
 | `profile_size` | `standard` | `--profile-size` |
 | `no_internet` | `false` | `--no-internet` |

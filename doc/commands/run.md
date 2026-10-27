@@ -117,6 +117,7 @@ oaiso run --profile-size small --agent codex
 | `--model` | `-m` | | エージェントに渡すモデル名 |
 | `--read-only` | | `false` | プロジェクトディレクトリを読み取り専用でマウント |
 | `--read-only-rootfs` | | `false` | イメージの rootfs を読み取り専用にし、HOME と一時ファイルには tmpfs を使用 |
+| `--agent-state-size` | | `auto`（512MiB） | [Codex専用DBディスク](../guides/agent-state.md)。`off`または64MiB〜8GiB。未リリース（main） |
 | `--profile-size` | | `standard` | Kata VM の資源プロファイル（`standard` / `small` / `compact`） |
 | `--no-git-metadata` | | `false` | linked worktree の共通 Git metadata を自動共有しない |
 | `--mount` | | | 追加のホストディレクトリをマウント（繰り返し指定可）`<host-path>:<container-path>[:ro\|rw]`（[詳細](#--mount--任意ディレクトリの追加マウント)） |
@@ -382,6 +383,8 @@ mounts = ["/home/user/datasets:/data:ro", "./cache:/cache"]
 
 ## CodexのSQLite起動エラー
 
+**未リリース（main）**では、対応nodeで新規作成する通常Kataワーカーに[専用DBディスク](../guides/agent-state.md)を追加しています。以下はv0.0.6・旧ワーカー、およびこの機能を無効にした場合の制約です。
+
 2026-10-26の固定版Codex 0.163.0では、通常のKata rootfs上のHOMEで `state_5.sqlite` の `disk I/O error (code: 5386)` が発生し、対話UIが起動できません。共有workspaceの整合性のために使う `virtio_fs_cache="none"` と、SQLite WALの書き込み可能な共有mmapが衝突します。[検証記録](../testing.md#ux改善の検証2026-10-26)を参照してください。
 
 履歴やHOME内の設定を停止後に保持する必要がない試行に限り、既存の一時HOMEモードを明示して起動できます。必要なパッケージは事前にイメージへ入れてください。`/workspace` の共有ファイルは通常どおり残ります。
@@ -390,7 +393,7 @@ mounts = ["/home/user/datasets:/data:ro", "./cache:/cache"]
 oaiso run --read-only-rootfs
 ```
 
-この指定は既定値に自動適用しません。永続的なCodex状態が必要な場合は、この回避策を使わず、DB保存用のVMディスク対応を待ってください。共有workspaceのキャッシュ設定を変更する回避策は採用していません。
+この指定は既定値に自動適用しません。状態の保持が必要なら、対応nodeで新規ワーカーを作り、[専用DBディスクの保持条件](../guides/agent-state.md)を確認してください。共有workspaceのキャッシュ設定は変更しません。
 
 ---
 

@@ -86,6 +86,7 @@ func TestKataDiskCheckpoint(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(project, "old-workspace"), []byte("workspace-must-not-copy"), 0600)
 	_ = os.WriteFile(filepath.Join(shared, "old-shared"), []byte("shared-must-not-copy"), 0600)
 	request := cxd.LaunchRequest{RequestID: caseID + "-source", ProjectDir: project, Image: os.Getenv("CODEX_DOCK_KATA_TEST_IMAGE"), NoInternet: true, Profile: "small", User: fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid()), Filesystem: cxd.FilesystemPolicy{DenyRead: []string{"/workspace/old-workspace"}}, Identity: identity.Identity{CaseID: caseID, RunID: "source", ConnectionVersion: "1", Provider: "openai"}, Mounts: []cxd.Mount{{Source: shared, Target: "/opt/external"}}}
+	request.AgentStateSize = "64MiB"
 	source, err := client.Launch(ctx, request)
 	if err != nil {
 		t.Fatal(err)
@@ -105,6 +106,7 @@ func TestKataDiskCheckpoint(t *testing.T) {
 	}
 	run(source.ID, `import os,pathlib
 p=pathlib.Path('/opt/disk-state');(p/'keep').write_text('disk-before-checkpoint');(p/'private').write_text('custom-secret-must-not-copy')
+s=pathlib.Path(os.environ['CODEX_SQLITE_HOME']);s.mkdir(parents=True,exist_ok=True);(s/'source-only').write_text('agent-state-must-not-copy')
 h=pathlib.Path('/home/node/.codex');h.mkdir(parents=True,exist_ok=True);(h/'auth.json').write_text('home-secret-must-not-copy')
 os.link(h/'auth.json',p/'secret-alias')
 os.symlink('keep',p/'link')
@@ -147,8 +149,9 @@ pathlib.Path('/tmp/temporary').write_text('temporary-must-not-copy')`)
 	if err := client.Start(ctx, source.ID); err != nil {
 		t.Fatal(err)
 	}
-	run(source.ID, `import pathlib
-p=pathlib.Path('/opt/disk-state/keep');assert p.read_text()=='disk-before-checkpoint';p.write_text('source-after-checkpoint')`)
+	run(source.ID, `import os,pathlib
+p=pathlib.Path('/opt/disk-state/keep');assert p.read_text()=='disk-before-checkpoint';p.write_text('source-after-checkpoint')
+assert (pathlib.Path(os.environ['CODEX_SQLITE_HOME'])/'source-only').read_text()=='agent-state-must-not-copy'`)
 	if err := client.Stop(ctx, source.ID, 5*time.Second); err != nil {
 		t.Fatal(err)
 	}
@@ -168,6 +171,7 @@ p=pathlib.Path('/opt/disk-state/keep');assert p.read_text()=='disk-before-checkp
 	}
 	run(restored.ID, `import os,pathlib
 p=pathlib.Path('/opt/disk-state');assert (p/'keep').read_text()=='disk-before-checkpoint';assert (p/'link').read_text()=='disk-before-checkpoint'
+assert not (pathlib.Path(os.environ['CODEX_SQLITE_HOME'])/'source-only').exists(),'source agent state leaked into new disk'
 for f in ['/opt/disk-state/private','/opt/disk-state/secret-alias','/opt/disk-state/masked','/opt/disk-state/masked-alias','/tmp/temporary','/workspace/old-workspace','/opt/external/old-shared']:
  assert not os.path.exists(f),f
 h=pathlib.Path('/home/node/.codex/auth.json');assert not h.exists() or 'home-secret-must-not-copy' not in h.read_text()

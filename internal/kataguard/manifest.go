@@ -178,7 +178,7 @@ func Seal(kataPath, daemonPath, containerd, launcher, runtime, output string, sh
 	}
 	h := k.Hypervisor["dragonball"]
 	paths := map[string]string{"config": kataPath, "daemon": daemonPath, "containerd": containerd, "launcher": launcher, "runtime": shim, "kernel": h.Kernel, "image": h.Image}
-	for key, name := range map[string]string{"ip": "ip", "nft": "nft", "sysctl": "sysctl", "runc": "runc", "runc-shim": "containerd-shim-runc-v2", "logger": "codex-dock-io-logger"} {
+	for key, name := range map[string]string{"ip": "ip", "nft": "nft", "sysctl": "sysctl", "runc": "runc", "runc-shim": "containerd-shim-runc-v2", "logger": "codex-dock-io-logger", "mkfs": "mke2fs"} {
 		var path string
 		var err error
 		if key == "logger" && len(shimPath) == 2 && shimPath[1] != "" {
@@ -355,5 +355,5 @@ func verifyAsset(name string, asset Asset) error {
 }
 
 func executableAsset(name string) bool {
-	return name == "launcher" || name == "runtime" || name == "containerd" || name == "ip" || name == "nft" || name == "sysctl" || name == "runc" || name == "runc-shim" || name == "logger"
+	return name == "launcher" || name == "runtime" || name == "containerd" || name == "ip" || name == "nft" || name == "sysctl" || name == "runc" || name == "runc-shim" || name == "logger" || name == "mkfs"
 }

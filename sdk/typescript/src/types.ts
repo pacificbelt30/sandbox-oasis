@@ -163,6 +163,7 @@ export interface JobOutput {
 export interface LaunchRequest {
   Agent?: string;
   AgentArgs?: (string)[] | null;
+  AgentStateSize?: string;
   ApprovalMode?: string;
   Branch?: string;
   CloneDir?: string;

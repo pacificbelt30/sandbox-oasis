@@ -50,6 +50,9 @@ func (b *Backend) clearIntent(ctx context.Context, r *record) error {
 			delete(b.execs, eid)
 		}
 	}
+	if err := b.removeAgentStateMetadata(r); err != nil {
+		return err
+	}
 	return os.RemoveAll(b.path(r.ID))
 }
 func (b *Backend) recoverIntents(ctx context.Context) error {

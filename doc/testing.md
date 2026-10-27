@@ -2,6 +2,32 @@
 
 - v0.0.4の各機能は、公開前の試験版で検証しています。試験版・基点commit・条件は各記録を参照してください。
 
+## Codexの永続DBと復旧（2026-10-27）
+
+対象：**未リリース（main）**。`e3a57a8`を基に追加。試験版は`sqlite-test-a/b`、Kata 4.2／Dragonball、containerd 2.4.2、固定Codex 0.163.0・Claude Code 2.1.306を使用。固定資産cacheを使うofflineの使い捨てノードで、架空の資格情報とローカルfixtureだけを使用しています。
+
+| 検査 | 結果・確認範囲 |
+|---|---|
+| ローカル | build・全Go race／coverage・vet・lint、既存5系統のfuzzが成功。新しい容量指定のfuzzは20秒・約110万入力。Pythonはscripts 69件・配置24件、SDKはPython 9件・TypeScript 10件が成功 |
+| 保存方式 | 共有workspaceの`cache=none`と`no_writeback_cache`を維持。新規ワーカーの専用ext4だけでSQLite WAL・fsyncを確認。guestの実行権限を追加せず、所有UID・0700・nosuid/nodev/noexecを検査 |
+| 正常な復旧 | 同じワーカーの停止・再起動、nodeプロセス再起動、実行用メタデータ消失からの再生成後もDBと会話ファイルを保持。既存ディスクを再フォーマットしない |
+| 実CLIの履歴と対話UI | 実Codexのツール実行履歴をVM再起動後に再表示。通常HOME・一時HOMEの両方で、固定Codex／ClaudeのANSI、日本語貼付け、Esc、resize、Ctrl-C終了、端末復元が成功。UI試験のモデルPOSTは0件 |
+| 異常終了 | 所有権を確認した試験VMのcgroupだけを強制終了。未checkpointのコミット済みWALを復旧し、行の内容と`integrity_check`を確認 |
+| 容量枯渇と分離 | 64MiBの専用ディスクを満杯にし、SQLiteの容量不足を検出。試験用ファイルだけを除去して再書込み成功。別ワーカーに元のDBがないことも確認 |
+| checkpoint | 専用fixtureイメージで`TestKataDiskCheckpoint`が217.71秒で成功。保存元の専用DBは再起動後も保持し、SDK／CLIの新規復元先へ混入しないことを確認。rootfs・共有mount・秘密の除外条件も維持 |
+| ホスト側の保護 | 新規ディスクの容量予約、作成失敗、metadataのsymlink・差し替え拒否、未完のmetadata書込みの回収を検査。guestが使ったext4をホストへmount・修復しない |
+| 互換性 | APIの省略値と生成schema／TypeScript型を照合。上流CLIのpinとbaselineは変更せず、オフライン契約検査が成功 |
+| 実Kataの最終範囲 | `TestKataAcceptance`（473.41秒）、`TestKataAgentState`（60.59秒）、`TestKataPrimaryTerminal`（15.32秒）が同じノードで成功。上記checkpointを合わせた選択4スイートの結果であり、全Kataスイートの再受入とは扱わない |
+| 更新・回収 | checkpoint用ノードで新規導入、対応版更新、起動失敗からの自動復旧、明示rollbackが成功。専用DBのmetadata・image、VM・task・コンテナ・netns・専用firewallの残留なし。最終3スイート後も専用DBのmetadata・imageが空であることを確認 |
+
+- formatterのゼロ書込みでホストの予約領域が解放される現象を検出。新規format後にも予約し直し、実ブロック数を回帰試験で確認しました。
+- 固定版Codexの`resume --last`は非対話の`exec`履歴を既定で除外します。試験では`--include-non-interactive`も指定し、会話ファイルの存在と実UIでの再表示を分けて検査します。
+- Claudeの終了待ちが再発したため、試験PTYへ端末の問い合わせ応答を追加。PTYだけでは端末エミュレーターの応答を返さないため、[端末属性・色・バージョンの問い合わせ](https://invisible-island.net/xterm/ctlseqs/ctlseqs.html)へ応答します。固定回数のCtrl-Cに頼らず、制限時間内の自発終了と端末復元を必須にしています。
+- 停止済みnetwork namespaceのinodeが再利用される試験上の問題を修正。古いnamespaceをFDで保持したうえで、再生成後の別identityを確認します。
+- 操作・保持期間・容量・障害時の手順：[専用DBディスク](guides/agent-state.md)。既存ワーカーの自動移行、別ワーカーへの履歴移送、専用DBを含む完全なsession backupは提供しません。
+- 実アカウントの認証・推論、外部AI通信、物理端末の目視検査、実WSLは今回の対象外。共有ホストの更新やリリース公開も行いません。
+- 証跡：`.kata-verification/sqlite-20261027/`。最終3スイートは`.kata-verification/setup-e2e/a3b478f1d7d9/`、checkpointは`.kata-verification/setup-e2e/382ac23e5093/`。最初の失敗と修正後の結果を分けて保持します。
+
 ## UX改善の検証（2026-10-26）
 
 対象：**未リリース（main）**。v0.0.6の `9718b00` を基に追加。試験版は `ux-test-a/b`。実資格情報と外部AIへの推論を使わず、固定Codex 0.163.0・Claude Code 2.1.306、架空の認証情報、ローカルfixtureで確認しています。
@@ -30,7 +56,7 @@
 | エージェント起動の待ち方 | 一時HOMEでCodexの対話UIは成功。Claudeが固定4秒以内に描画しなかった試験は失敗として保存し、制限時間内に描画・貼付け結果を待つ試験へ修正。証跡 `786b6ab3d540` |
 | Codex対話UIのSQLite | 通常のvirtiofs HOMEで `state_5.sqlite` が `SQLITE_IOERR_SHMMAP`（5386）となり起動失敗。証跡 `3fba57bd6597`。共有ファイル整合性を保つ設定とSQLiteの共有mmapが衝突するため、既定値は変更せず、既存の一時HOMEモードを別条件として再試験 |
 
-一時HOMEの回避策は[runの条件と保持期間](commands/run.md#codexのsqlite起動エラー)を確認してください。通常HOMEの永続的なCodex状態は未解決です。キー転送の成功や、Docker上だけの対話UI成功を、その問題の解決とは数えません。
+この時点では通常HOMEの永続的なCodex状態は未解決でした。[専用DBディスク](guides/agent-state.md)による後続の結果は、本ページの2026-10-27の記録を参照してください。一時HOMEの回避策は[runの条件と保持期間](commands/run.md#codexのsqlite起動エラー)を確認してください。キー転送やDocker上だけの対話UIの成功は、その問題の解決とは数えません。
 
 最終再試験の証跡は `.kata-verification/setup-e2e/822b5b804494/`、試験資材のhashとレビューは `.kata-verification/ux-20261026/` に保存。fixtureの成功は実アカウントの認証・更新・推論、OSのIME、全エージェント操作の確認を意味しません。
 
