@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/pacificbelt30/codex-dock/internal/brokersettings"
+	"github.com/pacificbelt30/codex-dock/internal/diagnostics"
 	"github.com/pacificbelt30/codex-dock/internal/engine"
 	"github.com/pacificbelt30/codex-dock/internal/instanceux"
 	"github.com/pacificbelt30/codex-dock/internal/policyevents"
@@ -26,19 +27,23 @@ func Run(cfg sandbox.ManagerConfig) error {
 }
 
 func RunWithOptions(cfg sandbox.ManagerConfig, configPath string) error {
+	return RunWithPolicyOptions(cfg, configPath, "", "")
+}
+
+func RunWithPolicyOptions(cfg sandbox.ManagerConfig, configPath, policyPath, policyOverride string) error {
 	app := tview.NewApplication()
 
 	// Include a network manager so deleting a worker also removes its per-worker
 	// Internal network (otherwise the networks accumulate).
 	netMgr, err := network.NewManager()
 	if err != nil {
-		return fmt.Errorf("connecting to Docker: %w", err)
+		return &diagnostics.StartupError{Stage: "node", Cause: err, Next: []string{"oaiso runtime-check", "systemctl status codex-dock-node"}}
 	}
 	defer func() { _ = netMgr.Close() }()
 	cfg.Network = netMgr
 	mgr, err := sandbox.NewManager(cfg)
 	if err != nil {
-		return fmt.Errorf("connecting to Docker: %w", err)
+		return &diagnostics.StartupError{Stage: "node", Cause: err, Next: []string{"oaiso runtime-check", "systemctl status codex-dock-node"}}
 	}
 
 	defer func() { _ = mgr.Close() }()
@@ -127,6 +132,14 @@ func RunWithOptions(cfg sandbox.ManagerConfig, configPath string) error {
 		app.SetFocus(table)
 		footer.SetText(dashboardHelp(false))
 	}
+	openPolicies := func() {
+		page := newAgentPolicyPage(policyPath, policyOverride, app.SetFocus, func() {
+			pages.RemovePage("agent-policies")
+			showMain()
+		})
+		pages.AddAndSwitchToPage("agent-policies", page.pages, true)
+		app.SetFocus(page.pages)
+	}
 
 	showHelp := func() {
 		pages.AddAndSwitchToPage("help", helpModal(func() { pages.RemovePage("help"); showMain() }), true)
@@ -142,18 +155,21 @@ func RunWithOptions(cfg sandbox.ManagerConfig, configPath string) error {
 
 	connectWorker := func(worker sandbox.Worker) {
 		if worker.Status != "running" {
-			reportError(fmt.Errorf("worker %s is %s; start it with R before connecting", worker.Name, worker.Status))
+			footer.SetText(tview.Escape(fmt.Sprintf("worker %s is %s; start it with R before connecting", worker.Name, worker.Status)))
 			return
 		}
+		var connectErr error
 		app.Suspend(func() {
-			_, err := instanceux.Connect(context.Background(), mgr, worker.ID, instanceux.ConnectOptions{
+			_, connectErr = instanceux.Connect(context.Background(), mgr, worker.ID, instanceux.ConnectOptions{
 				Shell: "auto", WorkingDir: "/workspace", Stdin: os.Stdin, Stdout: os.Stdout, Stderr: os.Stderr,
 			})
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "oaiso connect: %v\n", err)
-			}
 		})
-		refreshData()
+		if connectErr != nil {
+			footer.SetText("[red]" + tview.Escape(connectErr.Error()) + "[-]")
+		}
+		// QueueUpdateDraw waits for the event loop. This callback already runs
+		// on that loop, so refresh must execute outside it after Suspend.
+		go refreshData()
 	}
 
 	runCommand := func(worker sandbox.Worker) {
@@ -206,6 +222,9 @@ func RunWithOptions(cfg sandbox.ManagerConfig, configPath string) error {
 		idx := row - 1 // header offset
 
 		switch event.Rune() {
+		case 'g', 'G':
+			openPolicies()
+			return nil
 		case '/':
 			app.SetFocus(views.filter)
 			return nil
@@ -341,7 +360,7 @@ func RunWithOptions(cfg sandbox.ManagerConfig, configPath string) error {
 		}
 	}()
 
-	return app.SetRoot(pages, true).EnableMouse(true).Run()
+	return app.SetRoot(pages, true).EnableMouse(true).EnablePaste(true).Run()
 }
 
 func statusIcon(status string) string {

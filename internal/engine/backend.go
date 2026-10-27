@@ -431,7 +431,7 @@ func (b *Backend) create(ctx context.Context, c container.Config, h container.Ho
 		opts = append(opts, oci.WithRootFSReadonly())
 	}
 	if c.Tty {
-		opts = append(opts, oci.WithTTY)
+		opts = append(opts, withWorkerTTY)
 	}
 	if len(h.CapDrop) > 0 {
 		if len(h.CapDrop) != 1 || h.CapDrop[0] != "ALL" {

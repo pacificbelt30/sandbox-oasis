@@ -29,6 +29,27 @@ Alternatively set `run.agent_policy = "approve-for-me"` in the normal global con
 
 ## Create a policy
 
+### Select and edit in the TUI
+
+Available: **unreleased (`main`)**. Run as your normal user; the editor also works while the node is stopped.
+
+```bash
+oaiso agent-policy configure
+```
+
+1. Select a policy. `*` marks the host default and `built-in` marks read-only profiles.
+2. Use `C` to clone a built-in, `Tab` to move between panes, and `/` to search settings.
+3. Inspect each value, its source, description, and safety meaning. `Enter` edits a field; Stage keeps it in the draft. `R` or Inherit removes the local override.
+4. Use `D` to stage the host default and `Ctrl-S` to review changes, warnings, and affected descendants.
+5. In the review, `Tab` moves to Cancel / Save. Only a successful Save writes the owner-private `0600` file.
+
+- `Esc` returns; leaving with unsaved changes asks whether to discard. `Ctrl-R` reload behaves the same way.
+- Concurrent file edits reject saving and retain the draft; inspect the other edit before reloading.
+- Changes apply to new workers. A global `run.agent_policy` override is displayed and takes precedence over the host default.
+- The same editor opens with `G` from `oaiso ui`. Editing forms work best with at least 80 columns and 22 rows. Use `Tab` to reach the explanation pane and arrow keys to scroll it.
+
+### Edit with the CLI
+
 Clone a built-in and store only the differences:
 
 ```bash

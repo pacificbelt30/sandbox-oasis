@@ -2,6 +2,38 @@
 
 - v0.0.4の各機能は、公開前の試験版で検証しています。試験版・基点commit・条件は各記録を参照してください。
 
+## UX改善の検証（2026-10-26）
+
+対象：**未リリース（main）**。v0.0.6の `9718b00` を基に追加。試験版は `ux-test-a/b`。実資格情報と外部AIへの推論を使わず、固定Codex 0.163.0・Claude Code 2.1.306、架空の認証情報、ローカルfixtureで確認しています。
+
+| 対象 | 結果・確認範囲 |
+|---|---|
+| Go全体 | build、全件race・coverage、vet、lintが成功。既存5系統のsecurity fuzzも成功 |
+| ポリシー編集 | 複製・編集・継承、明示false/0、子ポリシーへの影響、危険な設定の説明、保存前レビュー、競合時の下書き保持、0600保存を確認 |
+| 実PTYの編集操作 | 日本語のbracketed paste、装飾として解釈され得る文字列の保存、Tabによる移動、レビュー・保存・Esc・端末復元を確認 |
+| 小さい画面 | 閲覧画面は120×40、80×24、60×22の描画と操作案内、説明欄へのキーボード移動を確認。編集フォームは80列×22行以上を推奨。物理端末の目視検査は別 |
+| 起動診断 | 元のエラーと終了型を保持。選択したconfig・profile・policyファイル・runtime登録・プロジェクトDockerfileを失わない案内を確認 |
+| CLI・上流 | CLI名・help・completion、configureでのJSON拒否、上流のオフライン契約検査が成功。上流の版とbaselineは変更なし |
+| 実Kataの最終再試験 | `TestKataAcceptance`（312.46秒）・`TestKataPrimaryTerminal`（14.08秒）が成功。選択した2スイートの結果であり、全Kataスイートの成功とは扱わない |
+| 固定エージェントの実UI | 明示した`--read-only-rootfs`相当の一時HOMEで、guest内PTYのCodex・Claude両方のANSI画面、日本語貼付け、Esc、resize、Ctrl-C終了、端末復元が成功。SQLite WALの利用可否も事前確認。モデルへのPOSTは0件 |
+| 導入・更新・復旧 | 固定資産cacheありのoffline専用ノードで、新規導入、対応版への更新、意図的な新サービス起動失敗からの自動復旧、明示rollbackが成功。今回の試験版は`ux-test-a/b`で、公開版の署名・版下限の再検証とは別 |
+| 回収 | 専用ノード内のVM・コンテナ・task・netns・専用firewallの残留なし。外側のノード・volume、作成した3イメージ、54 IDに限定したDocker build cache、生成bundle・archive・試験バイナリ、Go build/test/fuzz cacheを回収。固定資産cache約1.1GiBと全失敗・成功の証跡を保持。ルートの空きは開始前・終了後とも約55GiB |
+
+批判的レビューと実Kataで、次の問題を区別しました。
+
+| 発見 | 対応・証跡 |
+|---|---|
+| shell終了後のTUI停止 | UIループ内で同期refreshが同じループを待っていたため修正。実Kataで接続→shell終了→再操作→ポリシー画面→終了を確認 |
+| 終了後に残るstdin reader・resize処理 | 主端末も取消可能な入力処理を使い、次の入力処理へ戻す前に終了を待つよう修正 |
+| 最初の画面サイズ・256色 | bootstrap解除前に初期サイズを設定。containerdのTTY設定が `TERM=xterm-256color` を上書きする問題を修正。失敗証跡 `365a2b603c0a` |
+| dashboard試験の検索 | bare IDは通常検索の対象外。試験を文書どおりの `id:` 検索へ訂正。製品の検索仕様は変更なし。証跡 `d76f557411d6` |
+| エージェント起動の待ち方 | 一時HOMEでCodexの対話UIは成功。Claudeが固定4秒以内に描画しなかった試験は失敗として保存し、制限時間内に描画・貼付け結果を待つ試験へ修正。証跡 `786b6ab3d540` |
+| Codex対話UIのSQLite | 通常のvirtiofs HOMEで `state_5.sqlite` が `SQLITE_IOERR_SHMMAP`（5386）となり起動失敗。証跡 `3fba57bd6597`。共有ファイル整合性を保つ設定とSQLiteの共有mmapが衝突するため、既定値は変更せず、既存の一時HOMEモードを別条件として再試験 |
+
+一時HOMEの回避策は[runの条件と保持期間](commands/run.md#codexのsqlite起動エラー)を確認してください。通常HOMEの永続的なCodex状態は未解決です。キー転送の成功や、Docker上だけの対話UI成功を、その問題の解決とは数えません。
+
+最終再試験の証跡は `.kata-verification/setup-e2e/822b5b804494/`、試験資材のhashとレビューは `.kata-verification/ux-20261026/` に保存。fixtureの成功は実アカウントの認証・更新・推論、OSのIME、全エージェント操作の確認を意味しません。
+
 ## 配布署名のCLI互換性（2026-10-25）
 
 | 項目 | 内容 |

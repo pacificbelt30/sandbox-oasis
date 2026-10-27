@@ -32,6 +32,7 @@ The `C`, `X`, `/`, `O`, and `V` instance actions are available in v0.0.6 and lat
 | `E` | Fetch selected worker's proxy denial history |
 | `P` | Open proxy settings |
 | `B` | Open credential broker settings |
+| `G` | Select, clone, edit, and review host agent policies (unreleased, main) |
 | `?` / `H` | Open dashboard help |
 | `Q` | Quit; from log/denial view, return to the list |
 

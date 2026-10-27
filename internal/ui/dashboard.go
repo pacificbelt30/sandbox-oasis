@@ -36,7 +36,7 @@ func dashboardHelp(compact bool) string {
 	if compact {
 		return "[yellow]Enter[-] logs  [yellow]C[-] connect  [yellow]/[-] filter  [yellow]?[-] help  [yellow]Q[-] quit"
 	}
-	return "[yellow][↑↓][-] Select  [yellow][Enter][-] Logs  [yellow][C][-] Connect  [yellow][X][-] Exec  [yellow][/][-] Filter  [yellow][O][-] Sort  [yellow][V][-] Activity  [yellow][S/R/D][-] Manage  [yellow][?][-] Help  [yellow][Q][-] Quit"
+	return "[yellow][↑↓][-] Select  [yellow][Enter][-] Logs  [yellow][C][-] Connect  [yellow][X][-] Exec  [yellow][/][-] Filter  [yellow][O][-] Sort  [yellow][V][-] Activity  [yellow][G][-] Policies  [yellow][S/R/D][-] Manage  [yellow][?][-] Help  [yellow][Q][-] Quit"
 }
 
 func dashboardBody(views dashboardViews) *tview.Flex {
@@ -117,6 +117,7 @@ D       delete after confirmation
 E       show recorded egress denials
 A       stop every running worker after confirmation
 P / B   proxy / broker settings
+G       host agent policies: clone, edit, review, and select a default
 Q       quit; Escape closes a panel
 
 Existing agent processes continue while a connected shell is open.`

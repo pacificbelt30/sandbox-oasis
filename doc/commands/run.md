@@ -58,6 +58,21 @@ oaiso run -- npm test -- --watch=false
 
 ---
 
+## 起動で失敗したとき
+
+段階別の復旧案内：**未リリース（main）**。`run`・`codex`・`claude`の起動失敗に、原因と`Next:`の確認手順を表示します。
+
+| 表示される段階 | 次の確認 |
+|---|---|
+| `agent policy` | 選択中のファイルで`agent-policy validate`、または`agent-policy configure` |
+| `node` / `runtime` | `runtime-check`でKVM・cgroup・nodeを診断。サービスの状態を確認 |
+| `authentication` / `auth proxy` | `status`で保存とProxyを確認。`login --help`と`init --help`で手順を確認 |
+| `image` | 自動buildのエラーと選択イメージを確認。表示されたbuild例を実際のDockerfileに合わせる |
+| `worker launch` | `runtime-check`、`ps -a`、`vm ps -a`で残った資源と失敗原因を確認 |
+
+- 明示した`--config`・ポリシーファイル・認証profileは、復旧コマンドにも引き継ぎます。
+- 案内の表示だけで修復は実行しません。詳細は[準備状態](status.md)と[配置・復旧](../setup.md)を参照してください。
+
 ## 資源プロファイル
 
 | 組み込み名 | CPU | guestメモリ | ホスト予約・上限 | guest／host PID上限 |
@@ -348,7 +363,7 @@ oaiso run --mount ./cache:/cache --mount /opt/models:/models:ro
 
 - `--read-only-rootfs` はイメージの rootfs に適用され、`/workspace` と追加 mount の読み書き設定は変えません。
 - 起動時のパッケージ追加は使えないため、必要なパッケージはイメージに入れてください。
-- HOME と `/tmp`・`/var/tmp` は一時的な tmpfs になり、ワーカー削除後には残りません。
+- HOME と `/tmp`・`/var/tmp` は一時的な tmpfs になり、ワーカーの停止・再起動・削除を越えて保持されません。
 - `--no-git-metadata` を指定した linked worktree では共通 Git metadata をマウントしません。
 - VM 内で Git を使う場合は私有の metadata と mount を別途用意してください。
 
@@ -364,6 +379,18 @@ oaiso run --mount ./cache:/cache --mount /opt/models:/models:ro
 [run]
 mounts = ["/home/user/datasets:/data:ro", "./cache:/cache"]
 ```
+
+## CodexのSQLite起動エラー
+
+2026-10-26の固定版Codex 0.163.0では、通常のKata rootfs上のHOMEで `state_5.sqlite` の `disk I/O error (code: 5386)` が発生し、対話UIが起動できません。共有workspaceの整合性のために使う `virtio_fs_cache="none"` と、SQLite WALの書き込み可能な共有mmapが衝突します。[検証記録](../testing.md#ux改善の検証2026-10-26)を参照してください。
+
+履歴やHOME内の設定を停止後に保持する必要がない試行に限り、既存の一時HOMEモードを明示して起動できます。必要なパッケージは事前にイメージへ入れてください。`/workspace` の共有ファイルは通常どおり残ります。
+
+```bash
+oaiso run --read-only-rootfs
+```
+
+この指定は既定値に自動適用しません。永続的なCodex状態が必要な場合は、この回避策を使わず、DB保存用のVMディスク対応を待ってください。共有workspaceのキャッシュ設定を変更する回避策は採用していません。
 
 ---
 

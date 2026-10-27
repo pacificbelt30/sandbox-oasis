@@ -57,6 +57,21 @@ oaiso run -- npm test -- --watch=false
 
 ---
 
+## When startup fails
+
+Stage-specific recovery hints are **unreleased (`main`)**. Startup failures from `run`, `codex`, and `claude` retain the cause and print `Next:` steps.
+
+| Stage | Next check |
+|---|---|
+| `agent policy` | Validate the selected file or open `agent-policy configure` |
+| `node` / `runtime` | Run `runtime-check` for KVM, cgroups, and the node; inspect service status |
+| `authentication` / `auth proxy` | Run `status`, then review `login --help` and `init --help` |
+| `image` | Inspect the build error and selected source; adapt the suggested build command to the actual Dockerfile |
+| `worker launch` | Inspect `runtime-check`, `ps -a`, and `vm ps -a` before retrying |
+
+- Explicit config, policy-file, and credential-profile selections are carried into relevant recovery commands.
+- Hints do not execute repairs. See [readiness](status.md) and [setup/recovery](../../setup.md).
+
 ## Resource profiles
 
 | Built-in name | CPU | Guest memory | Host reservation/limit | Guest/host PID ceiling |
@@ -293,7 +308,7 @@ oaiso run --mount ./cache:/cache --mount /opt/models:/models:ro
 
 - `--read-only-rootfs` does not change `/workspace` or additional mount permissions.
 - Install needed packages in the image first; startup package installation is rejected.
-- HOME, `/tmp`, and `/var/tmp` are temporary tmpfs storage.
+- HOME, `/tmp`, and `/var/tmp` use temporary tmpfs storage that does not survive worker stop, restart, or removal.
 - With `--no-git-metadata`, a linked worktree's shared Git metadata is not mounted; provide private metadata and mounts if Git must run inside the VM.
 
 - `oaiso profile --json` reports the CPU, guest RAM, host limit, and PID limit of each profile.
@@ -308,6 +323,18 @@ oaiso run --mount ./cache:/cache --mount /opt/models:/models:ro
 [run]
 mounts = ["/home/user/datasets:/data:ro", "./cache:/cache"]
 ```
+
+## Codex SQLite startup error
+
+With the pinned Codex 0.163.0 tested on 2026-10-26, an ordinary Kata rootfs HOME fails to start the interactive UI with `disk I/O error (code: 5386)` for `state_5.sqlite`. The `virtio_fs_cache="none"` setting needed for coherent shared workspaces conflicts with SQLite WAL's writable shared mmap. See the [verification record](../../testing.md#ux改善の検証2026-10-26).
+
+For trials that do not require HOME settings or history to survive stopping the worker, explicitly select the existing temporary HOME mode. Install required packages in the image first. Shared files in `/workspace` retain their usual persistence.
+
+```bash
+oaiso run --read-only-rootfs
+```
+
+This option is not applied automatically. If durable Codex state is required, wait for VM disk storage support instead of using this workaround. Changing the shared workspace cache settings is not an adopted workaround.
 
 ---
 

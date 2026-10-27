@@ -9,6 +9,8 @@ import (
 
 type localTerminal struct{}
 
+func localTerminalSize(io.Reader) (uint, uint, bool) { return 0, 0, false }
+
 func openLocalTerminal(io.Reader, bool, func(uint, uint) error) (*localTerminal, error) {
 	return nil, nil
 }

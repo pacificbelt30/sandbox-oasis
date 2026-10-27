@@ -68,6 +68,15 @@ func (t *localTerminal) sendSize(resize func(uint, uint) error) {
 	}
 }
 
+func localTerminalSize(input io.Reader) (uint, uint, bool) {
+	file, ok := input.(*os.File)
+	if !ok || !term.IsTerminal(int(file.Fd())) {
+		return 0, 0, false
+	}
+	width, height, err := term.GetSize(int(file.Fd()))
+	return uint(max(width, 0)), uint(max(height, 0)), err == nil && width > 0 && height > 0
+}
+
 func (t *localTerminal) copyTo(ctx context.Context, destination io.Writer) error {
 	buffer := make([]byte, 32<<10)
 	for {
@@ -86,13 +95,23 @@ func (t *localTerminal) copyTo(ctx context.Context, destination io.Writer) error
 		if err != nil {
 			return err
 		}
-		if poll[0].Revents&(unix.POLLHUP|unix.POLLERR|unix.POLLNVAL) != 0 {
-			return io.EOF
-		}
 		if poll[0].Revents&unix.POLLIN == 0 {
+			if poll[0].Revents&(unix.POLLHUP|unix.POLLERR|unix.POLLNVAL) != 0 {
+				return io.EOF
+			}
 			continue
 		}
+		select {
+		case <-t.done:
+			return nil
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
 		count, err := unix.Read(t.fd, buffer)
+		if errors.Is(err, syscall.EINTR) {
+			continue
+		}
 		if count > 0 {
 			written := 0
 			for written < count {
@@ -108,6 +127,9 @@ func (t *localTerminal) copyTo(ctx context.Context, destination io.Writer) error
 		}
 		if err != nil {
 			return err
+		}
+		if count == 0 {
+			return io.EOF
 		}
 	}
 }

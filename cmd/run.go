@@ -180,7 +180,10 @@ func init() {
 	registerCompletion(runCmd, "profile-size", completeResourceProfiles)
 }
 
-func runWorker(cmd *cobra.Command, args []string) error {
+func runWorker(cmd *cobra.Command, args []string) (result error) {
+	stage := "configuration"
+	var buildCfg *ProjectConfig
+	defer func() { result = startupFailure(stage, result, buildCfg) }()
 	projectDir, err := resolveProjectDir(runOpts.ProjectDir)
 	if err != nil {
 		return fmt.Errorf("resolving project directory: %w", err)
@@ -189,9 +192,11 @@ func runWorker(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	stage = "agent policy"
 	if err := applyAgentPolicyDefaults(cmd); err != nil {
 		return err
 	}
+	stage = "configuration"
 	applyRunConfigDefaults(cmd)
 	if err := applyOptionalRunDefaults(cmd); err != nil {
 		return err
@@ -212,7 +217,7 @@ func runWorker(cmd *cobra.Command, args []string) error {
 	}
 	// An explicit template selects both the image tag and its build source.
 	// A project build with the same tag must not replace that template.
-	buildCfg := projectBuildConfigForRun(cmd, projectCfg)
+	buildCfg = projectBuildConfigForRun(cmd, projectCfg)
 	if runOpts.DirectAgent {
 		if agentFlag == string(sandbox.AgentClaude) {
 			if codexOptionPresent(runOpts.AgentArgs, "--model") {
@@ -251,14 +256,17 @@ func runWorker(cmd *cobra.Command, args []string) error {
 		runOpts.Environment.ImageID = l.ImageID
 	}
 	// Check before proxy startup, token issuance, worktrees or image builds.
+	stage = "node"
 	preflight, err := sandbox.NewManager(managementConfig())
 	if err != nil {
 		return err
 	}
 	defer func() { _ = preflight.Close() }()
+	stage = "runtime"
 	if err := preflight.CheckRuntime(cmd.Context(), runOpts); err != nil {
 		return err
 	}
+	stage = "configuration"
 
 	// A positional command is equivalent to --exec, but as separate argv
 	// entries rather than one pre-quoted string.
@@ -330,11 +338,14 @@ func runWorker(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("creating network manager: %w", err)
 	}
+	defer func() { _ = netMgr.Close() }()
 
+	stage = "authentication"
 	adminSecret, err := effectiveRunProxySecret()
 	if err != nil {
 		return err
 	}
+	stage = "auth proxy"
 	proxy, err := authproxy.NewRemoteProxy(proxyAdminURL, proxyContainerURL, adminSecret)
 	if err != nil {
 		// If the proxy simply isn't running and we're on a terminal with the
@@ -345,6 +356,7 @@ func runWorker(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	stage = "authentication"
 	proxy, err = reconcileProxyAuthState(cmd.Context(), proxy, forceRecreateProxy)
 	if err != nil {
 		return err
@@ -355,6 +367,7 @@ func runWorker(cmd *cobra.Command, args []string) error {
 			"set ANTHROPIC_API_KEY / CLAUDE_CODE_OAUTH_TOKEN or run `claude auth login` (~/.claude/.credentials.json) before starting the proxy")
 	}
 	if (len(runEgressAllow) > 0 || configuredPolicy().DefaultDeny) && !runOpts.NoInternet {
+		stage = "configuration"
 		if cmd.Flags().Changed("http-proxy-url") || httpProxyURL != "http://codex-http-proxy:18082" {
 			return fmt.Errorf("--egress-allow-domain requires the managed egress proxy")
 		}
@@ -374,8 +387,10 @@ func runWorker(cmd *cobra.Command, args []string) error {
 	}
 
 	// Setup signal handling for graceful shutdown
+	stage = "node"
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	defer signal.Stop(sigCh)
 
 	managerCfg := managementConfig()
 	managerCfg.Proxy = proxy
@@ -387,9 +402,11 @@ func runWorker(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("creating sandbox manager: %w", err)
 	}
+	defer func() { _ = sbMgr.Close() }()
 
 	// Auto-build the sandbox image when it is not present locally, or when it
 	// is stale relative to its template's Dockerfile (see imageNeedsBuild).
+	stage = "image"
 	needsBuild, reason := false, ""
 	if selected, _ := cmd.Flags().GetString("checkpoint"); selected == "" {
 		needsBuild, reason, err = imageNeedsBuild(sbMgr, runOpts.Image, buildCfg)
@@ -398,7 +415,7 @@ func runWorker(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("checking image %s: %w", runOpts.Image, err)
 	}
 	if needsBuild {
-		fmt.Printf("%s, building...\n", reason)
+		fmt.Fprintln(cmd.ErrOrStderr(), startupImageProgress(runOpts.Image, reason)) //nolint:errcheck
 		if buildCfg != nil && buildCfg.Build.Dockerfile != "" && buildCfg.Build.Tag == runOpts.Image {
 			if err := buildProjectImage(cmd.Context(), buildCfg, runOpts.Image); err != nil {
 				return fmt.Errorf("auto-build project image: %w", err)
@@ -423,6 +440,7 @@ func runWorker(cmd *cobra.Command, args []string) error {
 		fmt.Println("Build finished, starting container...")
 	}
 
+	stage = "configuration"
 	if runOpts.Parallel > 1 {
 		return runParallel(sbMgr, sigCh)
 	}
@@ -849,7 +867,7 @@ func runSingle(mgr *sandbox.Manager, sigCh <-chan os.Signal) error {
 	opts := runOpts
 	containerID, err := workerapp.Launch(context.Background(), diagnosticRunner{runner: mgr, directory: runObserveDir}, opts)
 	if err != nil {
-		return fmt.Errorf("starting container: %w", err)
+		return startupFailure("worker launch", fmt.Errorf("starting container: %w", err))
 	}
 
 	if opts.Detach {
@@ -914,7 +932,7 @@ func runParallel(mgr *sandbox.Manager, sigCh <-chan os.Signal) error {
 				containerIDs = append(containerIDs, containerID)
 			}
 			cleanupFailedBatch()
-			return fmt.Errorf("starting worker %d: %w", i, err)
+			return startupFailure("worker launch", fmt.Errorf("starting worker %d: %w", i, err))
 		}
 		containerIDs = append(containerIDs, containerID)
 		fmt.Printf("  Worker %d started: %s\n", i, containerID[:12])

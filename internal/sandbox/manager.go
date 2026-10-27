@@ -12,12 +12,10 @@ import (
 	"net"
 	"net/url"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/containerd/errdefs"
@@ -33,7 +31,6 @@ import (
 	"github.com/pacificbelt30/codex-dock/internal/network"
 	"github.com/pacificbelt30/codex-dock/internal/workerpolicy"
 	"github.com/pacificbelt30/codex-dock/internal/workertransport"
-	"golang.org/x/term"
 )
 
 const (
@@ -653,6 +650,13 @@ func (m *Manager) RunContext(parent context.Context, opts RunOptions) (container
 			return "", err
 		}
 		launchtiming.Next(ctx, "bootstrap_release")
+		if !opts.Detach {
+			if width, height, ok := localTerminalSize(os.Stdin); ok {
+				if err := m.cli.ContainerResize(ctx, resp.ID, container.ResizeOptions{Width: width, Height: height}); err != nil {
+					return "", fmt.Errorf("setting initial worker terminal size: %w", err)
+				}
+			}
+		}
 		if _, err = m.execTrusted(ctx, resp.ID, []string{guestGuard, "release", allocation}); err != nil {
 			return "", err
 		}
@@ -1116,42 +1120,32 @@ func (m *Manager) attachIO(ctx context.Context, containerID string) {
 	}
 	defer resp.Close()
 
-	fd := int(os.Stdin.Fd())
-	if term.IsTerminal(fd) {
-		oldState, err := term.MakeRaw(fd)
-		if err == nil {
-			defer term.Restore(fd, oldState) //nolint:errcheck
-		}
-
-		// Set initial PTY size
-		if w, h, err := term.GetSize(fd); err == nil {
-			_ = m.cli.ContainerResize(ctx, containerID, container.ResizeOptions{
-				Width:  uint(w),
-				Height: uint(h),
-			})
-		}
-
-		// Forward terminal resize events (SIGWINCH) to the container PTY
-		resizeCh := make(chan os.Signal, 1)
-		signal.Notify(resizeCh, syscall.SIGWINCH)
-		defer signal.Stop(resizeCh)
+	localTTY, err := openLocalTerminal(os.Stdin, true, func(width, height uint) error {
+		return m.cli.ContainerResize(ctx, containerID, container.ResizeOptions{Width: width, Height: height})
+	})
+	if err != nil {
+		return
+	}
+	stop := context.AfterFunc(ctx, resp.Close)
+	defer stop()
+	if localTTY != nil {
+		inputDone := make(chan struct{})
 		go func() {
-			for range resizeCh {
-				w, h, err := term.GetSize(fd)
-				if err == nil {
-					_ = m.cli.ContainerResize(ctx, containerID, container.ResizeOptions{
-						Width:  uint(w),
-						Height: uint(h),
-					})
-				}
-			}
+			defer close(inputDone)
+			_ = localTTY.copyTo(ctx, resp.Conn)
 		}()
+		defer func() {
+			_ = localTTY.Close()
+			resp.Close()
+			<-inputDone
+		}()
+	} else {
+		go func() { _, _ = io.Copy(resp.Conn, os.Stdin) }()
 	}
 
 	// Pass stdin bytes to the container as-is.  Ctrl+Z (0x1a) is forwarded
 	// to the container's PTY where the in-container bash handles job control:
 	// codex is suspended and the bash prompt appears inside the container.
-	go func() { _, _ = io.Copy(resp.Conn, os.Stdin) }()
 	_, _ = io.Copy(os.Stdout, resp.Reader)
 }
 

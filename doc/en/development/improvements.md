@@ -2,15 +2,31 @@
 
 [日本語](../../development/improvements.md) | **English**
 
-- Baseline: v0.0.4. This page tracks proposals, additional verification and included improvements.
+- Baseline: v0.0.6. This page tracks proposals, additional verification and included improvements.
 - P0 establishes guarantees; P1 improves daily use/security; P2 requires measured benefit. Unimplemented proposals have undecided effort and release dates.
 - No named-product evaluation or ranking is published here.
 - Preserve convenient local operation, the authentication proxy, isolation, revocation and cleanup.
+
+## UX tasks after v0.0.6
+
+Target: **unreleased (`main`)**.
+
+| Task | User-facing change | Acceptance |
+|---|---|---|
+| 1-A | Host agent-policy list, search, value sources, and explanations | Standalone editor; distinguish built-in and host policies |
+| 1-B | Clone, edit, inherit, and select a default | Review diffs and affected descendants, confirm discard, reject concurrent edits, save with mode 0600 |
+| 2-A | Terminal transport regressions | Esc without newline, special keys, UTF-8 paste, ANSI, live resize, restored terminal flags and stdin ownership |
+| 2-B | Real TUI interactions and layout | Small screens, Japanese paste through a PTY, review/save, responsive dashboard after shell exit |
+| 3 | Stage-specific startup guidance | Preserve underlying errors and suggest recovery commands using selected configuration |
+| Critical review | Mistaken saves, conflicts, misleading recovery, and return failures | Real Kata, no secret display, owned-resource cleanup; distinguish live AI inference and physical-terminal visual checks |
+
+Interaction design draws on [K9s search, Esc and help](https://k9scli.io/topics/commands/), [VS Code settings scopes, search and reset](https://code.visualstudio.com/docs/configure/settings), and [Docker troubleshooting guidance](https://docs.docker.com/desktop/troubleshoot-and-support/troubleshoot/). Oaiso adapts these ideas into source visibility, review before saving, and concrete checks for each startup stage.
 
 ## Establish guarantees first
 
 | Priority | Item | Current state and remaining work | Acceptance |
 |---|---|---|---|
+| P0 | Durable Codex state and interactive startup | [SQLite startup fails with an ordinary HOME](../../testing.md#ux改善の検証2026-10-26). Temporary HOME does not meet persistence requirements | Preserve shared workspace coherence; design and verify VM disk storage across stop, restart, crashes, migration and cleanup |
 | P0 | Remaining dependency findings | **Dependency updates and applicability review completed (v0.0.4)**. [Findings](dependency-security.md) reduced from 15 to 2; both concern unused daemon features | Automated regressions pass. No finding exclusions; rationale recorded. Follow-up real Kata coverage uses the network/revocation suite |
 | P0 | Live-account authentication | Independent login, auth-only VM and encrypted storage implemented; live accounts/long refresh unverified | API/subscription, refresh conflicts, proxy restart, cancellation, active-stream revocation, no secrets in logs/files |
 | P0 | Network/revocation acceptance | **Additional coverage completed (v0.0.4)**. [Scope and reproduction](network-acceptance.md) | Automated DNS/failed-stop checks; real Kata traffic, active SSE/WS revocation and quarantine pass. CLI text/JSON distinguish unconfirmed stops |

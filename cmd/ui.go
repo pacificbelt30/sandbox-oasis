@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"github.com/pacificbelt30/codex-dock/internal/proxysettings"
 	"github.com/pacificbelt30/codex-dock/internal/ui"
 	"github.com/spf13/cobra"
@@ -16,12 +17,26 @@ var uiCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		return ui.RunWithOptions(managementConfig(), path)
+		store, err := agentPolicyStore()
+		if err != nil {
+			return err
+		}
+		return ui.RunWithPolicyOptions(managementConfig(), path, store.Path, viper.GetString("run.agent_policy"))
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(uiCmd)
+	agentPolicyCmd.AddCommand(&cobra.Command{Use: "configure", Short: "Edit and review host agent policies in the TUI", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
+		if agentPolicyJSON {
+			return fmt.Errorf("configure is interactive; use agent-policy show --json for structured output")
+		}
+		store, err := agentPolicyStore()
+		if err != nil {
+			return err
+		}
+		return ui.RunAgentPolicies(store.Path, viper.GetString("run.agent_policy"))
+	}})
 	proxyCmd.AddCommand(&cobra.Command{Use: "configure", Short: "Edit non-secret proxy policy settings in the TUI", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
 		path, err := proxyConfigPath()
 		if err != nil {
