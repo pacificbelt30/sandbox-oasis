@@ -1,0 +1,7618 @@
+
+<!doctype html>
+<html lang="ja" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="御AgentISOlation（Oaiso）— AIエージェントの隔離実行基盤。コマンドは oaiso。">
+      
+      
+      
+        <link rel="canonical" href="https://pacificbelt30.github.io/sandbox-oasis/commands/run/">
+      
+      
+        <link rel="prev" href="../">
+      
+      
+        <link rel="next" href="../worker/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+    
+    
+      
+        <title>ワーカー起動 - 御AgentISOlation (Oaiso)</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#oaiso-run--サンドボックスコンテナの起動" class="md-skip">
+          コンテンツにスキップ
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="ヘッダー">
+    <a href="../.." title="御AgentISOlation (Oaiso)" class="md-header__button md-logo" aria-label="御AgentISOlation (Oaiso)" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            御AgentISOlation (Oaiso)
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              ワーカー起動
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="ダークモードに切り替え"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="ダークモードに切り替え" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="ライトモードに切り替え"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="ライトモードに切り替え" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="検索" placeholder="検索" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="検索">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="共有" aria-label="共有" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="クリア" aria-label="クリア" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            検索を初期化
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/pacificbelt30/sandbox-oasis" title="リポジトリへ" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    pacificbelt30/sandbox-oasis
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="タブ" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  ホーム
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../concepts/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  はじめに
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guides/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  利用ガイド
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../../reference/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  リファレンス
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../operations/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  管理・運用
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../development/toolchain/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  開発
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../en/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  English
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="ナビゲーション" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="御AgentISOlation (Oaiso)" class="md-nav__button md-logo" aria-label="御AgentISOlation (Oaiso)" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    御AgentISOlation (Oaiso)
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/pacificbelt30/sandbox-oasis" title="リポジトリへ" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    pacificbelt30/sandbox-oasis
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ホーム
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    はじめに
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    はじめに
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要と用語
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    インストール
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    クイックスタート
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../release-notes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリース情報
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../guides/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    利用ガイド
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    利用ガイド
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/first-run/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    導入から初回起動
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_3" id="__nav_3_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    エージェント
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    エージェント
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    起動方法と対応状況
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/agent-policies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ホスト管理の既定値
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/agent-state/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Codexの状態保存
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../claude-code/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Claude Code
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../workspace/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ファイル共有とworktree
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/usage-limits/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    実行ごとの利用上限
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/resource-limits/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    接続・帯域・FD・I/Oの上限
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/observability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    診断の保存
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/signed-releases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    配布物の署名と作成元
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/worker-tls/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    VMと認証Proxyの暗号化
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/audit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    操作の監査記録
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/disk-checkpoint/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    disk checkpoint
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/artifacts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    成果物をまとめて回収
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/preview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Webアプリのプレビュー
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/live-policy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    通信許可の申請・即時変更
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/credential-broker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    認証brokerの設定
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_16" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_16" id="__nav_3_16_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    認証
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_16_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_16">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    認証
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/authentication/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    認証方式とプロファイル
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/encrypted-credentials/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    暗号化して保存する
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/keyring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    キーリングを使う
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../auth-proxy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    認証プロキシ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../auth-proxy/tokens/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    短命トークン
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../proxy-standalone/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    プロキシの単体利用
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_17" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_17" id="__nav_3_17_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    通信と隔離
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_17_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_17">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    通信と隔離
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/networking/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    一般通信を許可する
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../proxy-policy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    通信の許可・拒否
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sandbox-features/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    追加のサンドボックス制御
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    セキュリティと制限
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../reference/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リファレンス
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    リファレンス
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    CLI
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    コマンド一覧
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ワーカー起動
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ワーカー起動
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="目次">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目次
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#codex-cli-を直接起動する" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Codex CLI を直接起動する
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#起動で失敗したとき" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        起動で失敗したとき
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#資源プロファイル" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        資源プロファイル
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#オプション一覧" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        オプション一覧
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="オプション一覧">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#通信隔離実行準備のオプション" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        通信・隔離・実行準備のオプション
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#docker-cli-との対応" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docker CLI との対応
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#--agent--エージェントの選択" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --agent — エージェントの選択
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#--exec--コマンドの実行" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --exec — コマンドの実行
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#--shell-type--シェルの種類の指定" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --shell-type — シェルの種類の指定
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#--approval-mode--承認モードの指定" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --approval-mode — 承認モードの指定
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#--user--コンテナ実行ユーザの指定" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --user — コンテナ実行ユーザの指定
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#--mount--任意ディレクトリの追加マウント" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --mount — 任意ディレクトリの追加マウント
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#codexのsqlite起動エラー" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CodexのSQLite起動エラー
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#パッケージ記述形式" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        パッケージ記述形式
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#並列ワーカー" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        並列ワーカー
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#使用例" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        使用例
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#関連ドキュメント" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        関連ドキュメント
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../worker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ワーカー管理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../build/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    イメージの作成
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../proxy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    プロキシ管理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../auth/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    認証管理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../login/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ログイン
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../status/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    状態の確認
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../network-cmd/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ネットワーク管理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ui/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TUI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../completion/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    シェル補完
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upgrade/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    配布版の更新
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../update/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Go版CLIの更新
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    設定
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    組み込みAPI
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    組み込みAPI
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../go-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Go API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../local-api-sdk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ローカルAPI・SDK
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../credential-store/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Credential Store
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../auth-proxy/endpoints/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    認証API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    管理・運用
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    管理・運用
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    日常の操作と更新
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ホストの配置と更新
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../kata/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    実行ホストの手動準備
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Kata VMの管理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    移行
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    トラブルシューティング
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../performance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    性能とベンチマーク
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    開発
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    開発
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/toolchain/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    開発用ツールの準備
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/local-credential-store/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ローカル暗号化ストアの仕様
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/dependency-security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    依存関係の検出結果
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_4" id="__nav_6_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    仕組み
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    仕組み
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    アーキテクチャ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../network/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ネットワーク
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../upstream-compatibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    上流仕様の変更検知
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    テストと動作確認
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/network-acceptance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    通信・失効の受け入れ検査
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../future-work/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    今後の対応
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/improvements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    機能と安全性の改善候補
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/security-tests/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    認証・通信・障害の自動検査
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/candidate-qualification/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    更新候補の確認
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/documentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ドキュメントの追加・修正
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/releases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリースの作成
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_14" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_14" id="__nav_6_14_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    廃止機能
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_14_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_14">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    廃止機能
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../firewall/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    firewall
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../firewall/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    旧firewallコマンド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../en/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    English
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_7" id="__nav_7_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    English
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_2" id="__nav_7_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview and terminology
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_3" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../en/guides/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_7_3" id="__nav_7_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/guides/first-run/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation to first run
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_3_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_3_3" id="__nav_7_3_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agents
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_7_3_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_3_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Agents
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/guides/agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Launch methods and support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/guides/agent-policies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Host-managed defaults
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/guides/agent-state/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Codex state storage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/claude-code/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Claude Code
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/guides/usage-limits/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Per-execution usage limits
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/guides/resource-limits/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Connection, bandwidth, FD and I/O limits
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/guides/observability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Save diagnostics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/guides/signed-releases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Signed releases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/guides/worker-tls/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Worker TLS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/guides/audit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operation audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/guides/disk-checkpoint/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Disk checkpoints
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/guides/artifacts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Artifact bundles
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/guides/preview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Web app previews
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/guides/live-policy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Live egress changes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/guides/credential-broker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Credential broker
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_3_15" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_3_15" id="__nav_7_3_15_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authentication
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_7_3_15_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_3_15">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Authentication
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/guides/authentication/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authentication and profiles
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/guides/encrypted-credentials/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Encrypted storage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/guides/keyring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Keyring sessions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/auth-proxy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Auth proxy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/auth-proxy/tokens/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Short-lived tokens
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/proxy-standalone/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Standalone proxy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_3_16" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_3_16" id="__nav_7_3_16_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Networking and isolation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_7_3_16_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_3_16">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Networking and isolation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/guides/networking/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Allow general traffic
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/sandbox-features/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Additional sandbox controls
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security and limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_4" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../en/reference/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_7_4" id="__nav_7_4_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_4_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_4_2" id="__nav_7_4_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_7_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    CLI
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/commands/run/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Run
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/commands/worker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Workers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/commands/build/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Build
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/commands/proxy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Proxy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/commands/auth/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Auth
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/commands/login/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Login
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/commands/status/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Status
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/commands/network-cmd/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Network
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/commands/ui/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TUI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/commands/completion/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Completion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/commands/upgrade/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Distribution updates
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/commands/update/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Go CLI update
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_4_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_4_4" id="__nav_7_4_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Embedding API
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_7_4_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_4_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Embedding API
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/go-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Go API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/local-api-sdk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Local API and SDKs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/credential-store/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Credential Store
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/auth-proxy/endpoints/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Auth API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_5" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../en/administration/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Administration
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_7_5" id="__nav_7_5_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Administration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/performance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance and benchmarks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_6" id="__nav_7_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_6_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_6_1" id="__nav_7_6_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_7_6_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_6_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Concepts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/network/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Networking
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/upstream-compatibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Upstream compatibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/future-work/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Future work
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/development/improvements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Feature and security improvements
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/development/security-tests/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security boundary tests
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/development/candidate-qualification/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Candidate qualification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/development/toolchain/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/development/local-credential-store/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Local credential store specification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/development/dependency-security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dependency findings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/development/network-acceptance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Network and revocation acceptance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/development/documentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Documentation editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_6_12" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_6_12" id="__nav_7_6_12_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Removed features
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_7_6_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_6_12">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Removed features
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/firewall/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Firewall
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/commands/firewall/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Firewall command
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="目次">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目次
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#codex-cli-を直接起動する" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Codex CLI を直接起動する
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#起動で失敗したとき" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        起動で失敗したとき
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#資源プロファイル" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        資源プロファイル
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#オプション一覧" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        オプション一覧
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="オプション一覧">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#通信隔離実行準備のオプション" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        通信・隔離・実行準備のオプション
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#docker-cli-との対応" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docker CLI との対応
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#--agent--エージェントの選択" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --agent — エージェントの選択
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#--exec--コマンドの実行" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --exec — コマンドの実行
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#--shell-type--シェルの種類の指定" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --shell-type — シェルの種類の指定
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#--approval-mode--承認モードの指定" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --approval-mode — 承認モードの指定
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#--user--コンテナ実行ユーザの指定" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --user — コンテナ実行ユーザの指定
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#--mount--任意ディレクトリの追加マウント" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --mount — 任意ディレクトリの追加マウント
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#codexのsqlite起動エラー" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CodexのSQLite起動エラー
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#パッケージ記述形式" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        パッケージ記述形式
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#並列ワーカー" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        並列ワーカー
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#使用例" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        使用例
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#関連ドキュメント" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        関連ドキュメント
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="oaiso-run--サンドボックスコンテナの起動"><code>oaiso run</code> — サンドボックスコンテナの起動<a class="headerlink" href="#oaiso-run--サンドボックスコンテナの起動" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p><strong>日本語</strong> | <a href="../../en/commands/run/">English</a></p>
+<p><a href="../">← コマンドリファレンス一覧</a></p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>やりたいこと</th>
+<th>起動方法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Codexを直接起動</td>
+<td><code>oaiso codex</code></td>
+</tr>
+<tr>
+<td>Claude Codeを直接起動</td>
+<td><code>oaiso claude</code></td>
+</tr>
+<tr>
+<td>イメージ・worktree・mountを指定</td>
+<td><code>oaiso run --agent codex</code> / <code>--agent claude</code></td>
+</tr>
+<tr>
+<td>認証済みシェル</td>
+<td><code>oaiso run</code>（組み込み既定値）</td>
+</tr>
+<tr>
+<td>コマンドを1回実行</td>
+<td><code>oaiso run -- COMMAND...</code></td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>既定動作・設定先</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>実行基盤</td>
+<td>Linux x86_64・containerd・Dragonball。<code>--runtime kata</code></td>
+</tr>
+<tr>
+<td>通信</td>
+<td>専用bridge・namespace・nftablesで直接通信を遮断。必要なProxyだけ接続</td>
+</tr>
+<tr>
+<td>既定エージェント</td>
+<td><code>oaiso default codex</code>。プロジェクト限定は <code>--local</code>、確認は <code>oaiso default</code></td>
+</tr>
+<tr>
+<td>イメージ</td>
+<td>不足時は自動ビルド。テンプレートのタグ、または既定Dockerfileを使用</td>
+</tr>
+<tr>
+<td>再ビルド</td>
+<td><a href="../../configuration/#auto_build">auto_build</a>で設定</td>
+</tr>
+<tr>
+<td>プロジェクト設定</td>
+<td>カレントの <code>oaiso.toml</code> の <code>[run]</code> / <code>[build]</code>。<code>--project DIR</code> は <code>DIR</code> の設定を使用</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>初回準備：<a href="../../getting-started/">導入</a>。</li>
+<li>ネットワーク：<a href="../../network/">通信の仕組み</a>。</li>
+<li>独自イメージ：<a href="../build/">build</a>。</li>
+<li>設定の詳細：<a href="../../configuration/#プロジェクト設定">プロジェクト設定</a>。</li>
+</ul>
+<h2 id="codex-cli-を直接起動する">Codex CLI を直接起動する<a class="headerlink" href="#codex-cli-を直接起動する" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>oaiso<span class="w"> </span>codex
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>oaiso<span class="w"> </span>codex<span class="w"> </span><span class="s2">"このリポジトリを調べて"</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>oaiso<span class="w"> </span>codex<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>--json<span class="w"> </span><span class="s2">"変更点を要約して"</span>
+</code></pre></div>
+<ul>
+<li>引数は <code>codex</code> にそのまま渡します。</li>
+<li>カレントディレクトリを <code>/workspace</code> にマウントし、ワーカー内でCodexを直接 <code>exec</code> します。</li>
+<li>承認モードなどのワーカー既定値は設定ファイルの <code>[run]</code> で指定できます。</li>
+<li>イメージ、worktree、追加マウント、detachなどのコンテナ指定には <code>oaiso run --agent codex</code> を使います。</li>
+<li>新規VMの起動時間は通常のホスト上の <code>codex</code> より長くなります。</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>oaiso<span class="w"> </span>run<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span><span class="o">[</span>IMAGE<span class="w"> </span><span class="o">[</span>COMMAND...<span class="o">]]</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>oaiso<span class="w"> </span>run<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span>--<span class="w"> </span>COMMAND...<span class="w">  </span><span class="c1"># 既定イメージでコマンドを実行</span>
+</code></pre></div>
+<ul>
+<li>イメージとコマンドの位置は <code>docker run IMAGE COMMAND</code> と同じです。</li>
+<li>フラグはイメージの前に置きます。</li>
+<li><code>--image</code> または <code>--template</code> を指定した場合は位置引数をコマンドとして扱います。</li>
+<li>コマンドは <code>--exec</code> と同等ですが、全体を1つの文字列にクォートする必要はありません。</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>oaiso<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span>--name<span class="w"> </span>worker<span class="w"> </span>codex-dock:latest
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>oaiso<span class="w"> </span>run<span class="w"> </span>codex-dock:latest<span class="w"> </span>npm<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--<span class="w"> </span>--watch<span class="o">=</span><span class="nb">false</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>oaiso<span class="w"> </span>run<span class="w"> </span>--<span class="w"> </span>npm<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--<span class="w"> </span>--watch<span class="o">=</span><span class="nb">false</span>
+</code></pre></div>
+<hr />
+<h2 id="起動で失敗したとき">起動で失敗したとき<a class="headerlink" href="#起動で失敗したとき" title="Permanent link">&para;</a></h2>
+<p>段階別の復旧案内：<strong>未リリース（main）</strong>。<code>run</code>・<code>codex</code>・<code>claude</code>の起動失敗に、原因と<code>Next:</code>の確認手順を表示します。</p>
+<table>
+<thead>
+<tr>
+<th>表示される段階</th>
+<th>次の確認</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>agent policy</code></td>
+<td>選択中のファイルで<code>agent-policy validate</code>、または<code>agent-policy configure</code></td>
+</tr>
+<tr>
+<td><code>node</code> / <code>runtime</code></td>
+<td><code>runtime-check</code>でKVM・cgroup・nodeを診断。サービスの状態を確認</td>
+</tr>
+<tr>
+<td><code>authentication</code> / <code>auth proxy</code></td>
+<td><code>status</code>で保存とProxyを確認。<code>login --help</code>と<code>init --help</code>で手順を確認</td>
+</tr>
+<tr>
+<td><code>image</code></td>
+<td>自動buildのエラーと選択イメージを確認。表示されたbuild例を実際のDockerfileに合わせる</td>
+</tr>
+<tr>
+<td><code>worker launch</code></td>
+<td><code>runtime-check</code>、<code>ps -a</code>、<code>vm ps -a</code>で残った資源と失敗原因を確認</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>明示した<code>--config</code>・ポリシーファイル・認証profileは、復旧コマンドにも引き継ぎます。</li>
+<li>案内の表示だけで修復は実行しません。詳細は<a href="../status/">準備状態</a>と<a href="../../setup/">配置・復旧</a>を参照してください。</li>
+</ul>
+<h2 id="資源プロファイル">資源プロファイル<a class="headerlink" href="#資源プロファイル" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>組み込み名</th>
+<th>CPU</th>
+<th>guestメモリ</th>
+<th>ホスト予約・上限</th>
+<th>guest／host PID上限</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>standard</code>（既定）</td>
+<td>1</td>
+<td>2 GiB</td>
+<td>3 GiB</td>
+<td>512</td>
+</tr>
+<tr>
+<td><code>small</code></td>
+<td>1</td>
+<td>1 GiB</td>
+<td>2 GiB</td>
+<td>512</td>
+</tr>
+<tr>
+<td><code>compact</code></td>
+<td>1</td>
+<td>512 MiB</td>
+<td>768 MiB</td>
+<td>512</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>oaiso<span class="w"> </span>profile<span class="w"> </span>--node<span class="w"> </span>--json
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>oaiso<span class="w"> </span>run<span class="w"> </span>--profile-size<span class="w"> </span>small<span class="w"> </span>--agent<span class="w"> </span>codex
+</code></pre></div>
+<ul>
+<li><code>profile</code> だけではCLI組み込み値、<code>--node</code> では実際のnodeと管理者定義を照会。</li>
+<li>予約・上限は実測メモリ使用量ではない。<code>compact</code> は大きな依存導入・ビルドに不足する場合あり。</li>
+<li>PID上限の変更：<a href="../../sandbox-features/#管理者定義の資源プロファイル">管理者定義</a>。<code>profile define</code> はJSON生成だけで、nodeへの登録ではない。</li>
+<li><a href="../../sandbox-features/#回収の常駐とメモリの観測">実測値</a>を確認して選択。</li>
+</ul>
+<h2 id="オプション一覧">オプション一覧<a class="headerlink" href="#オプション一覧" title="Permanent link">&para;</a></h2>
+<ul>
+<li>認証をホストと分けるには <code>oaiso --auth-profile NAME run --proxy-admin-secret-file /private/admin-secret ...</code>、または信頼済みグローバル設定を使います。</li>
+<li><a href="../auth/#独立プロファイル">独立プロファイルの作成と起動</a>を参照してください。</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>オプション</th>
+<th>省略形</th>
+<th>デフォルト</th>
+<th>説明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--runtime</code></td>
+<td></td>
+<td><code>kata</code></td>
+<td>ワーカーの隔離方式。<code>runc</code> は明示的な互換モード</td>
+</tr>
+<tr>
+<td><code>--kata-runtime</code></td>
+<td></td>
+<td><code>io.containerd.kata.v2</code></td>
+<td>専用containerdのKata登録名</td>
+</tr>
+<tr>
+<td><code>--image</code></td>
+<td><code>-i</code></td>
+<td><code>codex-dock:latest</code></td>
+<td>サンドボックスに使用するOCIイメージ。位置引数でも指定可能</td>
+</tr>
+<tr>
+<td><code>--template</code></td>
+<td><code>-T</code></td>
+<td></td>
+<td>サンドボックスイメージテンプレート（<code>plain</code>, <code>pwn</code> 等）。指定したテンプレートのタグに解決される。<code>--image</code> を明示指定した場合はそちらが優先。存在しなければ自動ビルドされる</td>
+</tr>
+<tr>
+<td><code>--pkg</code></td>
+<td><code>-p</code></td>
+<td></td>
+<td>追加パッケージ（繰り返し指定可）<code>apt:&lt;pkg&gt;</code>, <code>pip:&lt;pkg&gt;</code>, <code>npm:&lt;pkg&gt;</code></td>
+</tr>
+<tr>
+<td><code>--pkg-file</code></td>
+<td></td>
+<td></td>
+<td>パッケージ定義ファイルのパス (<code>packages.dock</code>)</td>
+</tr>
+<tr>
+<td><code>--project</code></td>
+<td></td>
+<td><code>.</code>（カレント）</td>
+<td><code>/workspace</code> にマウントするプロジェクトディレクトリ</td>
+</tr>
+<tr>
+<td><code>--worktree</code></td>
+<td><code>-w</code></td>
+<td><code>false</code></td>
+<td>git worktree を使ってコンテナを分離する</td>
+</tr>
+<tr>
+<td><code>--branch</code></td>
+<td><code>-b</code></td>
+<td></td>
+<td>チェックアウトするブランチ名（<code>--worktree</code> が必要）</td>
+</tr>
+<tr>
+<td><code>--new-branch</code></td>
+<td><code>-B</code></td>
+<td><code>false</code></td>
+<td>新規ブランチを作成する（<code>--worktree</code> と <code>--branch</code> が必要）</td>
+</tr>
+<tr>
+<td><code>--name</code></td>
+<td><code>-n</code></td>
+<td>自動生成</td>
+<td>コンテナ名（省略すると <code>codex-&lt;形容詞&gt;-&lt;名詞&gt;</code> 形式で自動生成）</td>
+</tr>
+<tr>
+<td><code>--agent</code></td>
+<td></td>
+<td><code>shell</code>（設定で変更可）</td>
+<td>起動するエージェント（<a href="#--agent--エージェントの選択">詳細</a>）</td>
+</tr>
+<tr>
+<td><code>--task</code></td>
+<td><code>-t</code></td>
+<td></td>
+<td>エージェントに渡す初期タスクプロンプト</td>
+</tr>
+<tr>
+<td><code>--exec</code></td>
+<td><code>-e</code></td>
+<td></td>
+<td>認証済みシェルの代わりに実行するコマンド（<a href="#--exec--コマンドの実行">詳細</a>）</td>
+</tr>
+<tr>
+<td><code>--approval-mode</code></td>
+<td></td>
+<td><code>suggest</code></td>
+<td>承認モード（<a href="#--approval-mode--承認モードの指定">詳細</a>）</td>
+</tr>
+<tr>
+<td><code>--full-auto</code></td>
+<td></td>
+<td><code>false</code></td>
+<td><strong>非推奨</strong>: <code>--approval-mode full-auto</code> を使用してください</td>
+</tr>
+<tr>
+<td><code>--model</code></td>
+<td><code>-m</code></td>
+<td></td>
+<td>エージェントに渡すモデル名</td>
+</tr>
+<tr>
+<td><code>--read-only</code></td>
+<td></td>
+<td><code>false</code></td>
+<td>プロジェクトディレクトリを読み取り専用でマウント</td>
+</tr>
+<tr>
+<td><code>--read-only-rootfs</code></td>
+<td></td>
+<td><code>false</code></td>
+<td>イメージの rootfs を読み取り専用にし、HOME と一時ファイルには tmpfs を使用</td>
+</tr>
+<tr>
+<td><code>--agent-state-size</code></td>
+<td></td>
+<td><code>auto</code>（512MiB）</td>
+<td><a href="../../guides/agent-state/">Codex専用DBディスク</a>。<code>off</code>または64MiB〜8GiB。未リリース（main）</td>
+</tr>
+<tr>
+<td><code>--profile-size</code></td>
+<td></td>
+<td><code>standard</code></td>
+<td>Kata VM の資源プロファイル（<code>standard</code> / <code>small</code> / <code>compact</code>）</td>
+</tr>
+<tr>
+<td><code>--no-git-metadata</code></td>
+<td></td>
+<td><code>false</code></td>
+<td>linked worktree の共通 Git metadata を自動共有しない</td>
+</tr>
+<tr>
+<td><code>--mount</code></td>
+<td></td>
+<td></td>
+<td>追加のホストディレクトリをマウント（繰り返し指定可）<code>&lt;host-path&gt;:&lt;container-path&gt;[:ro\|rw]</code>（<a href="#--mount--任意ディレクトリの追加マウント">詳細</a>）</td>
+</tr>
+<tr>
+<td><code>--no-internet</code></td>
+<td></td>
+<td><code>false</code></td>
+<td>一般egressプロキシを接続せず、AI API経路だけを維持</td>
+</tr>
+<tr>
+<td><code>--keep</code></td>
+<td></td>
+<td><code>false</code></td>
+<td>フォアグラウンド実行の終了時にコンテナと専用ネットワークを削除しない（既定では削除し、ネットワークの蓄積を防ぐ）</td>
+</tr>
+<tr>
+<td><code>--force-recreate-proxy</code></td>
+<td></td>
+<td><code>false</code></td>
+<td>ホストとAuth Proxyの認証状態が異なる場合、稼働中ワーカーがあってもAuth Proxyを再作成する（既存ワーカーの認証は失効）</td>
+</tr>
+<tr>
+<td><code>--token-ttl</code></td>
+<td></td>
+<td><code>3600</code></td>
+<td>Auth Proxy トークンの有効期限（秒）</td>
+</tr>
+<tr>
+<td><code>--agents-md</code></td>
+<td></td>
+<td></td>
+<td><code>AGENTS.md</code> ファイルのパス</td>
+</tr>
+<tr>
+<td><code>--detach</code></td>
+<td><code>-d</code></td>
+<td><code>false</code></td>
+<td>バックグラウンドで実行（ログを表示しない）。従来の <code>-D</code> も利用可能</td>
+</tr>
+<tr>
+<td><code>--parallel</code></td>
+<td><code>-P</code></td>
+<td><code>1</code></td>
+<td>並列ワーカー数</td>
+</tr>
+<tr>
+<td><code>--shell</code></td>
+<td><code>-s</code></td>
+<td><code>false</code></td>
+<td><code>entrypoint.sh</code> をバイパスした素の（未認証の）シェルを起動（デバッグ用）</td>
+</tr>
+<tr>
+<td><code>--shell-type</code></td>
+<td></td>
+<td><code>$SHELL</code> から自動判定、それ以外は <code>bash</code></td>
+<td>対話シェルの種類（<a href="#--shell-type--シェルの種類の指定">詳細</a>）</td>
+</tr>
+<tr>
+<td><code>--user</code></td>
+<td></td>
+<td><code>current</code></td>
+<td>コンテナ内の実行ユーザ（<a href="#--user--コンテナ実行ユーザの指定">詳細</a>）</td>
+</tr>
+</tbody>
+</table>
+<h3 id="通信隔離実行準備のオプション">通信・隔離・実行準備のオプション<a class="headerlink" href="#通信隔離実行準備のオプション" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>フラグ</th>
+<th>既定値</th>
+<th>用途・条件</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--policy-preset</code></td>
+<td>未指定</td>
+<td><code>offline</code> / <code>test</code> / <code>dependencies</code> / <code>api</code>。ホストの通信許可を拡張しない</td>
+</tr>
+<tr>
+<td><code>--egress-allow-domain</code></td>
+<td>未指定</td>
+<td>ワーカー別の許可を狭める。繰り返し可</td>
+</tr>
+<tr>
+<td><code>--deny-read</code> / <code>--deny-write</code></td>
+<td>空</td>
+<td>既存の <code>/workspace</code> 以下をmask／readonly。繰り返し可</td>
+</tr>
+<tr>
+<td><code>--watch-polling</code></td>
+<td><code>false</code></td>
+<td>Chokidar／Watchpackの1秒ポーリング</td>
+</tr>
+<tr>
+<td><code>--ssh-proxy</code> / <code>--jvm-proxy</code></td>
+<td><code>false</code></td>
+<td>SSH CONNECT／JVMのProxy設定</td>
+</tr>
+<tr>
+<td><code>--ca-bundle</code></td>
+<td>未指定</td>
+<td>ワーカーに渡す追加PEM CAのホストパス</td>
+</tr>
+<tr>
+<td><code>--clone-dir</code></td>
+<td>未指定</td>
+<td>新しい絶対パスへ独立clone。並列起動と併用不可</td>
+</tr>
+<tr>
+<td><code>--environment-lock</code></td>
+<td>未指定</td>
+<td>lockファイルとimage digestを照合</td>
+</tr>
+<tr>
+<td><code>--image-id</code></td>
+<td>未指定</td>
+<td><code>sha256:...</code> のimage digestを要求</td>
+</tr>
+<tr>
+<td><code>--start-hook</code></td>
+<td>空</td>
+<td>起動前のguest shellコマンド。繰り返し可</td>
+</tr>
+<tr>
+<td><code>--readiness</code></td>
+<td>未指定</td>
+<td>起動準備完了のguest shell probe</td>
+</tr>
+<tr>
+<td><code>--readiness-timeout</code></td>
+<td>0（実効60秒）</td>
+<td>hook・probeの期限</td>
+</tr>
+<tr>
+<td><code>--max-lifetime</code> / <code>--idle-timeout</code> / <code>--retention</code></td>
+<td><code>0</code></td>
+<td>寿命・idle・終了後保持。<code>30m</code> / <code>2h</code> など。<code>reap</code> の実行が必要</td>
+</tr>
+<tr>
+<td><code>--protect-main</code></td>
+<td><code>false</code></td>
+<td>v0.0.4。メイン処理の実行中はidle回収しない。最大寿命は適用</td>
+</tr>
+<tr>
+<td><code>--max-requests</code> / <code>--max-concurrent</code></td>
+<td><code>0</code></td>
+<td>v0.0.4。実行ごとの要求数／同時数を認証Proxyで制限</td>
+</tr>
+<tr>
+<td><code>--max-transfer-bytes</code> / <code>--max-observed-tokens</code></td>
+<td><code>0</code></td>
+<td>v0.0.4。本文合計量／観測tokenで制限。<a href="../../guides/usage-limits/">正確さと条件</a></td>
+</tr>
+<tr>
+<td><code>--proxy-admin-url</code></td>
+<td><code>http://127.0.0.1:18081</code></td>
+<td>ホスト管理API</td>
+</tr>
+<tr>
+<td><code>--proxy-container-url</code></td>
+<td><code>http://codex-auth-proxy:18080</code></td>
+<td>ワーカー向け固定AI経路</td>
+</tr>
+<tr>
+<td><code>--http-proxy-url</code></td>
+<td><code>http://codex-http-proxy:18082</code></td>
+<td>ワーカー向け一般egress</td>
+</tr>
+<tr>
+<td><code>--proxy-admin-secret</code></td>
+<td>未指定</td>
+<td>管理secretの直接指定。日常利用ではファイル指定を優先</td>
+</tr>
+<tr>
+<td><code>--proxy-admin-secret-file</code></td>
+<td>未指定</td>
+<td>管理secretの所有者0600ファイル</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>詳細・制限：<a href="../../sandbox-features/">追加のサンドボックス制御</a>。</li>
+<li>idleはguest CPUやファイル更新を監視しません。メイン処理には<code>--protect-main</code>、管理側の活動通知には<code>oaiso activity</code>を指定してください。</li>
+</ul>
+<hr />
+<h2 id="docker-cli-との対応">Docker CLI との対応<a class="headerlink" href="#docker-cli-との対応" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>run -d</code>、<code>run IMAGE COMMAND</code>、<code>ps -a</code>、<code>logs -f</code>、<code>start</code>、<code>stop</code>、<code>rm -f</code>、<code>build -t</code> はDockerと同じ形で使えます。</li>
+<li>従来の <code>run -d PATH</code>（プロジェクト指定）は <code>run --project PATH</code> に置き換えてください。</li>
+<li>従来の <code>-D</code> はバックグラウンド実行として引き続き使えます。</li>
+<li>ただし <code>run -p</code> は追加パッケージ、<code>run -i</code> はイメージ、<code>run -t</code> はエージェントのタスク、<code>-v</code> は詳細ログです。</li>
+<li>ホストポートの公開には対応していません。</li>
+<li>追加マウントは <code>--mount HOST:CONTAINER[:ro|rw]</code> を使います。</li>
+<li>ワーカーは既定で現在のプロジェクトを <code>/workspace</code> に共有し、前面実行の終了時に削除されます（保持する場合は <code>--keep</code>）。</li>
+</ul>
+<hr />
+<h2 id="--agent--エージェントの選択"><code>--agent</code> — エージェントの選択<a class="headerlink" href="#--agent--エージェントの選択" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>--agent</code> フラグでサンドボックス内に起動する AI エージェントを選びます。</li>
+<li>コンテナ内では <code>DOCK_AGENT</code> 環境変数として渡され、<code>entrypoint.sh</code> が分岐します。</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>値</th>
+<th>動作</th>
+<th>注入される認証情報</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><em>（省略）</em></td>
+<td>設定した既定値を使う（組み込み既定値は認証済みシェル）</td>
+<td>選ばれたエージェントに応じる</td>
+</tr>
+<tr>
+<td><code>shell</code></td>
+<td>認証設定済みの対話シェルを起動（<code>codex</code> / <code>claude</code> 両方が PATH 上にある）</td>
+<td>Codex と Anthropic の両方（利用可能なもの）</td>
+</tr>
+<tr>
+<td><code>codex</code></td>
+<td>OpenAI Codex CLI を起動</td>
+<td><code>CODEX_AUTH_PROXY_URL</code>, <code>CODEX_TOKEN</code>, <code>OPENAI_BASE_URL</code> ほか</td>
+</tr>
+<tr>
+<td><code>claude</code></td>
+<td>Anthropic Claude Code を起動</td>
+<td><code>ANTHROPIC_BASE_URL</code>(<code>…/anthropic</code>), <code>ANTHROPIC_API_KEY</code>（プレースホルダ）</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><code>--agent claude</code> は Auth Proxy が Anthropic 認証情報を持たない場合、起動前にエラーで停止します
+  （Proxy の <code>/admin/mode</code> を参照）。</li>
+<li>ホストと Auth Proxy の認証状態が異なる場合、稼働中ワーカーがなければ Auth Proxy を自動再作成します。
+  稼働中ワーカーがある場合は、それらの認証を失効させないようエラーで停止します。意図的に再作成する場合は
+  <code>--force-recreate-proxy</code> を指定し、プロキシIPが変わった既存ワーカーは新規作成してください。</li>
+<li>
+<p><code>--shell</code> は <code>entrypoint.sh</code> を完全にバイパスして<strong>認証なし</strong>の素のシェルを起動します（デバッグ用）。
+  認証済みシェルが欲しい場合は <code>--agent shell</code> を指定してください。</p>
+</li>
+<li>
+<p>設定した既定エージェントは、<code>oaiso run IMAGE COMMAND</code>、<code>oaiso run -- COMMAND</code>、<code>--exec</code> のコマンド実行時には適用しません。</p>
+</li>
+<li>明示した <code>--agent codex</code> / <code>--agent claude</code> はコマンドより優先します。</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>oaiso<span class="w"> </span>run<span class="w"> </span>--agent<span class="w"> </span>codex<span class="w">  </span>--approval-mode<span class="w"> </span>full-auto
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>oaiso<span class="w"> </span>run<span class="w"> </span>--agent<span class="w"> </span>claude<span class="w"> </span>--approval-mode<span class="w"> </span>full-auto<span class="w"> </span>--task<span class="w"> </span><span class="s2">"Refactor the auth module"</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>oaiso<span class="w"> </span>run<span class="w"> </span>--agent<span class="w"> </span>shell<span class="w">  </span><span class="c1"># 認証済みシェル（codex / claude 両方利用可）</span>
+</code></pre></div>
+<hr />
+<h2 id="--exec--コマンドの実行"><code>--exec</code> — コマンドの実行<a class="headerlink" href="#--exec--コマンドの実行" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>--exec</code> フラグで、対話シェルの代わりにコンテナ内で1回だけ実行するコマンドを指定できます。</li>
+<li>
+<p>コンテナ内では <code>DOCK_EXEC_CMD</code> 環境変数として渡され、<code>entrypoint.sh</code> の「エージェント未指定」 分岐（認証設定済みシェルを起動する分岐）でのみ参照されます。</p>
+</li>
+<li>
+<p><code>--agent codex</code> / <code>--agent claude</code> を指定した場合は<strong>エージェントが優先され</strong>、<code>--exec</code> は無視されます。</p>
+</li>
+<li><code>--agent shell</code> ではコマンドを実行します。</li>
+<li><code>--shell</code>（<code>entrypoint.sh</code> を完全にバイパスする素のデバッグシェル）と併用するとエラーになります
+  （<code>--shell</code> では <code>entrypoint.sh</code> 自体が実行されないため <code>--exec</code> が効きません）。</li>
+<li>コマンドは <code>--shell-type</code> で選んだシェル（既定は bash）の <code>-c</code> 経由で実行されます。</li>
+<li>コマンドラインの末尾に置く <code>-- command...</code>（上記参照）とは同時に指定できません。
+  どちらを使っても構いませんが、複数語のコマンドは後者の方が1つの文字列にクォートしなくて済む分手軽です。</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># 認証設定済みの環境でコマンドを1つ実行して終了</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>oaiso<span class="w"> </span>run<span class="w"> </span>--exec<span class="w"> </span><span class="s2">"ls -la"</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># 同じことを、コマンド全体をクォートせずに</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>oaiso<span class="w"> </span>run<span class="w"> </span>--<span class="w"> </span>ls<span class="w"> </span>-la
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="c1"># バックグラウンドでコマンドを実行</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>oaiso<span class="w"> </span>run<span class="w"> </span>--exec<span class="w"> </span><span class="s2">"npm test"</span><span class="w"> </span>--detach
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="c1"># --agent を指定すると --exec は無視され、エージェントが起動する</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>oaiso<span class="w"> </span>run<span class="w"> </span>--agent<span class="w"> </span>codex<span class="w"> </span>--exec<span class="w"> </span><span class="s2">"ls -la"</span><span class="w">   </span><span class="c1"># → Codex CLI が起動する</span>
+</code></pre></div>
+<hr />
+<h2 id="--shell-type--シェルの種類の指定"><code>--shell-type</code> — シェルの種類の指定<a class="headerlink" href="#--shell-type--シェルの種類の指定" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>--shell-type</code> で、サンドボックス内の対話シェルに使うバイナリを選べます。</li>
+<li>対象は「エージェント未指定時の認証済みシェル」と「<code>--shell</code> デバッグモード」の両方です （コンテナ内では <code>DOCK_SHELL</code> 環境変数として渡され、<code>entrypoint.sh</code> が参照します）。</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>値</th>
+<th>動作</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bash</code></td>
+<td>bash を起動</td>
+</tr>
+<tr>
+<td><code>zsh</code></td>
+<td>zsh を起動。対象イメージに zsh がインストールされている必要がある</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>条件</th>
+<th>選ばれるシェル</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>フラグ・<code>default_shell_type</code>・<code>run.shell_type</code> がすべて未指定</td>
+<td>ホストの <code>$SHELL</code> のベース名で判定</td>
+</tr>
+<tr>
+<td><code>$SHELL</code> が <code>zsh</code></td>
+<td><code>zsh</code></td>
+</tr>
+<tr>
+<td>その他・未設定・認識できないシェル</td>
+<td><code>bash</code></td>
+</tr>
+<tr>
+<td><code>--shell</code> デバッグモードでフラグ未指定</td>
+<td>自動判定せず常に <code>bash</code></td>
+</tr>
+<tr>
+<td><code>--shell --shell-type zsh</code></td>
+<td>明示した <code>zsh</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>デバッグモードの制限</strong></p>
+<ul>
+<li><code>--shell</code> はコンテナの <code>Entrypoint</code> をシェルバイナリへ置換。</li>
+<li><code>entrypoint.sh</code> をバイパスするため、同スクリプトによるfallbackは使えない。</li>
+<li>
+<p>指定したシェルがイメージにない場合：実行エンジンがコンテナ起動を拒否。</p>
+</li>
+<li>
+<p>組み込みの <code>plain</code> テンプレートには zsh がインストール済みで、<code>pwn</code> は <code>plain</code> を継承するため （<code>FROM codex-dock:latest</code>）、どちらのテンプレートでも <code>--shell-type zsh</code>（や <code>$SHELL=zsh</code> による自動判定）がそのまま使えます。</p>
+</li>
+<li>自作テンプレートで zsh を使う場合は、そのテンプレートの Dockerfile 側で zsh をインストールしてください。</li>
+<li>インストールされていない場合でも、<code>--shell</code> 以外（エージェント未指定時のシェルや <code>--exec</code>） では <code>entrypoint.sh</code> が起動時にバイナリの有無を確認し、無ければ警告を出して <code>bash</code> に フォールバックするため、コンテナが起動に失敗することはありません。</li>
+</ul>
+<blockquote>
+<p>エージェント（<code>--agent codex</code>/<code>claude</code>）を Ctrl+Z で一時停止してシェルに戻る機構
+（<code>launch_interactive</code>）は、bash の <code>PROMPT_COMMAND</code> を使った実装のため、
+<code>--shell-type</code> の値に関わらず内部的には常に bash で動作します。<code>--shell-type</code> が
+影響するのはエージェント未指定時の対話シェルと <code>--shell</code> デバッグモードのみです。</p>
+</blockquote>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># zsh で対話シェルを起動</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>oaiso<span class="w"> </span>run<span class="w"> </span>--shell-type<span class="w"> </span>zsh
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># zsh の素のデバッグシェル（entrypoint.sh をバイパス）</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>oaiso<span class="w"> </span>run<span class="w"> </span>--shell<span class="w"> </span>--shell-type<span class="w"> </span>zsh
+</code></pre></div>
+<ul>
+<li>設定ファイル（<code>~/.config/codex-dock/config.toml</code>）の <code>default_shell_type</code>（グローバル）/ <code>run.shell_type</code>（<code>run</code> のみ）でデフォルト値を変更できます。</li>
+<li>詳細は <a href="../../configuration/#default_shell_type">設定リファレンス</a> を参照してください。</li>
+</ul>
+<hr />
+<h2 id="--approval-mode--承認モードの指定"><code>--approval-mode</code> — 承認モードの指定<a class="headerlink" href="#--approval-mode--承認モードの指定" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>--approval-mode</code> フラグでエージェントがアクションを実行する際の承認動作を制御します。</li>
+<li>外側の隔離は選択したワーカーランタイムが担当します。</li>
+<li>値は両エージェントに対応する フラグへマッピングされます。</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>値</th>
+<th>Codex CLI フラグ</th>
+<th>Claude Code フラグ</th>
+<th>動作</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>suggest</code>（デフォルト）</td>
+<td>承認フラグを追加しない</td>
+<td>承認フラグを追加しない</td>
+<td>エージェント自身の既定設定に従う</td>
+</tr>
+<tr>
+<td><code>auto-edit</code></td>
+<td><code>--ask-for-approval on-request</code></td>
+<td><code>--permission-mode acceptEdits</code></td>
+<td>Codexはモデル判断で承認要求、Claudeは編集を自動許可</td>
+</tr>
+<tr>
+<td><code>full-auto</code></td>
+<td><code>--ask-for-approval never</code></td>
+<td><code>--dangerously-skip-permissions</code></td>
+<td>承認を一切求めない</td>
+</tr>
+<tr>
+<td><code>danger</code></td>
+<td><code>--dangerously-bypass-approvals-and-sandbox</code></td>
+<td><code>--dangerously-skip-permissions</code></td>
+<td>エージェントの承認とCodexの内側sandboxを省略。KataのVM隔離・ホスト制約は維持</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>Kata検証済みワーカーでは、Codexの内側sandboxを <code>danger-full-access</code> に設定します。</li>
+<li>VM内の入れ子namespaceとseccompの不整合を避けるためです。</li>
+<li>承認モードは独立した設定です。</li>
+<li>非対話execではエージェント自身が承認動作を選ぶ場合もあります。</li>
+<li>共有workspaceや追加mountは、指定した権限で変更できます。</li>
+<li><a href="../../security/">認証情報の扱い・共有ファイルへの影響・制限</a>を参照してください。</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># エージェント既定の承認設定</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>oaiso<span class="w"> </span>run<span class="w"> </span>--agent<span class="w"> </span>codex<span class="w"> </span>--task<span class="w"> </span><span class="s2">"テストを書いて"</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c1"># Codexはモデル判断で承認要求、Claudeは編集を自動許可</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>oaiso<span class="w"> </span>run<span class="w"> </span>--agent<span class="w"> </span>codex<span class="w"> </span>--approval-mode<span class="w"> </span>auto-edit<span class="w"> </span>--task<span class="w"> </span><span class="s2">"リファクタリング"</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="c1"># 完全自動実行（承認なし）</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>oaiso<span class="w"> </span>run<span class="w"> </span>--agent<span class="w"> </span>codex<span class="w"> </span>--approval-mode<span class="w"> </span>full-auto<span class="w"> </span>--task<span class="w"> </span><span class="s2">"バグ修正"</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="c1"># エージェントの承認・内側sandboxを無効化</span>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>oaiso<span class="w"> </span>run<span class="w"> </span>--agent<span class="w"> </span>codex<span class="w"> </span>--approval-mode<span class="w"> </span>danger<span class="w"> </span>--task<span class="w"> </span><span class="s2">"ビルドスクリプトを実行"</span>
+</code></pre></div>
+<hr />
+<h2 id="--user--コンテナ実行ユーザの指定"><code>--user</code> — コンテナ実行ユーザの指定<a class="headerlink" href="#--user--コンテナ実行ユーザの指定" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>--user</code> フラグを使うと、コンテナ内のプロセスを任意の uid:gid で起動できます。</li>
+<li>ホストのファイルシステムとの権限整合性を確保するために使用します。</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>値</th>
+<th>動作</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>current</code> (省略時のデフォルト)</td>
+<td><code>oaiso</code> コマンドを実行しているユーザの uid:gid を自動取得</td>
+</tr>
+<tr>
+<td><code>codex</code></td>
+<td>従来のデフォルト挙動。コンテナ内 <code>codex</code> ユーザ（<code>1001:1001</code>）で実行</td>
+</tr>
+<tr>
+<td><code>""</code></td>
+<td>イメージのデフォルトユーザを使用</td>
+</tr>
+<tr>
+<td><code>dir</code></td>
+<td><code>--project</code> で指定したディレクトリ所有者の uid:gid を自動取得</td>
+</tr>
+<tr>
+<td><code>uid</code> または <code>uid:gid</code></td>
+<td>明示的に指定（例: <code>1000</code>, <code>1000:1000</code>）</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>注意</strong>: カスタムユーザを指定した場合、そのユーザがコンテナの <code>/etc/passwd</code> に存在しない
+ことがあります。<code>oaiso</code> は <code>HOME=/var/tmp/codex-home</code> を自動注入します。認証ファイルや
+Codex CLI 設定はその <code>HOME</code> 配下に作成され、<code>/workspace</code> 配下に補助ディレクトリは作成しません。</p>
+</blockquote>
+<hr />
+<h2 id="--mount--任意ディレクトリの追加マウント"><code>--mount</code> — 任意ディレクトリの追加マウント<a class="headerlink" href="#--mount--任意ディレクトリの追加マウント" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>--mount</code> フラグで、<code>/workspace</code>（<code>--project</code>）以外の任意のホストディレクトリを コンテナへバインドマウントできます。</li>
+<li>繰り返し指定することで複数のディレクトリを マウントできます。</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>--mount &lt;host-path&gt;:&lt;container-path&gt;[:ro|rw]
+</code></pre></div>
+<ul>
+<li><code>&lt;host-path&gt;</code>: ホスト側のディレクトリ（相対パスは実行時のカレントディレクトリから解決）</li>
+<li><code>&lt;container-path&gt;</code>: コンテナ内の絶対パス。</li>
+<li><code>/workspace</code> は <code>--project</code> 専用のため指定不可</li>
+<li><code>:ro</code> / <code>:rw</code>: 読み取り専用 / 読み書き可能（省略時は <code>rw</code>）</li>
+<li>同じ <code>&lt;container-path&gt;</code> を複数回指定するとエラーになる</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># ホストの共有データディレクトリを読み取り専用でマウント</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>oaiso<span class="w"> </span>run<span class="w"> </span>--mount<span class="w"> </span>/home/user/datasets:/data:ro
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># 複数のディレクトリをマウント（読み書き・読み取り専用を混在）</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>oaiso<span class="w"> </span>run<span class="w"> </span>--mount<span class="w"> </span>./cache:/cache<span class="w"> </span>--mount<span class="w"> </span>/opt/models:/models:ro
+</code></pre></div>
+<blockquote>
+<p>追加マウントされたディレクトリはプロジェクトディレクトリ本体（<code>/workspace</code>）とは
+独立して読み取り専用を指定できます。<code>--read-only</code> は <code>/workspace</code> のみに適用されます。</p>
+</blockquote>
+<ul>
+<li><code>--read-only-rootfs</code> はイメージの rootfs に適用され、<code>/workspace</code> と追加 mount の読み書き設定は変えません。</li>
+<li>起動時のパッケージ追加は使えないため、必要なパッケージはイメージに入れてください。</li>
+<li>HOME と <code>/tmp</code>・<code>/var/tmp</code> は一時的な tmpfs になり、ワーカーの停止・再起動・削除を越えて保持されません。</li>
+<li><code>--no-git-metadata</code> を指定した linked worktree では共通 Git metadata をマウントしません。</li>
+<li>
+<p>VM 内で Git を使う場合は私有の metadata と mount を別途用意してください。</p>
+</li>
+<li>
+<p><code>oaiso profile --json</code> はプロファイルごとの CPU、guest RAM、ホスト側上限、PID 上限を出力します。</p>
+</li>
+<li><code>small</code> は 1 CPU・guest 1 GiB・ホスト上限 2 GiB、<code>standard</code> は 1 CPU・guest 2 GiB・ホスト上限 3 GiB です。</li>
+<li><code>--profile-size small</code> は Kata のみで使えます。</li>
+<li>
+<p>小型の実際のメモリ使用量・起動性能はホストで測定してください。</p>
+</li>
+<li>
+<p>設定ファイル（<code>~/.config/codex-dock/config.toml</code>）の <code>[run]</code> セクションでも <code>mounts</code> として既定値を指定できます（<code>--mount</code> を指定した場合はそちらが優先）。</p>
+</li>
+<li>詳細は <a href="../../configuration/#runmounts"><code>doc/configuration.md</code></a> を参照してください。</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="k">[run]</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="n">mounts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"/home/user/datasets:/data:ro"</span><span class="p">,</span><span class="w"> </span><span class="s2">"./cache:/cache"</span><span class="p">]</span>
+</code></pre></div>
+<h2 id="codexのsqlite起動エラー">CodexのSQLite起動エラー<a class="headerlink" href="#codexのsqlite起動エラー" title="Permanent link">&para;</a></h2>
+<p><strong>未リリース（main）</strong>では、対応nodeで新規作成する通常Kataワーカーに<a href="../../guides/agent-state/">専用DBディスク</a>を追加しています。以下はv0.0.6・旧ワーカー、およびこの機能を無効にした場合の制約です。</p>
+<p>2026-10-26の固定版Codex 0.163.0では、通常のKata rootfs上のHOMEで <code>state_5.sqlite</code> の <code>disk I/O error (code: 5386)</code> が発生し、対話UIが起動できません。共有workspaceの整合性のために使う <code>virtio_fs_cache="none"</code> と、SQLite WALの書き込み可能な共有mmapが衝突します。<a href="../../testing/#ux改善の検証2026-10-26">検証記録</a>を参照してください。</p>
+<p>履歴やHOME内の設定を停止後に保持する必要がない試行に限り、既存の一時HOMEモードを明示して起動できます。必要なパッケージは事前にイメージへ入れてください。<code>/workspace</code> の共有ファイルは通常どおり残ります。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>oaiso<span class="w"> </span>run<span class="w"> </span>--read-only-rootfs
+</code></pre></div>
+<p>この指定は既定値に自動適用しません。状態の保持が必要なら、対応nodeで新規ワーカーを作り、<a href="../../guides/agent-state/">専用DBディスクの保持条件</a>を確認してください。共有workspaceのキャッシュ設定は変更しません。</p>
+<hr />
+<h2 id="パッケージ記述形式">パッケージ記述形式<a class="headerlink" href="#パッケージ記述形式" title="Permanent link">&para;</a></h2>
+<p><code>--pkg</code> または <code>packages.dock</code> ファイルで使用できるパッケージ形式：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>apt:libssl-dev          # apt でインストール
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>pip:requests            # pip でインストール
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>npm:lodash              # npm でインストール
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>libssl-dev              # プレフィックスなし → apt 扱い（デフォルト）
+</code></pre></div>
+<p><code>packages.dock</code> ファイルの例：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a># コメントは # で始める
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>apt:libssl-dev
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>apt:postgresql-client
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>pip:requests
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>pip:numpy
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>npm:typescript
+</code></pre></div>
+<hr />
+<h2 id="並列ワーカー">並列ワーカー<a class="headerlink" href="#並列ワーカー" title="Permanent link">&para;</a></h2>
+<p><code>--parallel N</code> を指定すると、N 個のコンテナが同時に起動します。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>oaiso<span class="w"> </span>run<span class="w"> </span>--parallel<span class="w"> </span><span class="m">2</span><span class="w"> </span>--worktree<span class="w"> </span>--branch<span class="w"> </span>myfeature
+</code></pre></div>
+<ul>
+<li>ノードの既定上限は同時2台です。</li>
+<li>
+<p>自動的に以下のブランチが作成されます：</p>
+</li>
+<li>
+<p><code>myfeature-1</code>（worker 1）</p>
+</li>
+<li><code>myfeature-2</code>（worker 2）</li>
+</ul>
+<p><code>--branch</code> を指定しない場合は <code>worker-1</code>, <code>worker-2</code> が使用されます。</p>
+<hr />
+<h2 id="使用例">使用例<a class="headerlink" href="#使用例" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># 基本的な実行（カレントディレクトリをマウント）</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>oaiso<span class="w"> </span>run
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="c1"># タスクを指定して完全自動実行</span>
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>oaiso<span class="w"> </span>run<span class="w"> </span>--agent<span class="w"> </span>codex<span class="w"> </span>--task<span class="w"> </span><span class="s2">"ユニットテストを書いて"</span><span class="w"> </span>--approval-mode<span class="w"> </span>full-auto
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a>
+<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="c1"># git worktree を使って feature ブランチで作業</span>
+<a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a>oaiso<span class="w"> </span>run<span class="w"> </span>--worktree<span class="w"> </span>--branch<span class="w"> </span>feature-auth<span class="w"> </span>--new-branch
+<a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a>
+<a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a><span class="c1"># 並列ワーカー2つを起動（各ワーカーに別ブランチ）</span>
+<a id="__codelineno-15-11" name="__codelineno-15-11" href="#__codelineno-15-11"></a>oaiso<span class="w"> </span>run<span class="w"> </span>--parallel<span class="w"> </span><span class="m">2</span><span class="w"> </span>--worktree
+<a id="__codelineno-15-12" name="__codelineno-15-12" href="#__codelineno-15-12"></a>
+<a id="__codelineno-15-13" name="__codelineno-15-13" href="#__codelineno-15-13"></a><span class="c1"># 追加パッケージをインストールして実行</span>
+<a id="__codelineno-15-14" name="__codelineno-15-14" href="#__codelineno-15-14"></a>oaiso<span class="w"> </span>run<span class="w"> </span>--pkg<span class="w"> </span><span class="s2">"apt:libssl-dev"</span><span class="w"> </span>--pkg<span class="w"> </span><span class="s2">"pip:requests"</span><span class="w"> </span>--pkg<span class="w"> </span><span class="s2">"npm:lodash"</span>
+<a id="__codelineno-15-15" name="__codelineno-15-15" href="#__codelineno-15-15"></a>
+<a id="__codelineno-15-16" name="__codelineno-15-16" href="#__codelineno-15-16"></a><span class="c1"># packages.dock ファイルを使用</span>
+<a id="__codelineno-15-17" name="__codelineno-15-17" href="#__codelineno-15-17"></a>oaiso<span class="w"> </span>run<span class="w"> </span>--pkg-file<span class="w"> </span>./packages.dock
+<a id="__codelineno-15-18" name="__codelineno-15-18" href="#__codelineno-15-18"></a>
+<a id="__codelineno-15-19" name="__codelineno-15-19" href="#__codelineno-15-19"></a><span class="c1"># バックグラウンドで完全自動実行</span>
+<a id="__codelineno-15-20" name="__codelineno-15-20" href="#__codelineno-15-20"></a>oaiso<span class="w"> </span>run<span class="w"> </span>--agent<span class="w"> </span>codex<span class="w"> </span>--task<span class="w"> </span><span class="s2">"リファクタリング"</span><span class="w"> </span>--approval-mode<span class="w"> </span>full-auto<span class="w"> </span>--detach
+<a id="__codelineno-15-21" name="__codelineno-15-21" href="#__codelineno-15-21"></a>
+<a id="__codelineno-15-22" name="__codelineno-15-22" href="#__codelineno-15-22"></a><span class="c1"># 読み取り専用・インターネットなしでセキュアに実行</span>
+<a id="__codelineno-15-23" name="__codelineno-15-23" href="#__codelineno-15-23"></a>oaiso<span class="w"> </span>run<span class="w"> </span>--agent<span class="w"> </span>codex<span class="w"> </span>--read-only<span class="w"> </span>--no-internet<span class="w"> </span>--task<span class="w"> </span><span class="s2">"コードレビュー"</span>
+<a id="__codelineno-15-24" name="__codelineno-15-24" href="#__codelineno-15-24"></a>
+<a id="__codelineno-15-25" name="__codelineno-15-25" href="#__codelineno-15-25"></a><span class="c1"># 特定のOCIイメージを使用</span>
+<a id="__codelineno-15-26" name="__codelineno-15-26" href="#__codelineno-15-26"></a>oaiso<span class="w"> </span>run<span class="w"> </span>--image<span class="w"> </span>my-custom-codex:v2
+<a id="__codelineno-15-27" name="__codelineno-15-27" href="#__codelineno-15-27"></a>
+<a id="__codelineno-15-28" name="__codelineno-15-28" href="#__codelineno-15-28"></a><span class="c1"># テンプレートイメージを使用（未ビルドなら自動ビルド）</span>
+<a id="__codelineno-15-29" name="__codelineno-15-29" href="#__codelineno-15-29"></a>oaiso<span class="w"> </span>run<span class="w"> </span>--image<span class="w"> </span>codex-dock:pwn
+<a id="__codelineno-15-30" name="__codelineno-15-30" href="#__codelineno-15-30"></a>
+<a id="__codelineno-15-31" name="__codelineno-15-31" href="#__codelineno-15-31"></a><span class="c1"># --template でテンプレート名から直接指定（--image codex-dock:pwn と同じ）</span>
+<a id="__codelineno-15-32" name="__codelineno-15-32" href="#__codelineno-15-32"></a>oaiso<span class="w"> </span>run<span class="w"> </span>--template<span class="w"> </span>pwn
+<a id="__codelineno-15-33" name="__codelineno-15-33" href="#__codelineno-15-33"></a>
+<a id="__codelineno-15-34" name="__codelineno-15-34" href="#__codelineno-15-34"></a><span class="c1"># ~/.config/codex-dock/templates/ に置いた自作テンプレートも同様に使える</span>
+<a id="__codelineno-15-35" name="__codelineno-15-35" href="#__codelineno-15-35"></a>oaiso<span class="w"> </span>run<span class="w"> </span>--template<span class="w"> </span>mytool
+<a id="__codelineno-15-36" name="__codelineno-15-36" href="#__codelineno-15-36"></a>
+<a id="__codelineno-15-37" name="__codelineno-15-37" href="#__codelineno-15-37"></a><span class="c1"># カスタムモデルを指定</span>
+<a id="__codelineno-15-38" name="__codelineno-15-38" href="#__codelineno-15-38"></a>oaiso<span class="w"> </span>run<span class="w"> </span>--model<span class="w"> </span><span class="s2">"o3"</span>
+<a id="__codelineno-15-39" name="__codelineno-15-39" href="#__codelineno-15-39"></a>
+<a id="__codelineno-15-40" name="__codelineno-15-40" href="#__codelineno-15-40"></a><span class="c1"># エージェントを使わずコマンドを1つ実行して終了</span>
+<a id="__codelineno-15-41" name="__codelineno-15-41" href="#__codelineno-15-41"></a>oaiso<span class="w"> </span>run<span class="w"> </span>--exec<span class="w"> </span><span class="s2">"ls -la"</span>
+<a id="__codelineno-15-42" name="__codelineno-15-42" href="#__codelineno-15-42"></a>
+<a id="__codelineno-15-43" name="__codelineno-15-43" href="#__codelineno-15-43"></a><span class="c1"># デフォルトで、コマンド実行ユーザと同じ uid:gid でコンテナを起動</span>
+<a id="__codelineno-15-44" name="__codelineno-15-44" href="#__codelineno-15-44"></a>oaiso<span class="w"> </span>run
+<a id="__codelineno-15-45" name="__codelineno-15-45" href="#__codelineno-15-45"></a>
+<a id="__codelineno-15-46" name="__codelineno-15-46" href="#__codelineno-15-46"></a><span class="c1"># 従来どおり codex(1001:1001) ユーザで実行</span>
+<a id="__codelineno-15-47" name="__codelineno-15-47" href="#__codelineno-15-47"></a>oaiso<span class="w"> </span>run<span class="w"> </span>--user<span class="w"> </span>codex
+<a id="__codelineno-15-48" name="__codelineno-15-48" href="#__codelineno-15-48"></a>
+<a id="__codelineno-15-49" name="__codelineno-15-49" href="#__codelineno-15-49"></a><span class="c1"># 明示的にコマンド実行ユーザを指定</span>
+<a id="__codelineno-15-50" name="__codelineno-15-50" href="#__codelineno-15-50"></a>oaiso<span class="w"> </span>run<span class="w"> </span>--user<span class="w"> </span>current
+<a id="__codelineno-15-51" name="__codelineno-15-51" href="#__codelineno-15-51"></a>
+<a id="__codelineno-15-52" name="__codelineno-15-52" href="#__codelineno-15-52"></a><span class="c1"># プロジェクトディレクトリの所有者と同じ uid:gid でコンテナを起動</span>
+<a id="__codelineno-15-53" name="__codelineno-15-53" href="#__codelineno-15-53"></a>oaiso<span class="w"> </span>run<span class="w"> </span>--user<span class="w"> </span>dir<span class="w"> </span>--project<span class="w"> </span>/srv/myapp
+<a id="__codelineno-15-54" name="__codelineno-15-54" href="#__codelineno-15-54"></a>
+<a id="__codelineno-15-55" name="__codelineno-15-55" href="#__codelineno-15-55"></a><span class="c1"># uid:gid を明示指定</span>
+<a id="__codelineno-15-56" name="__codelineno-15-56" href="#__codelineno-15-56"></a>oaiso<span class="w"> </span>run<span class="w"> </span>--user<span class="w"> </span><span class="m">1000</span>:1000
+</code></pre></div>
+<hr />
+<h2 id="関連ドキュメント">関連ドキュメント<a class="headerlink" href="#関連ドキュメント" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../../getting-started/">クイックスタート</a> — 初回実行の手順</li>
+<li><a href="../../architecture/">アーキテクチャ概要</a> — 起動シーケンスの詳細</li>
+<li><a href="../../auth-proxy/">Auth Proxy 技術仕様</a> — 認証の仕組み</li>
+<li><a href="../../network/">ネットワーク仕様</a> — 専用ワーカーネットワークと2種類のプロキシの構成</li>
+<li>
+<p><a href="../../configuration/">設定リファレンス</a> — config.toml の設定項目</p>
+</li>
+<li>
+<p><code>--observe-dir PATH</code>: v0.0.4。起動時間を秘密を除いた形式で保存。<a href="../../guides/observability/">診断の保存</a>。</p>
+</li>
+<li>
+<p><code>--checkpoint ID</code>: v0.0.4。<a href="../../guides/disk-checkpoint/">disk checkpoint</a>から新しいKata VMを起動。workspace・認証・実行規則は新規設定。</p>
+</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  ページトップへ戻る
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.indexes", "navigation.top", "search.highlight", "search.share", "content.code.copy"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "\u30b3\u30d4\u30fc\u3057\u307e\u3057\u305f", "clipboard.copy": "\u30af\u30ea\u30c3\u30d7\u30dc\u30fc\u30c9\u3078\u30b3\u30d4\u30fc", "search.result.more.one": "\u3053\u306e\u30da\u30fc\u30b8\u5185\u306b\u3082\u30461\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.more.other": "\u3053\u306e\u30da\u30fc\u30b8\u5185\u306b\u3042\u3068#\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.none": "\u4f55\u3082\u898b\u3064\u304b\u308a\u307e\u305b\u3093\u3067\u3057\u305f", "search.result.one": "1\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.other": "#\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.placeholder": "\u691c\u7d22\u30ad\u30fc\u30ef\u30fc\u30c9\u3092\u5165\u529b\u3057\u3066\u304f\u3060\u3055\u3044", "search.result.term.missing": "\u691c\u7d22\u306b\u542b\u307e\u308c\u306a\u3044", "select.version": "\u30d0\u30fc\u30b8\u30e7\u30f3\u5207\u308a\u66ff\u3048"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
+      
+    
+  </body>
+</html>
