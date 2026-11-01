@@ -63,14 +63,27 @@ try:
     assert task["spec"]["prompt"] == "first line\n日本語 [blue]second line", task
     assert task["state"] == "queued", task
     assert path.stat().st_mode & 0o777 == 0o600
-    time.sleep(.2)
+    # Storage is written before the UI callback renders the saved task.
+    # Wait for that task's visible ID rather than guessing a render delay.
+    expect(task["id"].encode())
     send(b"n")
     expect(b"Instructions")
-    paste("cancel me")
+    paste("__CANCEL_ONLY__")
+    # Consume every older frame before looking for the board's return marker.
+    expect(b"__CANCEL_ONLY__")
     send(bytes([27]))
-    time.sleep(.2)
+    # Draws may exceed the PTY buffer on CI. Read until cancellation actually
+    # returns to the board before sending another navigation key.
+    expect(b"Q/Esc")
     send(b"q")
-    process.wait(timeout=5)
+    # Keep draining output while the screen is restored and the helper exits;
+    # waiting without reading can block the child's terminal writer forever.
+    deadline = time.monotonic() + 5
+    while process.poll() is None and time.monotonic() < deadline:
+        ready, _, _ = select.select([master], [], [], .05)
+        if ready:
+            output.extend(os.read(master, 65536))
+    assert process.poll() is not None, ("terminal helper did not exit", output[-4000:])
     assert process.returncode == 0
     assert len(json.loads(path.read_text())["tasks"]) == 1
     assert termios.tcgetattr(slave) == previous
