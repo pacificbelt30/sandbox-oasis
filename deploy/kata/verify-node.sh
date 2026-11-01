@@ -11,6 +11,12 @@ setup_python=${CODEX_DOCK_SETUP_PYTHON:-/usr/bin/python3}
 mkdir -p /evidence /var/cache/codex-dock-setup
 for archive in /cache-input/*; do cp "$archive" /var/cache/codex-dock-setup/; done
 chmod -R go-w /var/cache/codex-dock-setup
+# Only this disposable node's newly created empty volume is formatted.
+[[ -z $(find /var/lib/codex-dock-containerd -mindepth 1 -print -quit) ]]
+fallocate -l 32G /var/lib/oaiso-verification-rootfs.xfs
+mkfs.xfs -f /var/lib/oaiso-verification-rootfs.xfs > /evidence/quota-filesystem.txt
+mount -o loop,prjquota /var/lib/oaiso-verification-rootfs.xfs /var/lib/codex-dock-containerd
+proof 'disposable dedicated XFS project-quota storage mounted'
 if [[ -n ${CODEX_DOCK_RELEASE_INSTALLER:-} ]]; then
  cat "$CODEX_DOCK_RELEASE_INSTALLER" | bash -s -- --bundle /bundle --operator kata-test --offline > /evidence/plan.txt
 else
@@ -93,6 +99,11 @@ install -d -o kata-test -g 1000 -m 0700 /home/kata-test/.config/codex-dock /home
 proxy_fixture=${CODEX_DOCK_KATA_PROXY_IMAGE:-codex-dock-proxy:policy-verification}
 worker_fixture=${CODEX_DOCK_KATA_TEST_IMAGE:-codex-dock:kata-guard}
 export CODEX_DOCK_KATA_PROXY_IMAGE=$proxy_fixture CODEX_DOCK_KATA_TEST_IMAGE=$worker_fixture
+# These archives are explicit synthetic fixtures selected by the test owner.
+cli proxy trust "$proxy_fixture" > /evidence/proxy-authority.txt
+if [[ -n ${CODEX_DOCK_KATA_NETWORK_PROXY_IMAGE:-} ]]; then
+ cli proxy trust "$CODEX_DOCK_KATA_NETWORK_PROXY_IMAGE" >> /evidence/proxy-authority.txt
+fi
 python3 - <<'PYCONFIG'
 import json,os
 from pathlib import Path

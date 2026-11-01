@@ -39,6 +39,11 @@ func TestKataGoAPI(t *testing.T) {
 		image = "codex-dock:latest"
 	}
 	proxyImage := os.Getenv("CODEX_DOCK_KATA_PROXY_IMAGE")
+	// API credential injection uses the explicitly supplied synthetic upstream
+	// fixture; ordinary setup can still exercise the production proxy image.
+	if fixture := os.Getenv("CODEX_DOCK_KATA_NETWORK_PROXY_IMAGE"); fixture != "" {
+		proxyImage = fixture
+	}
 	if proxyImage == "" {
 		proxyImage = "codex-dock-proxy:latest"
 	}

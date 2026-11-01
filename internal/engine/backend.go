@@ -28,6 +28,7 @@ import (
 	"github.com/containerd/containerd/v2/contrib/seccomp"
 	"github.com/containerd/containerd/v2/core/containers"
 	"github.com/containerd/containerd/v2/core/content"
+	nativeimages "github.com/containerd/containerd/v2/core/images"
 	"github.com/containerd/containerd/v2/pkg/namespaces"
 	"github.com/containerd/containerd/v2/pkg/oci"
 	"github.com/containerd/errdefs"
@@ -78,6 +79,8 @@ type Backend struct {
 	closed        bool
 }
 type record struct {
+	RootFSQuota             *rootFSQuota    `json:",omitempty"`
+	ImageDigest             string          `json:",omitempty"`
 	AgentState              *agentStateDisk `json:",omitempty"`
 	ID, Name                string
 	Created                 time.Time
@@ -131,6 +134,10 @@ func Open(o Options) (*Backend, error) {
 		return nil, err
 	}
 	b := &Backend{client: c, opts: o, hubs: map[string]*hub{}, execs: map[string]*execution{}, ports: map[string][]net.Listener{}}
+	if err := b.ensureAuthorityRoot(); err != nil {
+		_ = c.Close()
+		return nil, err
+	}
 	ctx, cancel := context.WithTimeout(namespaces.WithNamespace(context.Background(), Namespace), 30*time.Second)
 	defer cancel()
 	if _, err = c.Version(ctx); err != nil {
@@ -367,7 +374,7 @@ func (b *Backend) create(ctx context.Context, c container.Config, h container.Ho
 	if c.StopSignal == "" {
 		c.StopSignal = ic.Config.StopSignal
 	}
-	r := &record{ID: cid, Name: name, Created: time.Now().UTC(), Config: c, Host: h, Networks: map[string]*dn.EndpointSettings{}, PrimaryOutputLimit: primaryOutputLimit}
+	r := &record{ID: cid, ImageDigest: img.Target().Digest.String(), Name: name, Created: time.Now().UTC(), Config: c, Host: h, Networks: map[string]*dn.EndpointSettings{}, PrimaryOutputLimit: primaryOutputLimit}
 	if r.Host.Runtime == "" {
 		r.Host.Runtime = "runc"
 	}
@@ -532,7 +539,12 @@ func (b *Backend) create(ctx context.Context, c container.Config, h container.Ho
 		r.Spec = *s
 		return b.save(r)
 	})
-	native, err := b.client.NewContainer(ctx, cid, cd.WithImage(img), cd.WithSnapshotter(b.opts.Snapshotter), cd.WithNewSnapshot(cid, img), cd.WithNewSpec(opts...), cd.WithRuntime(runtime, runtimeOptions), cd.WithContainerLabels(labels))
+	// Charge the pristine upper/work directories before spec helpers can mount
+	// the overlay (for example to resolve a named image user from /etc/passwd).
+	boundSnapshot := func(ctx context.Context, _ *cd.Client, _ *containers.Container) error {
+		return b.provisionRootFSQuota(ctx, r)
+	}
+	native, err := b.client.NewContainer(ctx, cid, cd.WithImage(img), cd.WithSnapshotter(b.opts.Snapshotter), cd.WithNewSnapshot(cid, img), boundSnapshot, cd.WithNewSpec(opts...), cd.WithRuntime(runtime, runtimeOptions), cd.WithContainerLabels(labels))
 	if err != nil {
 		return "", err
 	}
@@ -599,7 +611,7 @@ func (b *Backend) inspect(ctx context.Context, value string) (container.InspectR
 	// This status belongs to the node's durable record, not launch labels.
 	r.Config.Labels[workerpolicy.QuarantinedLabel] = strconv.FormatBool(r.Quarantined)
 	// Docker's current API still requires NetworkSettingsBase for published ports.
-	return container.InspectResponse{ContainerJSONBase: &container.ContainerJSONBase{ID: r.ID, Name: "/" + r.Name, Created: r.Created.Format(time.RFC3339Nano), State: state, HostConfig: &r.Host}, Config: &r.Config, NetworkSettings: &container.NetworkSettings{NetworkSettingsBase: container.NetworkSettingsBase{Ports: r.Host.PortBindings}, Networks: r.Networks}}, nil //nolint:staticcheck
+	return container.InspectResponse{ContainerJSONBase: &container.ContainerJSONBase{ID: r.ID, Image: r.ImageDigest, Name: "/" + r.Name, Created: r.Created.Format(time.RFC3339Nano), State: state, HostConfig: &r.Host}, Config: &r.Config, NetworkSettings: &container.NetworkSettings{NetworkSettingsBase: container.NetworkSettingsBase{Ports: r.Host.PortBindings}, Networks: r.Networks}}, nil //nolint:staticcheck
 }
 
 // FindRequest checks a deterministic worker name against the durable engine
@@ -625,6 +637,9 @@ func (b *Backend) start(ctx context.Context, r *record, c cd.Container) error {
 	if err := executionAllowed(r); err != nil {
 		return err
 	}
+	if err := b.validateRootFSQuota(r); err != nil {
+		return err
+	}
 	if t, err := c.Task(ctx, nil); err == nil {
 		status, e := t.Status(ctx)
 		if e != nil {
@@ -637,6 +652,12 @@ func (b *Backend) start(ctx context.Context, r *record, c cd.Container) error {
 			return err
 		}
 	} else if !errdefs.IsNotFound(err) {
+		return err
+	}
+	if err := b.cleanupKataSockets(ctx, r); err != nil {
+		return err
+	}
+	if err := b.admitRootFSStart(ctx, r); err != nil {
 		return err
 	}
 	if r.Host.Runtime != "runc" {
@@ -929,6 +950,43 @@ func (b *Backend) serveHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if path == "/images/load" && r.Method == "POST" {
 		b.importImages(w, r, ctx)
+		return
+	}
+	if strings.HasPrefix(path, "/authority/") {
+		b.authorityHTTP(w, r, ctx, path)
+		return
+	}
+	if path == "/images/promote" && r.Method == http.MethodPost {
+		var req struct{ Source, Target, Digest string }
+		if err := decode(r, &req); err != nil {
+			failure(w, err)
+			return
+		}
+		b.mu.Lock()
+		defer b.mu.Unlock()
+		source, _, err := b.image(ctx, req.Source)
+		if err != nil {
+			failure(w, err)
+			return
+		}
+		if req.Digest == "" || source.Target().Digest.String() != req.Digest {
+			failure(w, fmt.Errorf("staging image digest changed"))
+			return
+		}
+		name, err := imageName(req.Target)
+		if err != nil {
+			failure(w, err)
+			return
+		}
+		info := nativeimages.Image{Name: name, Target: source.Target()}
+		if _, err = b.client.ImageService().Create(ctx, info); errdefs.IsAlreadyExists(err) {
+			_, err = b.client.ImageService().Update(ctx, info, "target")
+		}
+		if err != nil {
+			failure(w, err)
+			return
+		}
+		reply(w, map[string]string{"Digest": req.Digest})
 		return
 	}
 	if strings.HasPrefix(path, "/images/") && r.Method == http.MethodDelete {

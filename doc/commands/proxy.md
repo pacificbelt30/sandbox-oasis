@@ -60,6 +60,20 @@ oaiso proxy build --tag my-proxy:v1 -f ./docker/proxy/Dockerfile
 - Goソースが必要なため、リポジトリのルートで実行してください。
 - Dockerfileは `docker/proxy/Dockerfile`、旧配置の `auth-proxy.Dockerfile` / `docker/auth-proxy.Dockerfile`、設定ディレクトリの順に探します。
 
+## イメージの認可（未リリース：main）
+
+- ProxyのdigestとCLI版の認可をrootのnode管理領域へ保存します。互換ラベルだけでは信頼しません。タグが変わると、秘密情報を渡す前に拒否します。
+- `proxy build`は自分がビルドした出力を認可します。自動ビルドは配置済みの静的CLIを使い、プロジェクト内のDockerfileを自動で信頼しません。
+- 通常のworkerビルドは製品用Proxy/loginタグと、既に認可された独自Proxyタグを使えません。別のタグを選んでください。
+- 外部から取り込んだ独自イメージは、内容・配布元を管理者が確認してから、同じnodeへ接続する通常利用者として明示的に認可します。この操作は署名や安全性の自動検証ではありません。
+
+```bash
+oaiso proxy trust my-proxy:v1
+```
+
+- Goの`EnsureCaseProxy`は管理secretをnode所有の保護領域へ保存し、Proxyへ0600ファイルとして渡します。値をargv・環境・ラベルへ入れません。保持Proxyがある間は保存し、確認済みの削除後に回収します。
+- 旧Proxyのイメージ・secret方式が異なる場合は、先に関連ワーカーの作業を終え、保持状態を確認してからProxyを再作成してください。
+
 ## 通信設定を編集する
 
 ```bash

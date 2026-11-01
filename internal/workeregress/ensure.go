@@ -16,6 +16,7 @@ import (
 	"github.com/pacificbelt30/codex-dock/internal/netquota"
 	"github.com/pacificbelt30/codex-dock/internal/network"
 	"github.com/pacificbelt30/codex-dock/internal/networkpolicy"
+	"github.com/pacificbelt30/codex-dock/internal/proxyimage"
 )
 
 const (
@@ -48,6 +49,9 @@ func EnsureWithLimits(ctx context.Context, socket, image string, rules networkpo
 	if image == "" {
 		image = "codex-dock-proxy:latest"
 	}
+	if socket == "" {
+		socket = engine.Socket()
+	}
 	cli, err := engine.NewClientAt(socket)
 	if err != nil {
 		return "", err
@@ -59,6 +63,9 @@ func EnsureWithLimits(ctx context.Context, socket, image string, rules networkpo
 	}
 	if imageInfo.Config == nil || imageInfo.Config.Labels[imageProtocolLabel] != imageProtocol || imageInfo.Config.Labels[imageBuildLabel] != buildinfo.Version {
 		return "", fmt.Errorf("egress proxy image %q is incompatible with the Go client; rebuild it before launching workers", image)
+	}
+	if err := proxyimage.Verify(ctx, socket, image, imageInfo.ID); err != nil {
+		return "", err
 	}
 	if existing, err := cli.NetworkInspect(ctx, network.EgressNetworkName, dn.InspectOptions{}); err == nil {
 		if existing.Driver != "bridge" || existing.Labels[managedLabel] != "true" {
@@ -77,6 +84,9 @@ func EnsureWithLimits(ctx context.Context, socket, image string, rules networkpo
 		name += "-" + id[:16]
 	}
 	if existing, err := cli.ContainerInspect(ctx, name); err == nil {
+		if existing.Image != imageInfo.ID {
+			return "", fmt.Errorf("egress proxy image differs from trusted build; drain workers before replacement")
+		}
 		if existing.Config == nil || existing.State == nil || existing.Config.Image != image || existing.Config.Labels[proxyLayoutLabel] != proxyLayoutVersion || existing.Config.Labels[proxyPolicyLabel] != ID(rules) || existing.Config.Labels[netquota.Label] != limits.ID() {
 			return "", fmt.Errorf("egress proxy %q has a different image, layout or policy; drain its workers before replacement", name)
 		}
@@ -109,7 +119,7 @@ func EnsureWithLimits(ctx context.Context, socket, image string, rules networkpo
 			}
 		}
 		args = append(args, limits.Args()...)
-		cfg := &container.Config{Image: image, User: "0:0", Cmd: args, Labels: map[string]string{proxyLayoutLabel: proxyLayoutVersion, proxyPolicyLabel: ID(rules)}}
+		cfg := &container.Config{Image: image, User: "0:0", Cmd: args, Labels: map[string]string{proxyLayoutLabel: proxyLayoutVersion, proxyPolicyLabel: ID(rules), "codex-dock.image-id": imageInfo.ID}}
 		if id := limits.ID(); id != "" {
 			cfg.Labels[netquota.Label] = id
 		}

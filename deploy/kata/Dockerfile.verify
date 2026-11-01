@@ -5,7 +5,7 @@ RUN --mount=type=secret,id=proxy_ca \
     if [ -r /run/secrets/proxy_ca ]; then export APT_CONFIG=/tmp/apt-ca.conf; printf 'Acquire::https::CaInfo "/run/secrets/proxy_ca";\n' > "$APT_CONFIG"; fi; \
     printf '#!/bin/sh\nexit 101\n' > /usr/sbin/policy-rc.d && chmod +x /usr/sbin/policy-rc.d && \
     apt-get update && apt-get install -y --no-install-recommends \
-    systemd systemd-sysv python3 gcc libc6-dev iproute2 nftables procps e2fsprogs zstd curl libc-bin passwd kmod tar ca-certificates git dbus-daemon gnome-keyring libsecret-tools && \
+    systemd systemd-sysv python3 gcc libc6-dev iproute2 nftables procps e2fsprogs xfsprogs util-linux zstd curl libc-bin passwd kmod tar ca-certificates git dbus-daemon gnome-keyring libsecret-tools && \
     rm -rf /var/lib/apt/lists/* /tmp/apt-ca.conf
 RUN if id ubuntu >/dev/null 2>&1; then userdel -r ubuntu; fi; \
     groupadd -g 1000 kata-test && useradd -m -u 1000 -g kata-test -s /bin/bash kata-test

@@ -227,7 +227,14 @@ func TestPendingPolicyBarrierCannotBeBypassedByRetry(t *testing.T) {
 	}()
 	apply := func(generation uint64) (int, egresscontrol.State) {
 		raw, _ := json.Marshal(egresscontrol.Update{ExpectedGeneration: generation, Rules: networkpolicy.Rules{DefaultDeny: true, BlockPrivate: true}})
-		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		deadline := 100 * time.Millisecond
+		// The recovery control includes durable fsyncs. Keep the two pending
+		// barrier deadlines short, but do not confuse storage latency with a
+		// surviving barrier after its request has been released.
+		if generation == 3 {
+			deadline = 5 * time.Second
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), deadline)
 		defer cancel()
 		req := httptest.NewRequest("POST", "http://local/policy", strings.NewReader(string(raw))).WithContext(ctx)
 		recorder := httptest.NewRecorder()

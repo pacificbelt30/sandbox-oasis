@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/pacificbelt30/codex-dock/internal/workerpolicy"
 )
@@ -23,6 +24,7 @@ func (b *Backend) protectUsageMounts(ctx context.Context, candidate *record) err
 		return err
 	}
 	var records []*record
+	records = append(records, b.privateAuthorityRecord())
 	for _, c := range containers {
 		r, _, err := b.loadOwned(ctx, c)
 		if err != nil {
@@ -33,13 +35,21 @@ func (b *Backend) protectUsageMounts(ctx context.Context, candidate *record) err
 	return checkUsageShares(candidate, records)
 }
 
+func (b *Backend) privateAuthorityRecord() *record {
+	return &record{Config: container.Config{Labels: map[string]string{"io.codex-dock.proxy-layout": "node-private-authority"}}, Host: container.HostConfig{Mounts: []mount.Mount{{Type: mount.TypeBind, Source: b.authorityRoot(), Target: "/run/cxd-private-authority"}}}}
+}
+
+func (b *Backend) protectAuthorityShares(ctx context.Context) error {
+	return b.protectUsageMounts(ctx, b.privateAuthorityRecord())
+}
+
 func usageMountPaths(r *record) []string {
 	if r.Config.Labels["io.codex-dock.proxy-layout"] == "" {
 		return nil
 	}
 	var paths []string
 	for _, m := range r.Host.Mounts {
-		if m.Type == mount.TypeBind && (m.Target == "/run/cxd-usage" || m.Target == "/run/cxd-broker.json") {
+		if m.Type == mount.TypeBind && (m.Target == "/run/cxd-usage" || m.Target == "/run/cxd-broker.json" || m.Target == "/run/cxd-admin-secret" || m.Target == "/run/cxd-private-authority") {
 			paths = append(paths, m.Source)
 		}
 	}

@@ -54,6 +54,20 @@ oaiso proxy build --tag my-proxy:v1 -f ./docker/proxy/Dockerfile
 - Build from the repository root: the current directory is the context and Go source is required.
 - The search order is `docker/proxy/Dockerfile`, legacy `auth-proxy.Dockerfile` / `docker/auth-proxy.Dockerfile`, then the config directory.
 
+## Authorize image identity (unreleased: main)
+
+- Root node state stores the authorized digest and CLI version. Compatibility labels alone do not grant trust. A changed tag is rejected before secrets are supplied.
+- `proxy build` authorizes its own build output. Automatic builds use the installed static CLI and never automatically trust a project's Dockerfile.
+- Worker builds cannot use product-owned proxy/login references or an already authorized custom proxy reference. Choose a separate worker tag.
+- For an imported custom image, review its content and publisher first, then explicitly authorize it as the ordinary operator connected to the same node. This operation does not automatically verify signatures or code safety.
+
+```bash
+oaiso proxy trust my-proxy:v1
+```
+
+- Go `EnsureCaseProxy` stores admin authority in protected node-owned storage and mounts a 0600 file into the proxy. The value is absent from arguments, environment and labels. It remains while a proxy is retained and is collected after confirmed removal.
+- If an older proxy uses a different image or secret mechanism, finish its workers and review retained state before recreating it.
+
 ## Edit network settings
 
 ```bash

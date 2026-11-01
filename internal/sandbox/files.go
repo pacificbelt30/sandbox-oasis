@@ -77,7 +77,23 @@ func (m *Manager) fileOperation(ctx context.Context, id, op, path string, in io.
 		return fmt.Errorf("file path must be relative to /workspace")
 	}
 	var stderr bytes.Buffer
-	code, err := m.Exec(ctx, id, []string{"python3", "-c", fileProgram, op, path}, in, out, &stderr)
+	limit := MaxFileBytes
+	if op == "list" {
+		// 10,000 names, including JSON escaping, fit within this bound.
+		limit = 16 << 20
+	}
+	if op == "write" {
+		limit = 0
+		if in != nil {
+			// One extra byte makes the guest's atomic upload reject overflow.
+			in = io.LimitReader(in, MaxFileBytes+1)
+		}
+	}
+	if out == nil {
+		out = io.Discard
+	}
+	code, err := m.Exec(ctx, id, []string{"python3", "-I", "-c", fileProgram, op, path}, in,
+		&fileOutput{out: out, remaining: limit}, &fileOutput{out: &stderr, remaining: 64 << 10})
 	if err != nil {
 		return err
 	}
@@ -85,6 +101,22 @@ func (m *Manager) fileOperation(ctx context.Context, id, op, path string, in io.
 		return fmt.Errorf("guest file %s failed (exit %d): %s", op, code, stderr.String())
 	}
 	return nil
+}
+
+// Guest code is untrusted even when the supplied helper bounds its own output.
+// Exec cancels the guest execution when this writer returns an error.
+type fileOutput struct {
+	out       io.Writer
+	remaining int64
+}
+
+func (w *fileOutput) Write(p []byte) (int, error) {
+	if int64(len(p)) > w.remaining {
+		return 0, fmt.Errorf("guest file output exceeds host limit")
+	}
+	n, err := w.out.Write(p)
+	w.remaining -= int64(n)
+	return n, err
 }
 func (m *Manager) ReadFile(ctx context.Context, id, path string, out io.Writer) error {
 	return m.fileOperation(ctx, id, "read", path, nil, out)

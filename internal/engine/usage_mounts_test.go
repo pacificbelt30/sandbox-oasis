@@ -40,3 +40,35 @@ func TestUsageLedgerCannotOverlapWorkersInEitherCreationOrder(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestNodeAuthorityRootIsProtectedBeforeFilesExist(t *testing.T) {
+	b := &Backend{opts: Options{State: t.TempDir()}}
+	if err := b.ensureAuthorityRoot(); err != nil {
+		t.Fatal(err)
+	}
+	private := b.privateAuthorityRecord()
+	for _, source := range []string{b.opts.State, b.authorityRoot()} {
+		worker := &record{Config: container.Config{Labels: map[string]string{"codex-dock.managed": "true"}}, Host: container.HostConfig{Mounts: []mount.Mount{{Type: mount.TypeBind, Source: source, Target: "/workspace"}}}}
+		if checkUsageShares(worker, []*record{private}) == nil {
+			t.Fatal("worker can share node authority before publication")
+		}
+		if checkUsageShares(private, []*record{worker}) == nil {
+			t.Fatal("authority can be published into existing share")
+		}
+	}
+	file := b.caseAuthorityPath("proxy", "case")
+	secret := "fixture-private-secret-at-least-32-bytes"
+	if err := writeCaseAuthority(file, secret, os.Geteuid(), os.Getegid()); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeCaseAuthority(file, secret, os.Geteuid(), os.Getegid()); err != nil {
+		t.Fatal("restart lost authority:", err)
+	}
+	if writeCaseAuthority(file, secret+"changed", os.Geteuid(), os.Getegid()) == nil {
+		t.Fatal("existing authority overwritten")
+	}
+	data, err := os.ReadFile(file)
+	if err != nil || string(data) != secret {
+		t.Fatal("failed replacement changed authority")
+	}
+}

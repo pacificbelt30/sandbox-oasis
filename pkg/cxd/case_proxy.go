@@ -15,6 +15,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"unicode/utf8"
 
 	"github.com/containerd/errdefs"
 	"github.com/docker/docker/api/types/container"
@@ -27,6 +28,7 @@ import (
 	"github.com/pacificbelt30/codex-dock/internal/engine"
 	"github.com/pacificbelt30/codex-dock/internal/netquota"
 	"github.com/pacificbelt30/codex-dock/internal/network"
+	"github.com/pacificbelt30/codex-dock/internal/proxyimage"
 )
 
 // ProxyResourceLimits bounds proxy TCP connections and per-source bandwidth.
@@ -83,8 +85,11 @@ func EnsureCaseProxy(ctx context.Context, opts CaseProxyOptions) (CaseProxy, err
 	if err := authproxy.ValidateAllowedModels(opts.AllowedModels); err != nil {
 		return CaseProxy{}, err
 	}
-	if !caseProxyName.MatchString(opts.Name) || opts.CaseID == "" || len(opts.CaseID) > 256 || strings.ContainsAny(opts.CaseID, "\x00\r\n") || len(opts.AdminSecret) < 32 || opts.AdminPort < 1 || opts.AdminPort > 65535 {
+	if !utf8.ValidString(opts.CaseID) || !utf8.ValidString(opts.AdminSecret) || !caseProxyName.MatchString(opts.Name) || opts.CaseID == "" || len(opts.CaseID) > 256 || strings.ContainsAny(opts.CaseID, "\x00\r\n") || len(opts.AdminSecret) < 32 || opts.AdminPort < 1 || opts.AdminPort > 65535 {
 		return CaseProxy{}, fmt.Errorf("case proxy requires name, case ID, admin secret and a valid admin port")
+	}
+	if len(opts.AdminSecret) > 4096 || strings.TrimSpace(opts.AdminSecret) != opts.AdminSecret || strings.ContainsAny(opts.AdminSecret, "\x00\r\n") {
+		return CaseProxy{}, fmt.Errorf("case proxy admin secret must be 32..4096 bytes without surrounding whitespace or line breaks")
 	}
 	if !filepath.IsAbs(opts.StoreSocket) || filepath.Clean(opts.StoreSocket) != opts.StoreSocket {
 		return CaseProxy{}, fmt.Errorf("credential store socket must be a clean absolute path")
@@ -115,6 +120,13 @@ func EnsureCaseProxy(ctx context.Context, opts CaseProxyOptions) (CaseProxy, err
 	if imageInfo.Config == nil || imageInfo.Config.Labels["io.codex-dock.proxy-protocol"] != "external-store-v1" || imageInfo.Config.Labels["io.codex-dock.proxy-build"] != buildinfo.Version {
 		return CaseProxy{}, fmt.Errorf("case proxy image is incompatible with Go client; rebuild the proxy image")
 	}
+	if err := proxyimage.Verify(ctx, opts.NodeSocket, opts.Image, imageInfo.ID); err != nil {
+		return CaseProxy{}, err
+	}
+	secretPath, err := prepareCaseAuthority(ctx, cli, opts)
+	if err != nil {
+		return CaseProxy{}, err
+	}
 	if existing, err := cli.NetworkInspect(ctx, network.EgressNetworkName, dn.InspectOptions{}); err == nil {
 		if existing.Driver != "bridge" || existing.Labels["codex-dock.managed"] != "true" {
 			return CaseProxy{}, fmt.Errorf("egress network is not managed by cxd")
@@ -131,6 +143,9 @@ func EnsureCaseProxy(ctx context.Context, opts CaseProxyOptions) (CaseProxy, err
 	caseHash := hex.EncodeToString(sum[:])
 	result := CaseProxy{Name: opts.Name, AdminURL: "http://127.0.0.1:" + strconv.Itoa(opts.AdminPort), ContainerURL: (&url.URL{Scheme: "https", Host: net.JoinHostPort(opts.Name, "18080")}).String()}
 	if existing, err := cli.ContainerInspect(ctx, opts.Name); err == nil {
+		if existing.Image != imageInfo.ID {
+			return CaseProxy{}, fmt.Errorf("case proxy image differs from trusted build; drain workers before replacement")
+		}
 		if existing.Config == nil || existing.State == nil || existing.Config.Image != opts.Image || existing.Config.Labels["io.codex-dock.proxy-layout"] != "split-v4-worker-mtls" || existing.Config.Labels["io.codex-dock.credential-case"] != caseHash {
 			return CaseProxy{}, fmt.Errorf("case proxy name already belongs to another image, layout or case")
 		}
@@ -139,8 +154,12 @@ func EnsureCaseProxy(ctx context.Context, opts CaseProxyOptions) (CaseProxy, err
 		}
 		mounted := false
 		usageDirectory := ""
+		secretMounted := false
 		if existing.HostConfig != nil {
 			for _, m := range existing.HostConfig.Mounts {
+				if m.Source == secretPath && m.Target == "/run/cxd-admin-secret" && m.ReadOnly {
+					secretMounted = true
+				}
 				if m.Target == "/run/cxd-usage" && !m.ReadOnly {
 					usageDirectory = m.Source
 				}
@@ -148,6 +167,9 @@ func EnsureCaseProxy(ctx context.Context, opts CaseProxyOptions) (CaseProxy, err
 					mounted = true
 				}
 			}
+		}
+		if !secretMounted || slices.Contains(existing.Config.Cmd, "--admin-secret") {
+			return CaseProxy{}, fmt.Errorf("case proxy requires private-file admin authority; drain workers and recreate it")
 		}
 		if usageDirectory != opts.UsageStateDir {
 			return CaseProxy{}, fmt.Errorf("case proxy usage directory differs; drain workers before replacement")
@@ -181,8 +203,8 @@ func EnsureCaseProxy(ctx context.Context, opts CaseProxyOptions) (CaseProxy, err
 	}
 	cfg := &container.Config{
 		Image: opts.Image, User: fmt.Sprintf("%d:%d", os.Geteuid(), os.Getegid()),
-		Cmd:    []string{"proxy", "serve", "--worker-mtls", "--listen", "0.0.0.0:18080", "--role", "auth", "--admin-listen", "egress:" + strconv.Itoa(opts.AdminPort), "--admin-secret", opts.AdminSecret, "--block-private", "--credential-store-socket", "/run/cxd-credential-store.sock", "--case-id", opts.CaseID},
-		Labels: map[string]string{"io.codex-dock.proxy-layout": "split-v4-worker-mtls", "io.codex-dock.credential-case": caseHash},
+		Cmd:    []string{"proxy", "serve", "--worker-mtls", "--listen", "0.0.0.0:18080", "--role", "auth", "--admin-listen", "egress:" + strconv.Itoa(opts.AdminPort), "--admin-secret-file", "/run/cxd-admin-secret", "--block-private", "--credential-store-socket", "/run/cxd-credential-store.sock", "--case-id", opts.CaseID},
+		Labels: map[string]string{"io.codex-dock.proxy-layout": "split-v4-worker-mtls", "io.codex-dock.credential-case": caseHash, "codex-dock.image-id": imageInfo.ID},
 	}
 	if id := opts.NetworkResources.ID(); id != "" {
 		cfg.Labels[netquota.Label] = id
@@ -192,6 +214,7 @@ func EnsureCaseProxy(ctx context.Context, opts CaseProxyOptions) (CaseProxy, err
 		cfg.Cmd = append(cfg.Cmd, "--allow-model", model)
 	}
 	host := &container.HostConfig{Runtime: "runc", CapDrop: []string{"ALL"}, SecurityOpt: []string{"no-new-privileges:true"}, NetworkMode: container.NetworkMode(network.EgressNetworkName), Mounts: []mount.Mount{{Type: mount.TypeBind, Source: opts.StoreSocket, Target: "/run/cxd-credential-store.sock", ReadOnly: true}}, PortBindings: nat.PortMap{port: []nat.PortBinding{{HostIP: "127.0.0.1", HostPort: strconv.Itoa(opts.AdminPort)}}}}
+	host.Mounts = append(host.Mounts, mount.Mount{Type: mount.TypeBind, Source: secretPath, Target: "/run/cxd-admin-secret", ReadOnly: true})
 	if opts.UsageStateDir != "" {
 		cfg.Cmd = append(cfg.Cmd, "--usage-state-dir", "/run/cxd-usage")
 		host.Mounts = append(host.Mounts, mount.Mount{Type: mount.TypeBind, Source: opts.UsageStateDir, Target: "/run/cxd-usage"})
@@ -237,7 +260,7 @@ func RemoveCaseProxy(ctx context.Context, nodeSocket, name, caseID string) error
 	defer func() { _ = cli.Close() }()
 	v, err := cli.ContainerInspect(ctx, name)
 	if errdefs.IsNotFound(err) {
-		return nil
+		return removeCaseAuthority(ctx, cli, name, caseID)
 	}
 	if err != nil {
 		return err
@@ -251,12 +274,16 @@ func RemoveCaseProxy(ctx context.Context, nodeSocket, name, caseID string) error
 		return err
 	}
 	endpoint := "http://" + net.JoinHostPort(name, "18080")
+	tlsEndpoint := "https://" + net.JoinHostPort(name, "18080")
 	for _, worker := range workers {
-		if worker.Labels["codex-dock.proxy-container-url"] == endpoint {
+		if worker.Labels["codex-dock.proxy-container-url"] == endpoint || worker.Labels["codex-dock.proxy-container-url"] == tlsEndpoint {
 			return fmt.Errorf("proxy %q still has a retained worker", name)
 		}
 	}
-	return cli.ContainerRemove(ctx, name, container.RemoveOptions{Force: true})
+	if err := cli.ContainerRemove(ctx, name, container.RemoveOptions{Force: true}); err != nil {
+		return err
+	}
+	return removeCaseAuthority(ctx, cli, name, caseID)
 }
 
 // Compare immutable launch arguments, including absent flags on legacy proxies.

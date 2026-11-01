@@ -3,10 +3,12 @@ package sandbox
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
@@ -31,6 +33,10 @@ func linkedWorktreeMounts(ctx context.Context, workspace string, readOnly bool, 
 	if !info.Mode().IsRegular() {
 		return nil, nil, fmt.Errorf("workspace .git must be a regular pointer file or directory")
 	}
+	workspace, err = filepath.EvalSymlinks(workspace)
+	if err != nil {
+		return nil, nil, err
+	}
 	cmd := exec.CommandContext(ctx, "git", "-C", workspace, "rev-parse", "--path-format=absolute", "--git-common-dir")
 	data, err := cmd.Output()
 	if err != nil {
@@ -52,9 +58,27 @@ func linkedWorktreeMounts(ctx context.Context, workspace string, readOnly bool, 
 	if err != nil {
 		return nil, nil, err
 	}
-	rel, err := filepath.Rel(common, gitDir)
-	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-		return nil, nil, fmt.Errorf("worktree Git directory is outside its common metadata")
+	// A workspace pointer is discovery input, never permission to share an
+	// arbitrary repository. Only an external reciprocal Git registration can
+	// grant this workspace access to common metadata.
+	registrationRoot := filepath.Join(common, "worktrees")
+	rel, err := filepath.Rel(workspace, common)
+	if err != nil || rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) || filepath.Dir(gitDir) != registrationRoot {
+		return nil, nil, fmt.Errorf("external Git metadata requires a registered linked worktree; use --no-git-metadata to omit sharing")
+	}
+	for _, dir := range []string{registrationRoot, gitDir} {
+		info, err := os.Lstat(dir)
+		if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+			return nil, nil, fmt.Errorf("invalid linked worktree registration")
+		}
+	}
+	backlink, err := worktreeRegistrationPath(filepath.Join(gitDir, "gitdir"))
+	if err != nil || backlink != filepath.Join(workspace, ".git") {
+		return nil, nil, fmt.Errorf("linked worktree registration does not authorize this workspace")
+	}
+	registeredCommon, err := worktreeRegistrationPath(filepath.Join(gitDir, "commondir"))
+	if err != nil || registeredCommon != common {
+		return nil, nil, fmt.Errorf("linked worktree common directory differs from registration")
 	}
 	for _, m := range existing {
 		if m.Target == common {
@@ -63,6 +87,30 @@ func linkedWorktreeMounts(ctx context.Context, workspace string, readOnly bool, 
 	}
 	return []mount.Mount{{Type: mount.TypeBind, Source: common, Target: common, ReadOnly: readOnly,
 		BindOptions: &mount.BindOptions{Propagation: mount.PropagationRPrivate}}}, []string{"GIT_DIR=" + gitDir, "GIT_WORK_TREE=/workspace"}, nil
+}
+
+func worktreeRegistrationPath(path string) (string, error) {
+	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0)
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = f.Close() }()
+	info, err := f.Stat()
+	if err != nil || !info.Mode().IsRegular() || info.Size() > 4096 {
+		return "", fmt.Errorf("invalid worktree registration file")
+	}
+	data, err := io.ReadAll(io.LimitReader(f, 4097))
+	if err != nil || len(data) > 4096 {
+		return "", fmt.Errorf("reading worktree registration failed")
+	}
+	target := strings.TrimSuffix(string(data), "\n")
+	if target == "" || strings.ContainsAny(target, "\x00\r\n") {
+		return "", fmt.Errorf("invalid worktree registration path")
+	}
+	if !filepath.IsAbs(target) {
+		target = filepath.Join(filepath.Dir(path), target)
+	}
+	return filepath.EvalSymlinks(target)
 }
 
 // Remove only worktrees created by the CLI, after the container and network

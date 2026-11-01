@@ -2,6 +2,7 @@
 Description=Dedicated containerd for codex-dock Dragonball workers
 Wants=network-online.target
 After=network-online.target
+RequiresMountsFor=/var/lib/codex-dock-containerd
 
 [Service]
 Type=notify

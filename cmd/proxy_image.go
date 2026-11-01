@@ -10,7 +10,31 @@ import (
 	"runtime"
 
 	"github.com/pacificbelt30/codex-dock/internal/engine"
+	"github.com/pacificbelt30/codex-dock/internal/proxyimage"
+	"github.com/spf13/cobra"
 )
+
+func init() {
+	proxyCmd.AddCommand(&cobra.Command{Use: "trust IMAGE", Short: "Authorize an explicitly reviewed proxy image digest on this node", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		c, err := engine.NewClient()
+		if err != nil {
+			return err
+		}
+		defer func() { _ = c.Close() }()
+		image, err := c.ImageInspect(cmd.Context(), args[0])
+		if err != nil {
+			return err
+		}
+		if image.Config == nil || !proxyImageCompatible(image.Config.Labels) {
+			return fmt.Errorf("proxy image is incompatible with this CLI")
+		}
+		if err := proxyimage.Record(cmd.Context(), engine.Socket(), args[0], image.ID); err != nil {
+			return err
+		}
+		_, err = fmt.Fprintf(cmd.OutOrStdout(), "Authorized proxy image %s at %s for this node and CLI version.\n", args[0], image.ID)
+		return err
+	}})
+}
 
 // An installed Linux CLI bundle is static and already matches the node. Build
 // its proxy image directly from those bytes, so a project clone need not carry
@@ -93,5 +117,5 @@ CMD ["proxy", "serve", "--listen", "0.0.0.0:18080"]
 	if err := os.WriteFile(dockerfile, []byte(contents), 0644); err != nil {
 		return true, err
 	}
-	return true, engine.Build(ctx, tag, dockerfile, dir, os.Stderr)
+	return true, engine.BuildProxyAt(ctx, engine.Socket(), tag, dockerfile, dir, os.Stderr)
 }

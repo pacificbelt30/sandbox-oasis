@@ -1,5 +1,7 @@
 # Installation
 
+- **Unreleased main** additionally requires dedicated XFS storage with project quotas. Read the [rootfs storage requirements](guides/resource-limits.md) before applying setup or migrating ext4. Setup does not convert or erase storage automatically.
+
 [日本語](../installation.md) | **English**
 
 | Current state | Next step |

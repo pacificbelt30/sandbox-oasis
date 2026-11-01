@@ -10,6 +10,22 @@ import setup
 
 
 class SetupTests(unittest.TestCase):
+    def test_quota_storage_requires_dedicated_enforcing_xfs(self):
+        for mount_id, output, accepted in [
+            ('22', '22 1 7:1 / /var/lib/codex-dock-containerd rw - xfs /dev/data rw,prjquota\n', True),
+            ('22', '21 1 0:1 / /var/lib/codex-dock-containerd rw - tmpfs tmpfs rw\n22 21 7:1 / /var/lib/codex-dock-containerd rw - xfs /dev/data rw,prjquota\n', True),
+            ('21', '21 1 0:1 / /var/lib/codex-dock-containerd rw - tmpfs tmpfs rw\n22 21 7:1 / /var/lib/codex-dock-containerd rw - xfs /dev/data rw,prjquota\n', False),
+            ('22', '22 1 7:1 / /var/lib/codex-dock-containerd rw - ext4 /dev/data rw\n', False),
+            ('22', '22 1 7:1 / /var/lib/codex-dock-containerd rw - xfs /dev/data rw\n', False),
+            ('22', '22 1 7:1 / / rw - xfs /dev/data rw,prjquota\n', False),
+        ]:
+            with self.subTest(output=output):
+                if accepted:
+                    setup.validate_quota_mount(mount_id, output, 2, 1)
+                else:
+                    with self.assertRaisesRegex(ValueError, 'dedicated XFS'):
+                        setup.validate_quota_mount(mount_id, output, 2, 1)
+
     def test_completion_script_uses_cli_and_installer_tracks_files(self):
         with tempfile.TemporaryDirectory() as tmp:
             cli = Path(tmp) / 'oaiso'

@@ -143,3 +143,8 @@
 ## Distribution signatures
 
 - v0.0.4 or later: [Signature/provenance/SBOM/rollback policy](guides/signed-releases.md).
+
+## Additional boundaries (unreleased: main)
+
+- Implicit external Git metadata sharing requires a reciprocal host-side worktree registration matching the workspace pointer. Pointers to unrelated repositories and mismatched registrations are rejected. Use `--no-git-metadata` or Go `RunOptions.NoGitMetadata` to omit this share.
+- Proxies require [node-owned image authorization](commands/proxy.md). Writable snapshots use enforced [rootfs capacity limits](guides/resource-limits.md).

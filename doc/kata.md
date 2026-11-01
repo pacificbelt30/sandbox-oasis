@@ -22,10 +22,12 @@ buildctl → 独立BuildKit → OCI archive → 同じcontainerd namespace
 - Ubuntu 26.04で新しく配置する場合は、[自動セットアップ](setup.md)も使えます。
 - 以下は手動配置の手順です。
 
+- 未リリース（main）では、[専用XFSとproject quota](guides/resource-limits.md)も必要です。
+
 ## 必要なホスト
 
 - Linux x86_64、KVM、cgroup v2、`cpu memory pids` controller、pidfdと`cgroup.kill`、iproute2・nftables・runc、containerd 2.xの設定v3が必要。
-- 検証版はKata 4.2.0 / containerd 2.4.2 / BuildKit 0.34.0。
+- 未リリース（main）の固定配布物はKata 4.3.0 / containerd 2.4.2 / BuildKit 0.34.0。
 - KataのDragonball用kernelには公式配布物上でexperimentalの名称が付く。
 - 更新時は資産を検証して受入試験を再実行する。
 
@@ -55,13 +57,13 @@ cd sandbox-oasis
 - ホストPythonは[インストール手順](installation.md#2-ツールを準備する)と同じuv管理の3.12を使う。
 
 ```bash
-curl -fL -o kata-static-4.2.0-amd64.tar.zst \
-  https://github.com/kata-containers/kata-containers/releases/download/4.2.0/kata-static-4.2.0-amd64.tar.zst
-echo 'b828904fa3f1e49ddd7dc799c72cb1503cd1e772d354c3987c8d4189b2a623a8  kata-static-4.2.0-amd64.tar.zst' | sha256sum -c -
+curl -fL -o kata-static-4.3.0-amd64.tar.zst \
+  https://github.com/kata-containers/kata-containers/releases/download/4.3.0/kata-static-4.3.0-amd64.tar.zst
+echo '79a77ff015c887da3067110c664c1f9f33fb38a3630dbe88daf4098a63d054d0  kata-static-4.3.0-amd64.tar.zst' | sha256sum -c -
 mkdir kata-staging
-tar --zstd -xf kata-static-4.2.0-amd64.tar.zst -C kata-staging \
+tar --zstd -xf kata-static-4.3.0-amd64.tar.zst -C kata-staging \
   ./opt/kata/runtime-rs/bin/containerd-shim-kata-v2 \
-  ./opt/kata/share/kata-containers/vmlinux-6.18.35-202-dragonball-experimental \
+  ./opt/kata/share/kata-containers/vmlinux-6.18.56-208-dragonball-experimental \
   ./opt/kata/share/kata-containers/kata-ubuntu-resolute.image \
   ./opt/kata/share/defaults/kata-containers/runtime-rs/configuration-dragonball.toml
 gcc -static -Os -Wall -Wextra -Werror deploy/kata/pids_hook.c -o pids-hook

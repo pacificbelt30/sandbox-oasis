@@ -59,6 +59,36 @@ def run(args, **kwargs):
     return subprocess.run([str(a) for a in args], text=True, **kwargs)
 
 
+def require_quota_storage():
+    """Read-only preflight; never format or remount a user's storage."""
+    target = '/var/lib/codex-dock-containerd'
+    try:
+        fd = os.open(target, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    except OSError as error:
+        raise ValueError('mount dedicated XFS with project quotas at ' + target + ' before setup --apply') from error
+    try:
+        # findmnt can return both an underlying bind and its overmount. Bind
+        # validation to the effective mount opened by this process instead.
+        info = Path(f'/proc/self/fdinfo/{fd}').read_text()
+        mount_id = next((line.split()[1] for line in info.splitlines() if line.startswith('mnt_id:')), None)
+        validate_quota_mount(mount_id, Path('/proc/self/mountinfo').read_text(), os.fstat(fd).st_dev, os.stat('/').st_dev)
+    finally:
+        os.close(fd)
+
+
+def validate_quota_mount(mount_id, mountinfo, device, root_device):
+    target = '/var/lib/codex-dock-containerd'
+    selected = [line.split(' - ', 1) for line in mountinfo.splitlines() if line.split()[0] == mount_id]
+    valid = False
+    if len(selected) == 1 and len(selected[0]) == 2:
+        fields, fs = selected[0][0].split(), selected[0][1].split()
+        if len(fields) >= 6 and len(fs) >= 3:
+            options = set(fields[5].split(',') + fs[2].split(','))
+            valid = fields[3] == '/' and fields[4] == target and fs[0] == 'xfs' and bool({'prjquota', 'pquota'} & options) and device != root_device
+    if not valid:
+        raise ValueError('dedicated XFS with project quota enforcement must be mounted at ' + target + '; migrate storage before setup --apply (setup never formats or remounts it)')
+
+
 def completion_script(cli, shell, command='oaiso'):
     # An explicit old argv[0] is used only to identify prior installer output.
     return run([command, 'completion', shell], executable=str(cli), capture_output=True).stdout.encode()
@@ -249,7 +279,7 @@ def stage(bundle, record, archives):
     selected = {}
     for member, target, mode in [
         ('runtime-rs/bin/containerd-shim-kata-v2', 'containerd-shim-kata-v2', 0o755),
-        ('share/kata-containers/vmlinux-6.18.35-202-dragonball-experimental', 'kernel', 0o644),
+        ('share/kata-containers/vmlinux-6.18.56-208-dragonball-experimental', 'kernel', 0o644),
         ('share/kata-containers/kata-ubuntu-resolute.image', 'original.image', 0o644),
         ('share/defaults/kata-containers/runtime-rs/configuration-dragonball.toml', 'original.toml', 0o644)]:
         selected['opt/kata/' + member] = (release / target, mode)
@@ -299,6 +329,7 @@ def units(release):
     daemon = f'''[Unit]
 Description=Dedicated codex-dock containerd
 After=network-online.target
+RequiresMountsFor=/var/lib/codex-dock-containerd
 [Service]
 Type=notify
 {common}ExecStart={binary}/containerd --config {base}/containerd.toml
@@ -466,7 +497,7 @@ def main():
     record = None if args.rollback else bundle_info(args.bundle.resolve())
     if not args.rollback:
         host_check(args.operator)
-    print('Plan: rollback previous setup' if args.rollback else 'Plan: verified Ubuntu 26.04 amd64 node; Kata 4.2.0 / Dragonball / containerd 2.4.2 / BuildKit 0.34.0 / runc 1.4.3', flush=True)
+    print('Plan: rollback previous setup' if args.rollback else 'Plan: verified Ubuntu 26.04 amd64 node; Kata 4.3.0 / Dragonball / containerd 2.4.2 / BuildKit 0.34.0 / runc 1.4.3', flush=True)
     if not args.rollback:
         print(f'Bundle: {args.bundle.resolve()} (version {record.get("version", "unknown")}); operator: {args.operator}; cache: {args.cache.resolve()}; offline: {"yes" if args.offline else "no"}', flush=True)
     print(f'Python: {sys.executable} (version {platform.python_version()})', flush=True)
@@ -531,6 +562,7 @@ def apply(args, record):
     targets = [*ACTIVE_MANAGED, *legacy_files]
     if not args.rollback:
         check_oaiso_collision(current)
+        require_quota_storage()
     for path in targets:
         trusted(path)
         if not current and path.exists():

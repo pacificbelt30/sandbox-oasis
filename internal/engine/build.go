@@ -1,16 +1,23 @@
 package engine
 
 import (
+	"bytes"
 	"context"
+	"crypto/rand"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 
+	"github.com/docker/docker/api/types/image"
 	"github.com/pacificbelt30/codex-dock/internal/buildinfo"
+	"github.com/pacificbelt30/codex-dock/internal/proxyimage"
 )
 
 var codexVersionPattern = regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$`)
@@ -24,19 +31,68 @@ func Build(ctx context.Context, tag, dockerfile, buildContext string, log io.Wri
 
 // BuildAt imports the built image into an explicitly selected local node.
 func BuildAt(ctx context.Context, socket, tag, dockerfile, buildContext string, log io.Writer) error {
-	return buildAt(ctx, socket, tag, dockerfile, buildContext, log, false)
+	return buildAt(ctx, socket, tag, dockerfile, buildContext, log, false, false)
 }
 
 // BuildPinned builds a product-owned image using the embedded recipe's CLI
 // versions. Development version overrides must not change the login CLI.
 func BuildPinned(ctx context.Context, tag, dockerfile, buildContext string, log io.Writer) error {
-	return buildAt(ctx, Socket(), tag, dockerfile, buildContext, log, true)
+	return buildAt(ctx, Socket(), tag, dockerfile, buildContext, log, true, false)
 }
 
-func buildAt(ctx context.Context, socket, tag, dockerfile, buildContext string, log io.Writer, pinned bool) error {
+// BuildProxyAt authorizes only the output of this explicit trusted build. A
+// random reserved staging reference prevents an in-flight project build from
+// substituting the target tag between build completion and digest capture.
+func BuildProxyAt(ctx context.Context, socket, tag, dockerfile, buildContext string, log io.Writer) error {
+	var random [16]byte
+	if _, err := rand.Read(random[:]); err != nil {
+		return err
+	}
+	staging := "oaiso-proxy-build:" + hex.EncodeToString(random[:])
+	if err := buildAt(ctx, socket, staging, dockerfile, buildContext, log, true, true); err != nil {
+		return err
+	}
+	c, err := NewClientAt(socket)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = c.Close() }()
+	info, err := c.ImageInspect(ctx, staging)
+	if err != nil {
+		return err
+	}
+	body, err := json.Marshal(map[string]string{"Source": staging, "Target": tag, "Digest": info.ID})
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "http://docker/images/promote", bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	resp, err := c.HTTPClient().Do(req)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("trusted proxy image promotion failed (HTTP %d); upgrade node", resp.StatusCode)
+	}
+	if err := proxyimage.Record(ctx, socket, tag, info.ID); err != nil {
+		return err
+	}
+	_, err = c.ImageRemove(ctx, staging, image.RemoveOptions{})
+	return err
+}
+
+func buildAt(ctx context.Context, socket, tag, dockerfile, buildContext string, log io.Writer, pinned, proxy bool) error {
 	name, err := normalizeBuildName(tag)
 	if err != nil {
 		return err
+	}
+	if !proxy {
+		if err := proxyimage.CheckWorkerTag(ctx, socket, name, pinned); err != nil {
+			return err
+		}
 	}
 	df, err := filepath.Abs(dockerfile)
 	if err != nil {

@@ -1,9 +1,9 @@
 {
   "kata": {
-    "version": "4.2.0",
-    "url": "https://github.com/kata-containers/kata-containers/releases/download/4.2.0/kata-static-4.2.0-amd64.tar.zst",
-    "file": "kata-static-4.2.0-amd64.tar.zst",
-    "sha256": "b828904fa3f1e49ddd7dc799c72cb1503cd1e772d354c3987c8d4189b2a623a8"
+    "version": "4.3.0",
+    "url": "https://github.com/kata-containers/kata-containers/releases/download/4.3.0/kata-static-4.3.0-amd64.tar.zst",
+    "file": "kata-static-4.3.0-amd64.tar.zst",
+    "sha256": "79a77ff015c887da3067110c664c1f9f33fb38a3630dbe88daf4098a63d054d0"
   },
   "containerd": {
     "version": "2.4.2",

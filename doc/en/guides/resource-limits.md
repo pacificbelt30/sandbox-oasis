@@ -3,8 +3,24 @@
 [日本語](../../guides/resource-limits.md) | **English**
 
 - Available: **v0.0.4**, with matching CLI, node, guard and proxy.
-- Optional. Unset settings retain existing behavior.
+- Connection, bandwidth, FD and I/O settings remain optional. Mandatory rootfs requirements are described below.
 - Separate from CPU, memory, PIDs, request-body size and [per-execution AI usage limits](usage-limits.md).
+
+## Writable root filesystems (unreleased: main)
+
+- Dedicated XFS storage with project quota enforcement is required at `/var/lib/codex-dock-containerd`. Setup checks the mount before applying and never formats or remounts storage.
+- Each writable snapshot has a **4 GiB and 65,536 inode** ceiling, including worker and runc proxy snapshots. Limits persist across stops and are checked on start and node recovery.
+- Creation and resume conservatively reserve the full ceiling for each existing native task plus 1 GiB of free space. Stopped VMs whose tasks have been deleted consume only their stored data; resume checks available capacity again.
+- Read-only image layers, explicitly shared workspaces, separate agent-state disks and tmpfs have separate storage scopes. Manage shared workspace capacity on the host as well.
+- Writes fail with errors such as `ENOSPC`. Disabled/unknown quotas and legacy unbounded snapshots prevent execution while retaining data.
+
+As the host administrator, check that TARGET matches exactly, FSTYPE is `xfs`, and OPTIONS contains `prjquota` or `pquota`. The node also checks enforcement through the kernel API.
+
+```bash
+findmnt -no SOURCE,FSTYPE,OPTIONS,TARGET --target /var/lib/codex-dock-containerd
+```
+
+For ext4 migrations, finish work and preserve required projects, VM changes, separate databases and images before an administrator prepares dedicated storage. Allow at least 32 GiB for a typical two-worker installation, separate from the OS and unrelated work. Sparse file size is not physically reserved capacity. Legacy root filesystems and databases are not automatically converted: verify your preserved data before creating new workers. Do not automatically erase the old store.
 
 ## Scope and behavior
 

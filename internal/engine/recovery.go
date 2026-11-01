@@ -58,6 +58,14 @@ func (b *Backend) recover(ctx context.Context) error {
 			}
 			continue
 		}
+		if quotaErr := b.validateRootFSQuota(r); quotaErr != nil {
+			// Preserve old/invalid snapshots, but stop execution before opening
+			// management traffic. Storage migration never silently drops data.
+			if err := b.stop(ctx, r, c, 0); err != nil {
+				return fmt.Errorf("stopping unbounded worker %s: %w", r.ID, err)
+			}
+			continue
+		}
 		h, err := newHub()
 		if err != nil {
 			return err

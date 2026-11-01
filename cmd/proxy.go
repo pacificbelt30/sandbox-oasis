@@ -9,6 +9,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/pacificbelt30/codex-dock/internal/engine"
+	"github.com/pacificbelt30/codex-dock/internal/proxyimage"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -422,10 +423,12 @@ func ensureProxyImageForStore(ctx context.Context, image string, encrypted bool)
 	}
 	defer func() { _ = c.Close() }()
 	if inspected, err := c.ImageInspect(ctx, image); err == nil {
-		if inspected.Config != nil && proxyImageCompatible(inspected.Config.Labels) && (!encrypted || inspected.Config.Labels[proxyVaultProtocolLabel] == proxyVaultProtocolVersion) {
+		if inspected.Config != nil && proxyImageCompatible(inspected.Config.Labels) && (!encrypted || inspected.Config.Labels[proxyVaultProtocolLabel] == proxyVaultProtocolVersion) && proxyimage.Verify(ctx, engine.Socket(), image, inspected.ID) == nil {
 			return nil
 		}
-		if image != "codex-dock-proxy:latest" {
+		canonical, _ := proxyimage.Normalize(image)
+		defaultName, _ := proxyimage.Normalize("codex-dock-proxy:latest")
+		if canonical != defaultName {
 			return fmt.Errorf("proxy image %s does not match CLI version/protocol; rebuild it with the current proxy Dockerfile", image)
 		}
 	} else if !errdefs.IsNotFound(err) {
@@ -435,11 +438,7 @@ func ensureProxyImageForStore(ctx context.Context, image string, encrypted bool)
 	if built, err := buildProxyImageFromExecutable(ctx, image); built || err != nil {
 		return err
 	}
-	dockerfile, buildCtx, err := resolveProxyDockerfile("")
-	if err != nil {
-		return err
-	}
-	return executeProxyBuild(ctx, image, dockerfile, buildCtx)
+	return fmt.Errorf("automatic proxy builds require a static Linux CLI bundle; run oaiso proxy build with an explicitly trusted recipe")
 }
 
 func proxyImageCompatible(labels map[string]string) bool {
@@ -464,11 +463,21 @@ func ensureProxyContainer(ctx context.Context, spec proxyRunArgs) (result error)
 		return err
 	}
 	defer func() { _ = c.Close() }()
+	imageInfo, err := c.ImageInspect(ctx, spec.image)
+	if err != nil {
+		return err
+	}
+	if err := proxyimage.Verify(ctx, engine.Socket(), spec.image, imageInfo.ID); err != nil {
+		return err
+	}
 	v, err := c.ContainerInspect(ctx, spec.name)
 	if err != nil && !errdefs.IsNotFound(err) {
 		return err
 	}
 	if err == nil {
+		if v.Image != imageInfo.ID {
+			return fmt.Errorf("proxy image differs from the trusted build; drain workers before replacement")
+		}
 		if v.Config == nil || v.State == nil {
 			return fmt.Errorf("incomplete proxy record")
 		}
@@ -548,6 +557,7 @@ func ensureProxyContainer(ctx context.Context, spec proxyRunArgs) (result error)
 	if err != nil {
 		return err
 	}
+	cfg.Labels["codex-dock.image-id"] = imageInfo.ID
 	created, err := c.ContainerCreate(ctx, cfg, host, nil, nil, spec.name)
 	if err != nil {
 		return err
@@ -943,5 +953,5 @@ func ensureProxyDockerfile(dir string) error {
 // instead of collapsing it into a live-updating TTY view, so an auto-build
 // triggered by `run` never looks stalled while it's actually still working.
 func executeProxyBuild(ctx context.Context, tag, dockerfile, buildCtx string) error {
-	return executeBuild(ctx, tag, dockerfile, buildCtx)
+	return engine.BuildProxyAt(ctx, engine.Socket(), tag, dockerfile, buildCtx, os.Stderr)
 }

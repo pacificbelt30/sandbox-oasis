@@ -29,13 +29,17 @@ func TestGuestFileProgramRejectsSymlinksAndWritesAtomically(t *testing.T) {
 	}
 	program := strings.Replace(fileProgram, "os.open('/workspace',", "os.open(sys.argv[3],", 1)
 	run := func(op, path string, in io.Reader) (string, error) {
-		cmd := exec.CommandContext(context.Background(), python, "-c", program, op, path, root)
+		cmd := exec.CommandContext(context.Background(), python, "-I", "-c", program, op, path, root)
+		cmd.Dir = root
 		cmd.Stdin = in
 		var out, stderr bytes.Buffer
 		cmd.Stdout = &out
 		cmd.Stderr = &stderr
 		err := cmd.Run()
 		return out.String(), err
+	}
+	if err = os.WriteFile(filepath.Join(root, "json.py"), []byte("raise RuntimeError('project module must not execute')"), 0600); err != nil {
+		t.Fatal(err)
 	}
 	for _, path := range []string{"../private", "/etc/passwd", "link", "dirlink/private"} {
 		if out, err := run("read", path, nil); err == nil || strings.Contains(out, "outside-secret") {

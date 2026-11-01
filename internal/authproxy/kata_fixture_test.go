@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/pacificbelt30/codex-dock/internal/egresscontrol"
+	"github.com/pacificbelt30/codex-dock/internal/privatefile"
 
 	"io"
 	"net/http"
@@ -51,12 +52,13 @@ func runKataFixtureProxy() int {
 	f.Int64Var(&cfg.NetworkResources.BytesPerSecond, "network-bytes-per-second", 0, "")
 	f.BoolVar(&cfg.WorkerMTLS, "worker-mtls", false, "")
 	cfg.EventWriter = os.Stdout
-	var socket, role string
+	var socket, role, adminFile string
 	var block bool
 	f.StringVar(&cfg.PolicyControlDir, "policy-control-dir", "", "")
 	f.StringVar(&cfg.ListenAddr, "listen", "", "")
 	f.StringVar(&cfg.AdminListenAddr, "admin-listen", "", "")
 	f.StringVar(&cfg.AdminSecret, "admin-secret", "", "")
+	f.StringVar(&adminFile, "admin-secret-file", "", "")
 	f.StringVar(&cfg.CaseID, "case-id", "", "")
 	f.StringVar(&cfg.CredentialRoutesFile, "credential-routes", "", "")
 	f.StringVar(&cfg.UsageStateDir, "usage-state-dir", "", "")
@@ -76,6 +78,19 @@ func runKataFixtureProxy() int {
 	f.Func("allow-model", "", func(v string) error { cfg.AllowedModels = append(cfg.AllowedModels, v); return nil })
 	if err := f.Parse(os.Args[3:]); err != nil {
 		return 2
+	}
+	if adminFile != "" {
+		if cfg.AdminSecret != "" {
+			return 2
+		}
+		data, err := privatefile.Read(adminFile)
+		if err != nil || len(data) > 4096 {
+			return 2
+		}
+		cfg.AdminSecret = strings.TrimSpace(string(data))
+		if len(cfg.AdminSecret) < 32 || strings.ContainsAny(cfg.AdminSecret, "\x00\r\n") {
+			return 2
+		}
 	}
 	if role == RoleEgress {
 		cfg.Role, cfg.BlockPrivate = RoleEgress, block

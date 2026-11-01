@@ -3,8 +3,24 @@
 **日本語** | [English](../en/guides/resource-limits.md)
 
 - 利用可能：**v0.0.4**。対応するCLI・node・guard・Proxyが必要です。
-- 追加の制限は任意です。未指定では従来の動作を維持します。
+- 接続・帯域・FD・I/Oの追加設定は任意です。rootfsの必須条件は次節を参照してください。
 - 既存のCPU・メモリ・PID、要求本文のサイズ、[AIの実行別利用上限](usage-limits.md)とは別の設定です。
+
+## 書き込み可能なルート領域（未リリース：main）
+
+- `/var/lib/codex-dock-containerd`に、project quotaを強制する専用XFSが必要です。setupは配置前に確認し、フォーマットや再マウントを行いません。
+- 書き込み可能なsnapshotごとに**4 GiB・65,536 inode**を強制します。ワーカーとrunc Proxyが対象です。停止後も上限を保持し、起動・node復旧時に検査します。
+- 実行taskごとの上限全額と1 GiBの空きを保守的に予約し、新規作成・再開時に検査します。taskを削除した停止中のVMは保存データの実使用分だけを消費し、再開時に改めて空きを検査します。
+- 読み取り専用image layer、明示共有workspace、別のagent-stateディスク、tmpfsは別の容量管理です。共有workspaceもホスト側で管理してください。
+- 上限では`ENOSPC`等で書き込みを拒否します。quotaが無効・不明な配置や旧版の上限なしsnapshotは実行を拒否し、データを残します。
+
+実行ホストの管理者が適用前に確認します。TARGETの完全一致、FSTYPE=`xfs`、OPTIONSに`prjquota`または`pquota`が必要です。nodeはkernel APIでも強制状態を検査します。
+
+```bash
+findmnt -no SOURCE,FSTYPE,OPTIONS,TARGET --target /var/lib/codex-dock-containerd
+```
+
+ext4配置から更新する場合は、作業を終了し、必要なプロジェクト・VM変更・独立DB・イメージを保管してから、管理者が専用ストレージを準備します。2ワーカー構成では32 GiB以上を目安とし、OSや他の作業用領域と分けてください。スパースファイルの見かけの容量は実容量の予約にはなりません。旧VMのrootfs・独立DBは自動変換せず、保管した内容を確認して新規ワーカーを作成します。既存の保存領域を自動削除しないでください。
 
 ## 何を制限するか
 

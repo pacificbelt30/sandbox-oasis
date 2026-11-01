@@ -145,6 +145,9 @@
 
 ## workspace・Git・削除
 
+- **未リリース（main）**：外部Git metadataは、workspaceのポインタとホスト側worktree登録が相互に対応する場合だけ暗黙共有します。別リポジトリへのポインタや登録不一致は拒否します。共有を省く場合は`--no-git-metadata`、Go APIでは`RunOptions.NoGitMetadata`を指定してください。
+- 認証Proxyの[node所有イメージ認可](commands/proxy.md)と、[rootfs容量制限](guides/resource-limits.md)も適用します。
+
 | 対象 | 保護・制限 |
 |---|---|
 | workspace・追加mount | 指定したreadonlyを維持 |

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Embed the PID hook into a NEW copy of the fixed Kata 4.2.0 guest image.
+"""Embed the PID hook into a NEW copy of the fixed Kata 4.3.0 guest image.
 
 Requires Python 3.11+, debugfs and a statically compiled pids_hook.c binary.
 No mounts, root privileges or network access are needed. Source is never opened
@@ -16,7 +16,7 @@ import struct
 import tempfile
 
 HOOK_PATH = "/usr/share/codex-dock/hooks"
-SOURCE_SHA256 = "c9f423489ed7d58f429e7c6a354d2d4f4879fd630e710b728495b46ef16287e1"
+SOURCE_SHA256 = "1f58dcc4954a164e93fd74e34f62fdc71c60aaeaf617bb0a5a29f1c2284d7c34"
 
 
 def sha(path):
