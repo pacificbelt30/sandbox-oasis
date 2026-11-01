@@ -80,3 +80,7 @@ Saved. Recreate the desired proxies/workers explicitly to apply the new settings
 - [Worker Management](worker.md)
 - [`oaiso run`](run.md)
 - [Host-managed agent policies](../guides/agent-policies.md)
+
+## Inspect rootfs capacity
+
+Available: **v0.0.7**. Details show host-observed writable rootfs bytes/inodes and limits. This excludes total image, shared workspace and private database usage. Failed queries show unavailable and suggest `oaiso runtime-check`. See [dedicated storage](../guides/storage-migration.md#inspect-usage).

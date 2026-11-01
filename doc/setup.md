@@ -12,7 +12,7 @@
 
 ## 初めて配置する
 
-- **未リリース（main）**では、[rootfs容量制限](guides/resource-limits.md)のため専用XFSとproject quotaが必要です。既存ext4配置は、保管・ストレージ準備・ワーカー再作成を終えてから適用してください。setupはディスクを自動変換しません。
+- **v0.0.7**では、[rootfs容量制限](guides/resource-limits.md)のため専用XFSとproject quotaが必要です。既存ext4配置は、保管・ストレージ準備・ワーカー再作成を終えてから適用してください。setupはディスクを自動変換しません。
 
 ### 配置計画を確認して適用する
 

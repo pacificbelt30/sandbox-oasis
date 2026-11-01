@@ -259,6 +259,14 @@ func (b *Backend) createCheckpoint(ctx context.Context, worker string, options d
 }
 
 func (b *Backend) checkpointHTTP(w http.ResponseWriter, r *http.Request, ctx context.Context, path string) {
+	if path == "/checkpoints/import" {
+		b.portableCheckpointHTTP(w, r, ctx, "")
+		return
+	}
+	if strings.HasSuffix(path, "/export") {
+		b.portableCheckpointHTTP(w, r, ctx, strings.TrimSuffix(strings.TrimPrefix(path, "/checkpoints/"), "/export"))
+		return
+	}
 	if path == "/checkpoints/retention" || path == "/checkpoints/pin" {
 		b.checkpointMaintenanceHTTP(w, r, ctx, path)
 		return

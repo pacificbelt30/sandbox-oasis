@@ -142,6 +142,14 @@ func disabledReason(enabled bool, reason string) string {
 }
 
 func Detail(worker sandbox.Worker, now time.Time) []string {
+	storage := "Rootfs     unavailable; run oaiso runtime-check"
+	if q := worker.RootFS; q != nil && q.Available {
+		if q.ReadOnly {
+			storage = "Rootfs     read-only"
+		} else {
+			storage = fmt.Sprintf("Rootfs     %.1f / %.1f MiB; inodes %d / %d", float64(q.UsedBytes)/(1<<20), float64(q.LimitBytes)/(1<<20), q.UsedInodes, q.LimitInodes)
+		}
+	}
 	lines := []string{
 		"[::b]" + Escape(worker.Name) + "[::-]",
 		"",
@@ -153,6 +161,7 @@ func Detail(worker sandbox.Worker, now time.Time) []string {
 		"Started    " + Escape(formatTime(worker.StartedAt)),
 		"Uptime     " + Escape(formatAge(worker.StartedAt, now)),
 		"Finished   " + Escape(formatTime(worker.FinishedAt)),
+		storage,
 		"",
 		"[::b]Task[::-]",
 		Escape(orInteractive(worker.Task)),

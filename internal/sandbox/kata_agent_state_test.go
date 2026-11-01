@@ -4,6 +4,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"github.com/pacificbelt30/codex-dock/internal/engine"
 	"os"
 	"path/filepath"
 	"strings"
@@ -91,6 +92,103 @@ func TestKataAgentState(t *testing.T) {
 	}
 	probe("crash-verify")
 	probe("quota")
+	backup := filepath.Join(t.TempDir(), "agent-state.backup")
+	if err := engine.ExportAgentState(ctx, engine.Socket(), id, backup); err == nil {
+		t.Fatal("live disk backup accepted")
+	}
+	usage, err := m.RootFSUsage(ctx, id)
+	if err != nil || !usage.Available || usage.LimitBytes != 4<<30 || usage.LimitInodes != 65536 {
+		t.Fatal("host-observed quota unavailable", usage, err)
+	}
+	storage, err := engine.StorageStatus(ctx, engine.Socket())
+	if err != nil || !storage.Enforced || storage.AvailableBytes == 0 {
+		t.Fatal("dedicated quota diagnostics", storage, err)
+	}
+	kataExec(t, ctx, m.cli, id, false, []string{"python3", "-c", `import os,pathlib,subprocess,sys,time
+ready=pathlib.Path('/workspace/backup-wal-ready');ready.unlink(missing_ok=True)
+child="""import os,pathlib,sqlite3,time
+root=pathlib.Path(os.environ['CODEX_SQLITE_HOME'])
+db=sqlite3.connect(root/'portable.sqlite')
+assert db.execute('PRAGMA journal_mode=WAL').fetchone()[0]=='wal'
+db.execute('PRAGMA synchronous=FULL');db.execute('PRAGMA wal_autocheckpoint=0')
+db.execute('CREATE TABLE retained(value TEXT)');db.execute("INSERT INTO retained VALUES ('committed-in-WAL')");db.commit()
+assert (root/'portable.sqlite-wal').stat().st_size>0
+pathlib.Path('/workspace/backup-wal-ready').write_text('committed')
+time.sleep(600)
+"""
+subprocess.Popen([sys.executable,'-c',child],stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True)
+deadline=time.monotonic()+10
+while not ready.exists():
+ assert time.monotonic()<deadline,'WAL commit not ready'
+ time.sleep(.05)
+`})
+	request("crash")
+	// Remove only the dead task; do not boot/replay the source filesystem before
+	// backing up its committed WAL and ext4 journal.
+	if err = m.Stop(id, 0); err != nil {
+		t.Fatal(err)
+	}
+	if err = engine.ExportAgentState(ctx, engine.Socket(), id, backup); err != nil {
+		t.Fatal("offline backup", err)
+	}
+	if err = engine.RestoreAgentState(ctx, engine.Socket(), id, backup); err == nil {
+		t.Fatal("restore overwrote a used source")
+	}
+	targetOpts := opts
+	targetOpts.Name = "oaiso-state-restore-" + randomSuffix()
+	targetOpts.CreateOnly = true
+	target, err := m.RunContext(ctx, targetOpts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	targetRemoved := false
+	defer func() {
+		if !targetRemoved {
+			if err := m.Remove(target, true); err != nil {
+				t.Error(err)
+			}
+		}
+	}()
+	// Reject a corrupt file without altering the new destination's empty disk.
+	damaged := filepath.Join(t.TempDir(), "damaged.backup")
+	data, err := os.ReadFile(backup)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data[len(data)-1] ^= 1
+	if err = os.WriteFile(damaged, data, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err = engine.RestoreAgentState(ctx, engine.Socket(), target, damaged); err == nil {
+		t.Fatal("corrupt backup accepted")
+	}
+	if err = engine.RestoreAgentState(ctx, engine.Socket(), target, backup); err != nil {
+		t.Fatal("offline restore", err)
+	}
+	if err = engine.RestoreAgentState(ctx, engine.Socket(), target, backup); err == nil {
+		t.Fatal("already-restored disk overwritten")
+	}
+	if err = m.Start(target); err != nil {
+		t.Fatal("restored disk boot", err)
+	}
+	out := kataExec(t, ctx, m.cli, target, false, []string{"python3", "-c", agentStateProbe, "crash-verify", id})
+	if !strings.Contains(out, "SQLITE_DURABLE_crash-verify") {
+		t.Fatal(out)
+	}
+	kataExec(t, ctx, m.cli, target, false, []string{"python3", "-c", `import os,pathlib,sqlite3
+root=pathlib.Path(os.environ['CODEX_SQLITE_HOME'])
+with sqlite3.connect(root/'portable.sqlite') as db:
+ assert db.execute('SELECT value FROM retained').fetchall()==[('committed-in-WAL',)]
+ assert db.execute('PRAGMA integrity_check').fetchone()[0]=='ok'
+print('OFFLINE_WAL_RESTORE_PASS')`})
+	if err = engine.RestoreAgentState(ctx, engine.Socket(), target, backup); err == nil {
+		t.Fatal("live restore accepted")
+	}
+	if err = m.Remove(target, true); err != nil {
+		t.Fatal(err)
+	}
+	targetRemoved = true
+	t.Log("verified: offline private disk export/restore, corruption/live/used-target rejection, committed SQLite WAL in a new VM, host quota diagnostics")
 	// A second worker gets a distinct filesystem even with the same host UID.
 	opts.Name = "oaiso-state-peer-" + randomSuffix()
 	peer, err := m.RunContext(ctx, opts)

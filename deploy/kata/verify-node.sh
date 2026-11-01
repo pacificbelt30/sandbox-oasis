@@ -7,6 +7,17 @@ operator() { runuser -u kata-test -- env HOME=/home/kata-test OPENAI_API_KEY=sk-
 release() { python3 -c 'import json; print(json.load(open("/var/lib/codex-dock-setup/installed.json"))["release"])'; }
 cli() { operator /usr/local/bin/oaiso "$@"; }
 ctr_node() { "$(release)/bin/ctr" --address /run/codex-dock-containerd/containerd.sock --namespace codex-dock "$@"; }
+record_failure() {
+ status=$?
+ if [[ $status != 0 ]]; then
+  set +e
+  operator timeout 15 /usr/local/bin/oaiso logs codex-auth-proxy > /evidence/failed-auth-proxy.txt 2>&1
+  operator timeout 15 /usr/local/bin/oaiso logs codex-http-proxy > /evidence/failed-egress-proxy.txt 2>&1
+  operator timeout 15 /usr/local/bin/oaiso ps -a > /evidence/failed-workers.txt 2>&1
+ fi
+ return "$status"
+}
+trap record_failure EXIT
 setup_python=${CODEX_DOCK_SETUP_PYTHON:-/usr/bin/python3}
 mkdir -p /evidence /var/cache/codex-dock-setup
 for archive in /cache-input/*; do cp "$archive" /var/cache/codex-dock-setup/; done
@@ -30,6 +41,20 @@ else
  /bundle/oaiso setup --python "$setup_python" --bundle /bundle --operator kata-test --offline --apply > /evidence/setup.txt 2>&1
 fi
 cli runtime-check --json > /evidence/readiness.json
+# No group access: diagnostics must preserve the socket-permission cause,
+# rather than suggesting a filesystem migration for an unreachable node.
+if runuser -u nobody -- env HOME=/nonexistent /usr/local/bin/oaiso runtime-check --json > /evidence/readiness-denied.json 2>/evidence/readiness-denied.txt; then
+ echo 'runtime-check unexpectedly accepted an account without node access' >&2; exit 1
+fi
+python3 - <<'PYDENIED'
+import json
+from pathlib import Path
+checks={v['name']:v for v in json.loads(Path('/evidence/readiness-denied.json').read_text())['checks']}
+for name in ['storage','node']:
+    assert checks[name]['status']=='error',checks[name]
+    assert 'codex-dock group' in checks[name]['fix'],checks[name]
+PYDENIED
+proof 'unprivileged diagnostics preserve socket permission recovery steps'
 initial_release=$(release)
 proof 'fresh setup and operator readiness'
 # Only this explicitly selected, disposable resource suite defines an I/O
@@ -121,6 +146,20 @@ if not any(check['name'] == 'auth-entrypoint' and check['status'] == 'ok' for ch
     raise SystemExit('test worker entrypoint does not match this CLI; rebuild the worker image before acceptance')
 PYIMAGE
 proof 'init prepares proxy and validates custom-compatible image without real credentials'
+if [[ -d /migration-backup ]]; then
+ cli checkpoint import /migration-backup/legacy-checkpoint.oci > /evidence/migrated-checkpoint.json
+ migrated_id=$(python3 -c 'import json;print(json.load(open("/evidence/migrated-checkpoint.json"))["id"])')
+ install -d -o kata-test -g 1000 -m 0700 /home/kata-test/migrated-project
+ install -o kata-test -g 1000 -m 0600 /migration-backup/migration-workspace /home/kata-test/migrated-project/migration-workspace
+ # The backup stays private; grant this disposable operator access explicitly.
+ cli run --checkpoint "$migrated_id" --name migrated-worker --project /home/kata-test/migrated-project --detach --keep --no-internet --exec 'exec sleep 600' > /evidence/migrated-worker.txt 2>&1
+ cli exec migrated-worker -- python3 -c "from pathlib import Path;assert Path('/opt/disk-state/keep').read_text()=='legacy-rootfs-preserved';p=Path('/workspace/migration-workspace');assert p.read_text()=='legacy-workspace-preserved';p.write_text('new-XFS-workspace-writable')"
+ [[ $(cat /home/kata-test/migrated-project/migration-workspace) == new-XFS-workspace-writable ]]
+ cli stop migrated-worker
+ cli rm --force migrated-worker
+ cli checkpoint rm "$migrated_id"
+ proof 'v0.0.6 ext4 checkpoint and workspace imported, booted and writable on dedicated XFS quota storage'
+fi
 cd /home/kata-test/project
 printf host > input
 chown kata-test:1000 input
@@ -184,7 +223,7 @@ if [[ -x /acceptance.test ]]; then
   CODEX_DOCK_RESOURCE_WORKSPACE=/evidence/resource-workspaces \
   CODEX_DOCK_KATA_OWNER_FIXTURE=/home/kata-test/owner-fixture/project \
   CODEX_DOCK_NODE_RESTART_REQUEST_DIR=/run/setup-node-restart \
-  /acceptance.test -test.run "${CODEX_DOCK_KATA_ACCEPTANCE_RUN:-^TestKata(Acceptance|AgentState|AuthenticationSession|EncryptedProfile|KeyringProfile|WorkspaceSharing|PolicyFeatures|PrimaryTerminal|GoAPI)$}" -test.v -test.count=1 -test.timeout=25m > /evidence/acceptance.txt 2>&1 &
+  /acceptance.test -test.run "${CODEX_DOCK_KATA_ACCEPTANCE_RUN:-^TestKata(Acceptance|AgentState|AuthenticationSession|EncryptedProfile|KeyringProfile|WorkspaceSharing|PolicyFeatures|PrimaryTerminal|GoAPI)$}" -test.v -test.count=1 -test.timeout=45m > /evidence/acceptance.txt 2>&1 &
  test_pid=$!
  while kill -0 "$test_pid" 2>/dev/null; do
   if [[ -f /run/setup-node-restart/request ]]; then

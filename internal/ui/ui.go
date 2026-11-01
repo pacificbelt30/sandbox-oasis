@@ -98,6 +98,15 @@ func RunWithPolicyOptions(cfg sandbox.ManagerConfig, configPath, policyPath, pol
 			reportError(err)
 			return
 		}
+		probe, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		for i := range ws {
+			usage, usageErr := mgr.RootFSUsage(probe, ws[i].ID)
+			if usageErr != nil {
+				usage.Error = "Storage measurement unavailable; run oaiso runtime-check"
+			}
+			ws[i].RootFS = &usage
+		}
+		cancel()
 		events := tracker.Observe(ws, time.Now())
 		app.QueueUpdateDraw(func() {
 			for _, event := range events {

@@ -41,6 +41,10 @@ def main():
     parser.add_argument('--image', default='codex-dock-setup-node:verification')
     parser.add_argument('--sudo-docker', action='store_true')
     parser.add_argument('--offline', action='store_true')
+    parser.add_argument('--legacy-export', action='store_true',
+                        help='Run benign v0.0.6 ext4 export rehearsal instead of current setup acceptance')
+    parser.add_argument('--migration-backup', type=Path,
+                        help='Private directory from --legacy-export; import rootfs and workspace on XFS')
     parser.add_argument('--online-onboarding', action='store_true', help='Use a bridged disposable node to build the uncached default worker and verify fresh keyring login/init for both agents')
     args = parser.parse_args()
     if args.release_installer and not (args.setup_python and args.uv):
@@ -97,6 +101,8 @@ def main():
                 '-e', 'CODEX_DOCK_KATA_TEST_IMAGE='+args.worker_image,
                 '-e', 'CODEX_DOCK_KATA_ACCEPTANCE_RUN='+args.acceptance_run,
                 '--mount', f'type=volume,src={volume},dst=/var/lib/codex-dock-containerd']
+        if args.migration_backup:
+            argv += ['--mount', f'type=bind,src={args.migration_backup.resolve(strict=True)},dst=/migration-backup,readonly']
         if args.online_onboarding:
             argv += ['-e', 'CODEX_DOCK_VERIFY_ONBOARDING=1']
             # Resolve the existing session proxy for the nested node; never
@@ -139,8 +145,8 @@ def main():
         with (evidence / 'controller.log').open('w') as log:
             # Full VM/API acceptance plus install/upgrade/recovery can exceed
             # forty minutes. Individual suites retain their own shorter limits.
-            call(['exec', name, '/bin/bash', '/verification/verify-node.sh'], stdout=log, stderr=subprocess.STDOUT, timeout=3600)
-        print('PASS: fresh setup, real Kata, upgrade and recovery. Evidence:', evidence)
+            call(['exec', name, '/bin/bash', '/verification/verify-legacy-export.sh' if args.legacy_export else '/verification/verify-node.sh'], stdout=log, stderr=subprocess.STDOUT, timeout=3600)
+        print('PASS: v0.0.6 ext4 export and source restart. Evidence:' if args.legacy_export else 'PASS: fresh setup, real Kata, upgrade and recovery. Evidence:', evidence)
     finally:
         if started:
             # Only this controller's uniquely labelled node may be removed.

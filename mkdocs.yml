@@ -60,6 +60,7 @@ nav:
       - VMと認証Proxyの暗号化: guides/worker-tls.md
       - 操作の監査記録: guides/audit.md
       - disk checkpoint: guides/disk-checkpoint.md
+      - 専用ストレージへの移行: guides/storage-migration.md
       - 成果物をまとめて回収: guides/artifacts.md
       - Webアプリのプレビュー: guides/preview.md
       - 通信許可の申請・即時変更: guides/live-policy.md
@@ -146,6 +147,7 @@ nav:
           - Worker TLS: en/guides/worker-tls.md
           - Operation audit: en/guides/audit.md
           - Disk checkpoints: en/guides/disk-checkpoint.md
+          - Dedicated storage migration: en/guides/storage-migration.md
           - Artifact bundles: en/guides/artifacts.md
           - Web app previews: en/guides/preview.md
           - Live egress changes: en/guides/live-policy.md

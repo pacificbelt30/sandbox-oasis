@@ -3,7 +3,7 @@
 [日本語](../../guides/disk-checkpoint.md) | **English**
 
 - Available: **v0.0.4**; matching CLI/node/proxy required.
-- Saves a stopped Kata root filesystem for a **new VM on the same node**. No RAM, instruction pointer, live connection or stream resume.
+- Saves a stopped Kata root filesystem for a **new VM** (v0.0.4 is node-local; cross-node transfer is v0.0.7). No RAM, instruction pointer, live connection or stream resume.
 
 ## Saved and excluded state
 
@@ -13,7 +13,7 @@
 | Basic metadata | Permissions, numeric UID/GID, modification times and symlinks retained; hard links materialized as independent files |
 | Masked read-denied paths | Underlying files and hard-link aliases excluded even when original data remains on disk |
 | Workspace/additional shared mounts | Contents excluded; explicitly supply new host directories at restore; host data is never rolled back |
-| Private Codex database disk | Contents excluded; unreleased (`main`) [state storage](agent-state.md). Restored workers get an empty new disk |
+| Private Codex database disk | Contents excluded; v0.0.7 [state storage](agent-state.md). Restored workers get an empty new disk |
 | `/home`, `/root` | Contents excluded, including credentials, history, caches and user-local dependencies; only top-level home directory skeletons/ownership retained |
 | `/run`, `/tmp`, `/var/tmp`, `/dev`, `/proc`, `/sys` | Contents excluded, including tmpfs, bootstrap files and kernel state |
 | `/var/log`, hosts/hostname/resolv.conf | Excluded; necessary runtime settings are generated for the new VM |
@@ -80,7 +80,7 @@ oaiso run --checkpoint "$checkpoint_id" --name restored-job \
 | Cancellation/failure | Unpublished content becomes GC-eligible after lease release; physical space may not be reclaimed immediately |
 | Node restart | Completed checkpoints persist; in-progress capture is not resumed |
 | Compatibility | `oaiso-disk-v1`, Linux amd64, canonical entrypoint matching the current node; current Kata/guard/isolation checks apply |
-| Scope | New VM on the same node; cross-node transfer, RAM snapshots and stream resume are not provided |
+| Scope | New VM; cross-node transfer requires the portable commands below. RAM snapshots and stream resume are not provided |
 
 ```bash
 read -r -p 'Checkpoint ID: ' checkpoint_id
@@ -156,3 +156,30 @@ oaiso checkpoint list
 - Partial failure may follow some deletions. Inspect the catalog and review a fresh plan before retrying.
 - Inspection failure aborts cleanup instead of treating resources as unused. Shared content is not broadly pruned.
 - Go: `RetainCheckpoints(ctx, cxd.CheckpointRetentionOptions{...})`, `PinCheckpoint(ctx, id, true)`; apply using `Apply: true` and `ExpectedPlan`.
+
+## Export and import
+
+Available: **v0.0.7**. For v0.0.6 export, use the [migration procedure](storage-migration.md). Run as the normal user and store backups outside shared workspaces.
+
+```bash
+install -d -m 0700 "$HOME/oaiso-backup"
+read -r -p 'Checkpoint ID: ' checkpoint_id
+```
+
+```bash
+oaiso checkpoint export "$checkpoint_id" --output "$HOME/oaiso-backup/checkpoint.oci"
+```
+
+After transferring the file privately, import on the destination node as its normal operator.
+
+```bash
+oaiso checkpoint import "$HOME/oaiso-backup/checkpoint.oci"
+```
+
+- Output is 0600; existing files are never replaced and incomplete streams are not published.
+- OCI references, every blob hash, the actual canonical entrypoint and exclusions are checked before registration. Existing image tags are never replaced; repeated import of the same ID/digest is idempotent.
+- Pins are not transferred; set them again on the destination if needed.
+- No encryption, creator signatures, workspace or credentials are transferred.
+- Go API: `ExportCheckpoint(ctx, id, path)` and `ImportCheckpoint(ctx, path)`.
+
+Portable layer paths and symlink targets are limited to 4,096 bytes each, with a combined 64 MiB path-metadata budget per layer.

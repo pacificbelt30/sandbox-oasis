@@ -1,6 +1,7 @@
 package sandbox
 
 import (
+	"github.com/pacificbelt30/codex-dock/internal/storageinfo"
 	"io"
 	"time"
 
@@ -164,6 +165,7 @@ type RunOptions struct {
 
 // Worker represents a running or stopped codex-dock container.
 type Worker struct {
+	RootFS      *storageinfo.Usage `json:",omitempty"`
 	ID          string
 	Name        string
 	Status      string

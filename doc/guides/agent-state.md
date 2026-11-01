@@ -2,7 +2,7 @@
 
 **日本語** | [English](../en/guides/agent-state.md)
 
-利用可能：**未リリース（main）**。対応するCLI・node・worker-guardへ更新後、新規作成した通常のKataワーカーが対象です。既存ワーカーの保存先やデータを自動移行しません。
+利用可能：**v0.0.7**。対応するCLI・node・worker-guardへ更新後、新規作成した通常のKataワーカーが対象です。既存ワーカーの保存先やデータを自動移行しません。
 
 通常のHOMEを使いながら、CodexのSQLite DBだけをワーカー専用ext4ディスクへ保存します。共有workspaceの整合性設定は維持します。HOME内の設定・認証用プレースホルダー・会話ファイルの場所は変えません。
 
@@ -94,3 +94,33 @@ agent_state_size = "1GiB"
 | 旧node・旧worker-guard | 対応する組へ更新・再検証したnodeで新規ワーカーを作る |
 
 実Kataの確認条件と未確認事項は[検証記録](../testing.md)へまとめています。
+
+## バックアップと別VMへの復元
+
+利用可能：**v0.0.7**。通常ユーザーとしてホストで実行します。保存元・復元先の専用ディスク容量と数値UID/GIDが同じであることが必要です。以下は既定の512MiBを使う`codex-work`の例です。別の容量なら復元先にも同じ`--agent-state-size`を指定します。
+
+1. アプリを保存し、VMを停止してバックアップします。共有workspaceの外に置いてください。
+
+```bash
+install -d -m 0700 "$HOME/oaiso-backup"
+oaiso stop codex-work &&
+  oaiso agent-state export codex-work --output "$HOME/oaiso-backup/codex-state.backup"
+```
+
+2. 新しいワーカーを**起動せず**作成します。`/home/alice/restored-project`は復元したworkspaceへ置き換えます。必要な認証profile・ポリシー・共有も新たに指定します。
+
+```bash
+oaiso run --name restored-codex --project /home/alice/restored-project   --agent-state-size 512MiB --create-only --keep --exec 'sleep infinity' &&
+  oaiso agent-state restore restored-codex --input "$HOME/oaiso-backup/codex-state.backup" &&
+  oaiso start restored-codex &&
+  oaiso connect restored-codex
+```
+
+- `--create-only`はKata専用。実行前のVMでもネットワーク・snapshot・ディスクなどの資源を保持します。不要になったら`oaiso rm restored-codex`で回収します。
+- rootfsも引き継ぐ場合は、作成時に`--checkpoint ID`を追加します。DBとrootfsは同じ停止時点で別々に保存します。[移行手順](storage-migration.md)。
+- 稼働中・一時停止中の保存、使用済み・復元済みVMへの復元、UID/GID・容量不一致、長さやhashの不一致を拒否します。復元中のnode停止後は永続化した復元情報から再開します。
+- 復元中は、未起動の保存先ディスクに加え、同容量の一時ディスクを確保します。nodeの状態領域にも追加の空きが必要です。
+- バックアップは0600で、既存ファイルを上書きしません。ディスク全体を保存するため、削除済み領域や会話履歴などの秘密が含まれる可能性があります。暗号化はしません。
+- CodexのSQLite専用領域だけが対象です。HOME内の会話ファイル・設定・認証、workspace、Proxy、トークンは含めません。明示設定でSQLiteの保存先を専用領域外へ変えた場合、そのDBは含みません。
+- ゲストのext4はホストでmount・解析せず、新しいKata内だけで使います。ハッシュは作成者の信頼性を保証しません。信頼できる自分のバックアップだけを取り込んでください。
+- Go API：`Create(ctx, request)`→`RestoreAgentState(ctx, workerID, path)`→`Start(ctx, workerID)`。書き出しは`ExportAgentState(ctx, workerID, path)`。

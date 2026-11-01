@@ -1,5 +1,24 @@
 # テストと動作確認
 
+## v0.0.7のストレージ移行・保管・復旧（2026-11-01）
+
+対象：v0.0.7の公開前候補。CLI・node・試験バイナリをv0.0.7でそろえ、固定Kata 4.3.0／Dragonball、containerd 2.4.2、Codex 0.163.0・Claude Code 2.1.306を使用しました。更新・復旧用には別の試験版を使用し、その版は公開しません。外側のDockerは使い捨てホストの隔離だけに使い、内部はcontainerd・Kata・BuildKitです。
+
+| 検査 | 結果・範囲 |
+|---|---|
+| 旧ext4からXFSへ | v0.0.6タグのソースを再ビルドし、Kata 4.2.0／ext4で停止checkpointを作成。旧`ctr`でOCIへ書き出し、保存元の再起動とデータ保持を確認。新しい専用XFSへ取り込み、rootfs・別保管したworkspaceの内容と書き込みを確認 |
+| rootfsの持ち出し | 実データのexport/import、既存ファイルの上書き拒否、同一ID/digestの再取り込み、node再起動後の保持、新規Kataでの起動を確認 |
+| 専用DB | 停止時のraw ext4バックアップ、コミット済みWALを残した強制停止後の別VM復元、SQLite整合性、元VMの保持を確認。稼働中・使用済み・復元済み対象と破損データを拒否 |
+| 公開Go API | `ExportCheckpoint`・`ImportCheckpoint`、`Create`→`RestoreAgentState`→`Start`、`ExportAgentState`を実Kataで確認。実行IDは新規発行 |
+| 診断・TUI | カーネルからquota・byte/inode上限を取得。nodeへアクセスできないユーザーにはグループ権限の復旧案内。TUI接続からの復帰、Esc単独、特殊キー、ANSI、Unicode、リサイズ、固定両CLIの対話画面を確認 |
+| その他の回帰 | VM基本受入、認証専用VM、相互TLS、セキュリティ境界、前面端末、workspace共有、追加ポリシー、暗号化／キーリングprofile、Go APIの各suiteが成功 |
+| 更新・復旧 | 通常更新時のimage・成果物保持、意図しない旧版拒否、新サービス起動失敗からの自動復旧、明示rollbackと版の下限保持、資源残留なしを確認 |
+| 境界の単体試験 | OCI参照・blob hash・実entrypoint・除外path・メタデータ上限、壊れた／短い／追加データ付きDB、UID/GID・容量不一致、復元intentのrename前後からの復旧を検査 |
+
+- 広い受入で追加したDB試験の二重削除を検出し、試験の後片付けを修正しました。修正したDBとcheckpointのsuiteを最終候補で再実行し、成功しています。
+- 通常Proxyと通信fixtureを分けています。資格情報は架空で、固定資産cacheを使うoffline検証です。実資格情報、外部AI推論、実WSL、物理ホスト再起動は含みません。
+- 既存ホストのサービスは変更せず、作成したノードとボリュームを回収しました。手順は[使い捨てノードの検証](#新規導入更新復旧を検証する)、利用時の保管範囲は[移行ガイド](guides/storage-migration.md)を参照してください。
+
 - v0.0.4の各機能は、公開前の試験版で検証しています。試験版・基点commit・条件は各記録を参照してください。
 
 ## Codexの永続DBと復旧（2026-10-27）

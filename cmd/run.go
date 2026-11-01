@@ -151,6 +151,7 @@ func init() {
 	f.StringVar(&httpProxyURL, "http-proxy-url", "http://codex-http-proxy:18082", "General-egress (forward) proxy URL workers use for HTTP(S)_PROXY")
 	f.StringVar(&runProxyAdminSecret, "proxy-admin-secret", "", "Admin secret for external auth proxy")
 	f.StringVar(&runProxyAdminSecretFile, "proxy-admin-secret-file", "", "Owner-only (0600) file with the auth proxy admin secret")
+	f.BoolVar(&runOpts.CreateOnly, "create-only", false, "Create a stopped Kata worker for offline restore; start it explicitly afterwards")
 	f.BoolVarP(&runOpts.Detach, "detach", "d", false, "Run container in background")
 	f.BoolVarP(&runOpts.Detach, "detach-legacy", "D", false, "Deprecated alias for --detach")
 	if err := f.MarkHidden("detach-legacy"); err != nil {
@@ -203,6 +204,9 @@ func runWorker(cmd *cobra.Command, args []string) (result error) {
 		return err
 	}
 	applyProjectRunConfig(cmd, projectCfg)
+	if runOpts.CreateOnly && runOpts.Parallel > 1 {
+		return fmt.Errorf("--create-only requires one worker at a time")
+	}
 	if runOpts.CloneDir != "" && runOpts.Parallel > 1 {
 		return fmt.Errorf("--clone-dir requires a distinct directory per worker; launch workers separately")
 	}
@@ -874,6 +878,10 @@ func runSingle(mgr *sandbox.Manager, sigCh <-chan os.Signal) error {
 		return startupFailure("worker launch", fmt.Errorf("starting container: %w", err))
 	}
 
+	if opts.CreateOnly {
+		fmt.Printf("Container created: %s\n", containerID)
+		return nil
+	}
 	if opts.Detach {
 		fmt.Printf("Container started: %s\n", containerID[:12])
 		return nil

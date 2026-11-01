@@ -6,7 +6,7 @@
 - Connection, bandwidth, FD and I/O settings remain optional. Mandatory rootfs requirements are described below.
 - Separate from CPU, memory, PIDs, request-body size and [per-execution AI usage limits](usage-limits.md).
 
-## Writable root filesystems (unreleased: main)
+## Writable root filesystems (v0.0.7)
 
 - Dedicated XFS storage with project quota enforcement is required at `/var/lib/codex-dock-containerd`. Setup checks the mount before applying and never formats or remounts storage.
 - Each writable snapshot has a **4 GiB and 65,536 inode** ceiling, including worker and runc proxy snapshots. Limits persist across stops and are checked on start and node recovery.
@@ -169,3 +169,5 @@ oaiso vm inspect limited-job --json
 | Launch selection | Existing `LaunchRequest.Profile` |
 
 - [Verification and remaining limits (Japanese)](../../testing.md). These controls do not defend against local root or a trusted operator changing the configuration.
+
+For existing ext4 installations, follow the [backup and migration procedure](storage-migration.md).

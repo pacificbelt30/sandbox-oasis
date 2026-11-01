@@ -220,9 +220,66 @@ print('DISK_CHECKPOINT_RESTORE_PASS')`)
 	if err != nil {
 		t.Fatalf("CLI remove: %s %v", output, err)
 	}
-	if err := client.RemoveCheckpoint(ctx, checkpoint.ID); err != nil {
+	portable := filepath.Join(t.TempDir(), "checkpoint.oci")
+	if err := client.ExportCheckpoint(ctx, checkpoint.ID, portable); err != nil {
+		t.Fatal("portable export", err)
+	}
+	// A second export must not clobber an existing backup.
+	if err := client.ExportCheckpoint(ctx, checkpoint.ID, portable); err == nil {
+		t.Fatal("backup overwritten")
+	}
+	if err := client.RemoveCheckpoint(ctx, checkpoint.ID); err != nil && !strings.Contains(err.Error(), "404") {
 		t.Fatal(err)
 	}
+	imported, err := client.ImportCheckpoint(ctx, portable)
+	if err != nil || imported.Digest != checkpoint.Digest {
+		t.Fatal("portable import", imported, err)
+	}
+	imported, err = client.ImportCheckpoint(ctx, portable)
+	if err != nil || imported.ID != checkpoint.ID {
+		t.Fatal("idempotent portable import", imported, err)
+	}
+	// Verify persisted native content after lease release and a node restart.
+	restartNodeForCheckpoint(t, ctx)
+	// Boot from the imported image so archive validation is not the sole oracle.
+	request.RequestID = caseID + "-portable"
+	request.Identity.RunID = "portable"
+	portableWorker, err := client.RestoreCheckpoint(ctx, checkpoint.ID, request)
+	if err != nil {
+		t.Fatal("imported checkpoint boot", err)
+	}
+	t.Cleanup(func() { _ = client.Remove(context.Background(), portableWorker.ID, true) })
+	run(portableWorker.ID, `import pathlib;assert pathlib.Path('/opt/disk-state/keep').read_text()=='disk-before-checkpoint'`)
+	if err := client.Remove(ctx, portableWorker.ID, true); err != nil {
+		t.Fatal(err)
+	}
+	// Exercise the public SDK's optional database restore separately from the
+	// rootfs-only restore above. Create issues no live token before Start.
+	privateBackup := filepath.Join(t.TempDir(), "private-state.backup")
+	if err := client.ExportAgentState(ctx, source.ID, privateBackup); err != nil {
+		t.Fatal("SDK private state export", err)
+	}
+	request.RequestID = caseID + "-private-state"
+	request.Identity.RunID = "private-state"
+	request.Image = imported.Image
+	request.Environment.ImageID = imported.Digest
+	privateWorker, err := client.Create(ctx, request)
+	if err != nil {
+		t.Fatal("SDK stopped create", err)
+	}
+	t.Cleanup(func() { _ = client.Remove(context.Background(), privateWorker.ID, true) })
+	if err = client.RestoreAgentState(ctx, privateWorker.ID, privateBackup); err != nil {
+		t.Fatal("SDK private state restore", err)
+	}
+	if err = client.Start(ctx, privateWorker.ID); err != nil {
+		t.Fatal("SDK private state start", err)
+	}
+	run(privateWorker.ID, `import os,pathlib;assert (pathlib.Path(os.environ['CODEX_SQLITE_HOME'])/'source-only').read_text()=='agent-state-must-not-copy'`)
+	if err = client.Remove(ctx, privateWorker.ID, true); err != nil {
+		t.Fatal(err)
+	}
+	t.Log("PASS: SDK Create/ExportAgentState/RestoreAgentState/Start with fresh execution identity")
+	t.Log("PASS: portable checkpoint verified export/import, no-overwrite, idempotent import and fresh Kata boot")
 	t.Log("PASS: stopped full disk capture, byte-limit atomicity, node restart, unchanged source, fresh verified Kata restore, mount/home/tmp/custom-secret exclusions and in-use deletion refusal")
 }
 func restartNodeForCheckpoint(t *testing.T, ctx context.Context) {

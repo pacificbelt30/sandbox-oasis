@@ -31,7 +31,7 @@ Alternatively set `run.agent_policy = "approve-for-me"` in the normal global con
 
 ### Select and edit in the TUI
 
-Available: **unreleased (`main`)**. Run as your normal user; the editor also works while the node is stopped.
+Available: **v0.0.7**. Run as your normal user; the editor also works while the node is stopped.
 
 ```bash
 oaiso agent-policy configure

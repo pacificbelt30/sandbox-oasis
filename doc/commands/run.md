@@ -60,7 +60,7 @@ oaiso run -- npm test -- --watch=false
 
 ## 起動で失敗したとき
 
-段階別の復旧案内：**未リリース（main）**。`run`・`codex`・`claude`の起動失敗に、原因と`Next:`の確認手順を表示します。
+段階別の復旧案内：**v0.0.7**。`run`・`codex`・`claude`の起動失敗に、原因と`Next:`の確認手順を表示します。
 
 | 表示される段階 | 次の確認 |
 |---|---|
@@ -117,7 +117,8 @@ oaiso run --profile-size small --agent codex
 | `--model` | `-m` | | エージェントに渡すモデル名 |
 | `--read-only` | | `false` | プロジェクトディレクトリを読み取り専用でマウント |
 | `--read-only-rootfs` | | `false` | イメージの rootfs を読み取り専用にし、HOME と一時ファイルには tmpfs を使用 |
-| `--agent-state-size` | | `auto`（512MiB） | [Codex専用DBディスク](../guides/agent-state.md)。`off`または64MiB〜8GiB。未リリース（main） |
+| `--create-only` | | `false` | 起動せず作成。Kata専用、DB復元用。v0.0.7 |
+| `--agent-state-size` | | `auto`（512MiB） | [Codex専用DBディスク](../guides/agent-state.md)。`off`または64MiB〜8GiB。v0.0.7 |
 | `--profile-size` | | `standard` | Kata VM の資源プロファイル（`standard` / `small` / `compact`） |
 | `--no-git-metadata` | | `false` | linked worktree の共通 Git metadata を自動共有しない |
 | `--mount` | | | 追加のホストディレクトリをマウント（繰り返し指定可）`<host-path>:<container-path>[:ro\|rw]`（[詳細](#--mount--任意ディレクトリの追加マウント)） |
@@ -383,7 +384,7 @@ mounts = ["/home/user/datasets:/data:ro", "./cache:/cache"]
 
 ## CodexのSQLite起動エラー
 
-**未リリース（main）**では、対応nodeで新規作成する通常Kataワーカーに[専用DBディスク](../guides/agent-state.md)を追加しています。以下はv0.0.6・旧ワーカー、およびこの機能を無効にした場合の制約です。
+**v0.0.7**では、対応nodeで新規作成する通常Kataワーカーに[専用DBディスク](../guides/agent-state.md)を追加しています。以下はv0.0.6・旧ワーカー、およびこの機能を無効にした場合の制約です。
 
 2026-10-26の固定版Codex 0.163.0では、通常のKata rootfs上のHOMEで `state_5.sqlite` の `disk I/O error (code: 5386)` が発生し、対話UIが起動できません。共有workspaceの整合性のために使う `virtio_fs_cache="none"` と、SQLite WALの書き込み可能な共有mmapが衝突します。[検証記録](../testing.md#ux改善の検証2026-10-26)を参照してください。
 

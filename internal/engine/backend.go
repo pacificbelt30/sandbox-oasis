@@ -53,10 +53,10 @@ var hexID = regexp.MustCompile(`^[a-f0-9]{64}$`)
 var validName = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$`)
 
 type Options struct {
-	Address, State, Runtime, KataConfig, Snapshotter string
-	Logger                                           string
-	DNS                                              []string
-	TemporaryStorage                                 bool
+	Address, State, Runtime, KataConfig, Snapshotter, StorageRoot string
+	Logger                                                        string
+	DNS                                                           []string
+	TemporaryStorage                                              bool
 	// Retire keeps an attested Dragonball supervisor in a sibling leaf inside
 	// the same bounded envelope before its self-owned cgroup is deleted.
 	Retire      func(context.Context, string, string) error
@@ -933,6 +933,14 @@ func (b *Backend) serveHTTP(w http.ResponseWriter, r *http.Request) {
 		reply(w, system.Info{DriverStatus: features, OSType: "linux", CgroupDriver: "cgroupfs", CgroupVersion: "2", Runtimes: map[string]system.RuntimeWithStatus{"io.containerd.kata.v2": {Runtime: system.Runtime{Type: b.opts.Runtime}}, "runc": {Runtime: system.Runtime{Type: "io.containerd.runc.v2"}}}})
 		return
 	}
+	if strings.HasPrefix(path, "/agent-state/") {
+		b.agentBackupHTTP(w, r, ctx, path)
+		return
+	}
+	if path == "/storage" && r.Method == http.MethodGet {
+		reply(w, b.storageStatus())
+		return
+	}
 	if path == "/checkpoints" || strings.HasPrefix(path, "/checkpoints/") {
 		b.checkpointHTTP(w, r, ctx, path)
 		return
@@ -1127,11 +1135,18 @@ func (b *Backend) serveHTTP(w http.ResponseWriter, r *http.Request) {
 		failure(w, err)
 		return
 	}
-	if b.checkpointing[rec.ID] && action != "json" {
+	if b.checkpointing[rec.ID] && action != "json" && action != "storage" {
 		failure(w, fmt.Errorf("worker checkpoint is active: %w", errdefs.ErrConflict))
 		return
 	}
 	switch action {
+	case "storage":
+		if r.Method != http.MethodGet {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		reply(w, b.rootFSUsage(rec))
+		return
 	case "json":
 		var v container.InspectResponse
 		v, err = b.inspect(ctx, rec.ID)

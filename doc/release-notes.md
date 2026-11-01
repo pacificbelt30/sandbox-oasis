@@ -1,97 +1,75 @@
-# Oaiso v0.0.6
+# Oaiso v0.0.7
 
 ## 主な変更
 
-v0.0.6は、Codex / Claude Codeのホスト管理設定と、既存ワーカーへ安全にアクセスする操作を追加するUX更新です。
+隔離・認証の境界を強化し、既存環境からの保管・移行と、Codex DBの復元を追加しました。
 
-| 分野 | 改善 |
+| 分野 | 変更 |
 |---|---|
-| エージェントポリシー | `interactive`、`approve-for-me`、`autonomous`、`review`、`private`、`restricted`の6つを追加。承認・推論・履歴などの既定値を所有者専用ファイルで管理し、list / show / clone / set / diff / audit / doctorで確認・編集 |
-| ワーカーへのアクセス | `oaiso connect`とTUIの`C`キーで、メインAgentを止めずに別PTYのlogin shellへ接続。`exit`後はホストまたはTUIへ復帰 |
-| 一覧と観測 | `oaiso ps`へfilter・sort・JSON／CSV・列選択・集計・snapshot比較を追加。TUIへ詳細表示、絞り込み、並び替え、コマンド実行、活動履歴を追加 |
-| 端末入出力 | connect時のraw入力、初期サイズとSIGWINCH、`TERM=xterm-256color`、終了後の端末復元を追加。Esc・矢印・Ctrl-C・Ctrl-Z・Tab、ANSI装飾、UnicodeをPTYのまま転送 |
-| 開発検査 | 空行・コメント・文書・テストを除く本体コード50,000行の再現可能な計測を追加。Codex設定の上流契約基準へエージェントポリシー項目を追加 |
+| Kata | 固定版を4.3.0へ更新。Dragonballの既知の脆弱性に対応し、固定資産のhashを更新 |
+| ワーカーの容量 | 書き込み可能rootfsへ4 GiB・65,536 inodeのXFS project quota。OSと別の専用XFSが必須。起動時の空き・予約容量も検査 |
+| 認証Proxy | 製品用image tagの予約、root管理のdigest認可、管理シークレットの所有者限定ファイル経由の受渡し |
+| ホストとの共有 | 外部Git metadataはホスト側のworktree登録と相互確認。ファイル操作の出力を制限し、Pythonを隔離モードで実行 |
+| 保管・移行 | `checkpoint export/import`で検証済みOCIを持ち出し。既存ファイル・image tagを上書きしない。v0.0.6の書き出し手順を追加 |
+| Codex DB | 専用ext4へSQLiteを保持。停止・再起動に対応。`agent-state export/restore`で未起動の新規VMへ復元。`run --create-only`を追加 |
+| 診断・TUI | `runtime-check`へquotaと空き容量、TUIへrootfsのbyte／inode使用量を追加。エージェントポリシーの編集画面と段階別の起動エラー案内を追加 |
 
-- Codex CLI 0.163.0／Claude Code 2.1.306、Kata 4.2.0、containerd 2.4.2、BuildKit 0.34.0、runc 1.4.3の固定版はv0.0.5から変更していません。
-- エージェントポリシーを指定しない場合は、対話承認を維持する`interactive`が既定です。
-- 実APIキー・OAuth access／refresh／ID tokenは、引き続き認証Proxyだけで保持します。
-- 保存済み認証プロファイル、暗号化形式、Local API v1に破壊的変更はありません。
+- Codex CLI 0.163.0／Claude Code 2.1.306、containerd 2.4.2、BuildKit 0.34.0、runc 1.4.3の固定版は維持しています。
+- 既存の接続・Escなどの特殊キー・ANSI／Unicodeの入出力を維持します。
+- 認証プロファイルの暗号化形式とLocal API v1に破壊的変更はありません。実APIキー・OAuthは引き続き認証Proxyで保持します。
+- バックアップは暗号化しません。rootfs、workspace、HOME内のデータ、専用DBの対象範囲を確認し、共有workspaceの外へ所有者限定で保管してください。
 
-## インストール
+## v0.0.6から更新する
 
-1. [前提条件とツールを準備](https://pacificbelt30.github.io/sandbox-oasis/installation/)。署名検証用のGitHub CLIが必要です。GitHubへのログインは不要です。
-2. 通常ユーザーで配置計画を表示。
+**既存ext4へそのまま適用できません。** [専用ストレージへの移行](https://pacificbelt30.github.io/sandbox-oasis/guides/storage-migration/)で保存対象と取り出し方を確認してください。
+
+1. アプリの保存を完了し、旧CLIでworkerを停止。rootfs checkpoint・workspace・必要な利用者データとホスト設定を保管します。v0.0.6には専用DBディスクがありません。
+2. 管理者が別の保存先へ専用XFSを準備し、project quotaのaccountingとenforcementを有効化。2ワーカーは32 GiB以上が目安です。setupは既存ディスクをformat・変換しません。
+3. 対応するCLI・node・guard・loggerを配置し、通常ユーザーで`oaiso runtime-check`を確認します。
+4. 新しい環境で認証・Proxyを準備。既定imageは再ビルドし、独自Proxyはソースとdigestを確認してから認可します。
+5. checkpointを取り込み、復元したworkspaceを指定して新しいworkerを作成。成果物・DB・書き込み・認証と通信規則を確認してから旧環境を回収します。
+
+新版同士の専用DB復元には[状態保存ガイド](https://pacificbelt30.github.io/sandbox-oasis/guides/agent-state/)を使います。既存VMへDBを上書きせず、容量とUID/GIDが一致する未起動・未復元のVMだけを受け入れます。
+
+## インストールと配布物
+
+[前提条件と署名検証](https://pacificbelt30.github.io/sandbox-oasis/installation/)を準備した通常ユーザーが、適用前の計画を表示します。
 
 ```bash
-curl -fsSL https://github.com/pacificbelt30/sandbox-oasis/releases/download/v0.0.6/install.sh | bash
+curl -fsSL https://github.com/pacificbelt30/sandbox-oasis/releases/download/v0.0.7/install.sh | bash
 ```
 
-3. 計画を確認して適用。
-
-```bash
-curl -fsSL https://github.com/pacificbelt30/sandbox-oasis/releases/download/v0.0.6/install.sh | bash -s -- --apply
-```
-
-- 対象：Ubuntu 26.04 x86_64、systemd、KVM、cgroup v2、sudoが使える通常ユーザー。
-- Go・Make・ソース取得は不要。uv管理Python 3.12を使用します。
-- パイプ実行はHTTPS配布元のスクリプトを信頼して実行します。[スクリプト自体を実行前に署名検証する手順](https://pacificbelt30.github.io/sandbox-oasis/guides/signed-releases/)もあります。
-- 適用後は再ログインし、`oaiso --version`・`oaiso runtime-check`を確認します。
-
-## v0.0.5から更新する
-
-| 順番 | 操作 |
-|---|---|
-| 1 | 作業を保存し、既存CLIで保持中のworkerとProxyを停止・削除 |
-| 2 | v0.0.6のインストーラーで計画を確認し、`--apply`でCLI・node・guard・loggerを更新 |
-| 3 | 再ログイン後、`oaiso --version`・`oaiso runtime-check`で確認 |
-| 4 | `oaiso build --template plain --tag codex-dock:latest`を実行。独自イメージは別途確認・再ビルド |
-| 5 | 必要なら`oaiso agent-policy init`と`oaiso agent-policy default approve-for-me`でホスト既定値を選択 |
-| 6 | `oaiso init --agent codex`または`oaiso init --agent claude`でProxyを準備し、新しいworkerを起動 |
-
-- ポリシーは新しく起動するworkerへ適用されます。既存のリポジトリ設定からホスト専用ポリシーを変更することはできません。
-- 旧版への意図したrollbackと障害復旧：[更新と復旧](https://pacificbelt30.github.io/sandbox-oasis/setup/)。到達済みの最も新しい適用版は保持されます。
-
-## 配布ファイル
-
-| ファイル | 内容 |
-|---|---|
-| `oaiso-linux-amd64.tar.gz` | 静的CLI・guard・IO logger・`bundle.json`・ライセンス／依存notice |
-| `install.sh` | v0.0.6を選択する単独インストーラー |
-| `SHA256SUMS` | archive・installer・SBOMのSHA-256 |
-| `sbom.cdx.json` | 実バイナリのGo依存・標準ライブラリ・固定runtime資産の一覧 |
-| `provenance.json` | 4ファイルの署名・作成元・タグ・commitを検証する証跡bundle |
-
-- Kata等の固定配布物・作業イメージ・認証情報はarchiveに含みません。
-- 署名・作成元は正当なビルド経路を確認するものです。脆弱性の不存在やguest image内の安全性は保証しません。
+- 対象：Ubuntu 26.04 x86_64、systemd、KVM、cgroup v2、専用XFS。Go・Make・ソース取得は不要です。
+- パイプ実行はHTTPS配布元を信頼する操作です。[実行前にinstallerの署名を検証する手順](https://pacificbelt30.github.io/sandbox-oasis/guides/signed-releases/)も使えます。
+- 5ファイル：`oaiso-linux-amd64.tar.gz`・`install.sh`・`SHA256SUMS`・`sbom.cdx.json`・`provenance.json`。Kata等の固定配布物・作業image・認証情報はarchiveに含みません。
+- 署名・作成元はビルド経路を確認するもので、脆弱性の不存在を保証しません。
 
 ## 検証範囲
 
-| 検証 | 結果・範囲 |
-|---|---|
-| 自動試験 | build・全件race・vet・lint、コード行数検査が成功 |
-| 実Kata | 使い捨てノードで新規導入、更新、更新拒否、障害復旧と受入試験が成功 |
-| エージェントポリシー | 架空の設定をworkerへ渡し、Codex / Claude設定の生成、0600保存、選択ポリシーの管理情報を確認 |
-| 端末 | Esc・矢印・Ctrl-C・Ctrl-Z・Tabの生バイト、91x33のresize、ANSI SGR、Unicode、`TERM=xterm-256color`を実PTYで確認 |
-| 未確認 | 実アカウントの認証・推論、長期OAuth更新、人が見た物理端末の色味、実WSL、macOS／WindowsでのVM実行 |
+- Go build・全件raceテスト・vet・lint、既存のセキュリティfuzz、Pythonの配置／配布検査、CLI名検査、文書strictビルド。
+- 実Kataでv0.0.6のext4からXFSへの移行、rootfs／SQLite WALの別VM復元、公開Go API、端末キー・ANSI・Unicode、認証・相互TLS・共有・隔離境界を確認。更新・自動復旧・rollbackと資源回収も成功。[検証記録](https://pacificbelt30.github.io/sandbox-oasis/testing/)。
+- 外部AIの実認証・推論、実WSL、実ホスト再起動は対象外です。
 
-- 実Kataでは架空の資格情報・ローカル上流を使用し、外部AIへ推論要求を送っていません。
-- [検証記録と制約](https://pacificbelt30.github.io/sandbox-oasis/testing/)・[セキュリティ上の保護範囲](https://pacificbelt30.github.io/sandbox-oasis/security/)。
+---
 
 ## English
 
-v0.0.6 adds host-managed Codex / Claude Code defaults and safer, more capable access to existing workers.
+Oaiso v0.0.7 strengthens isolation and credential boundaries and adds portable checkpoints, private Codex database backups and storage diagnostics.
 
-| Area | Changes |
+| Area | Change |
 |---|---|
-| Agent policies | Six built-in profiles, owner-private host storage, explicit precedence, structured guest configuration, and list / show / clone / set / diff / audit / doctor commands |
-| Worker access | `oaiso connect` and the TUI `C` key open a separate login-shell PTY without replacing the primary agent process |
-| Inventory and TUI | Filtering, sorting, JSON/CSV, selected columns, summaries, snapshots, richer details, command execution, and an in-session activity timeline |
-| Terminal fidelity | Raw input, initial and SIGWINCH resize propagation, `TERM=xterm-256color`, terminal restoration, ANSI styling, Unicode, and special-key byte preservation |
-| Development checks | A reproducible 50,000-line production-code gate and expanded upstream Codex configuration contracts |
+| Kata | Pin 4.3.0 and verified hashes to address the reported Dragonball vulnerability |
+| Capacity | Enforce 4 GiB / 65,536 inode writable rootfs project quotas; require dedicated XFS separate from the OS and check admission capacity |
+| Proxy trust | Reserve product image names, verify root-owned digest approval before credentials, and pass admin secrets through owner-only files |
+| Host sharing | Authorize Git metadata through reciprocal host worktree records; bound file-operation output and use isolated Python |
+| Backups | Add verified OCI `checkpoint export/import`; never overwrite existing files or image tags. Document export from v0.0.6 |
+| Codex state | Keep SQLite on private ext4; add offline `agent-state export/restore` into a matching never-started, never-restored worker and `run --create-only` |
+| UX | Add quota/free-space runtime diagnostics, rootfs bytes/inodes in TUI details, a staged policy editor and actionable startup errors |
 
-- Pinned agent and runtime versions are unchanged from v0.0.5.
-- The default remains the conservative `interactive` policy unless a host policy is selected explicitly.
-- Stored credential profiles, encryption formats, and Local API v1 remain compatible.
-- Save work and remove existing workers and proxies before updating, rebuild the desired worker image, and create new workers to apply an agent policy.
-- Install and signature verification: [installation](https://pacificbelt30.github.io/sandbox-oasis/en/installation/) and [signed releases](https://pacificbelt30.github.io/sandbox-oasis/en/guides/signed-releases/).
-- Disposable real-Kata setup, upgrade, recovery, policy rendering, raw special-key bytes, PTY resizing, ANSI sequences, and Unicode transport passed with synthetic credentials and local fixtures. Live accounts, physical-terminal visual rendering, long-running OAuth refresh, and real WSL remain unverified.
+**Existing ext4 installations require migration before applying this release.** Follow the [storage migration guide](https://pacificbelt30.github.io/sandbox-oasis/en/guides/storage-migration/): stop/save with the old CLI, retain rootfs/workspace/user data and host configuration, prepare separate quota-enabled XFS (32 GiB recommended for two workers), install matching components, then import and verify new workers before retiring the source. Setup never formats or converts existing data. v0.0.6 has no private database disk; supported new versions use the [database restore procedure](https://pacificbelt30.github.io/sandbox-oasis/en/guides/agent-state/).
+
+Codex 0.163.0, Claude Code 2.1.306, containerd 2.4.2, BuildKit 0.34.0 and runc 1.4.3 pins remain unchanged. Existing terminal keys/ANSI/Unicode, profile encryption and Local API v1 behavior are preserved. Backups are unencrypted, exclude workspace/credentials from rootfs, and need private storage outside shared projects.
+
+Ubuntu 26.04 x86_64/systemd/KVM/cgroup v2/dedicated XFS are required. Go/Make/source are unnecessary for installation. Verify [signatures before execution](https://pacificbelt30.github.io/sandbox-oasis/en/guides/signed-releases/). The five release files are archive, installer, checksums, SBOM and provenance; they exclude runtime downloads, worker images and credentials.
+
+Validation covers Go/race/vet/lint/fuzz, Python deployment/distribution tests, CLI names and strict documentation. Real Kata verified v0.0.6 ext4-to-XFS migration, rootfs/private SQLite WAL restoration, public Go APIs, terminal behavior, authentication/mTLS/sharing/isolation, upgrade, automatic recovery, rollback and owned-resource cleanup. Live external AI authentication/inference, real WSL and physical host reboot are excluded.

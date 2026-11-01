@@ -65,6 +65,10 @@ func Hint(err error) string {
 	}
 	s := strings.ToLower(err.Error())
 	switch {
+	case strings.Contains(s, "quota"), strings.Contains(s, "rootfs"), strings.Contains(s, "storage capacity"), strings.Contains(s, "xfs"):
+		return "Run oaiso runtime-check; use dedicated writable XFS with project quota accounting and enforcement. Back up stopped workers before migration; see doc/guides/storage-migration.md. Do not format existing data."
+	case strings.Contains(s, "proxy image"), strings.Contains(s, "image authority"), strings.Contains(s, "trusted image"), strings.Contains(s, "proxy trust"):
+		return "Run oaiso proxy build to rebuild the trusted image. For a custom image, review its source and digest before explicit oaiso proxy trust IMAGE; drain workers before replacing a running proxy."
 	case strings.Contains(s, "permission denied"):
 		return "Run id and ls -l /run/codex-dock-node.sock; join the codex-dock group and log in again. Do not chmod the socket to 0666."
 	case strings.Contains(s, "shared workspace"), strings.Contains(s, "virtio_fs"), strings.Contains(s, "manifest"), strings.Contains(s, "checksum"), strings.Contains(s, "profile"):

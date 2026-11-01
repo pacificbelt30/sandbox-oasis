@@ -26,6 +26,8 @@ const agentStateTarget = workerpolicy.AgentStateTarget
 const directVolumeRoot = "/run/kata-containers/shared/direct-volumes"
 
 type agentStateDisk struct {
+	Restored      bool               `json:",omitempty"`
+	Restore       *agentStateRestore `json:",omitempty"`
 	Version       int
 	Bytes         int64
 	UID, GID      uint32
@@ -204,6 +206,9 @@ func (b *Backend) provisionAgentState(ctx context.Context, r *record, spec *spec
 func (b *Backend) ensureAgentState(r *record) error {
 	if r.AgentState == nil {
 		return nil
+	}
+	if err := b.finishAgentRestore(r); err != nil {
+		return err
 	}
 	s := r.AgentState
 	info, err := os.Lstat(b.agentStateImage(r))

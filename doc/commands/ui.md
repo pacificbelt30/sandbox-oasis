@@ -99,3 +99,7 @@ Saved. Recreate the desired proxies/workers explicitly to apply the new settings
 - [ワーカー管理コマンド](worker.md) — ps / stop / rm / logs
 - [`oaiso run`](run.md) — 並列ワーカーの起動
 - [ホスト管理のエージェントポリシー](../guides/agent-policies.md)
+
+## rootfs容量を確認する
+
+利用可能：**v0.0.7**。詳細欄へホストで観測した書き込み可能rootfsの使用量と上限（byte・inode）を表示します。image・共有workspace・専用DBの総使用量ではありません。照会できない場合は取得不可として`oaiso runtime-check`を案内します。[専用ストレージ](../guides/storage-migration.md#使用量を調べる)。

@@ -54,7 +54,7 @@ oaiso proxy build --tag my-proxy:v1 -f ./docker/proxy/Dockerfile
 - Build from the repository root: the current directory is the context and Go source is required.
 - The search order is `docker/proxy/Dockerfile`, legacy `auth-proxy.Dockerfile` / `docker/auth-proxy.Dockerfile`, then the config directory.
 
-## Authorize image identity (unreleased: main)
+## Authorize image identity (v0.0.7)
 
 - Root node state stores the authorized digest and CLI version. Compatibility labels alone do not grant trust. A changed tag is rejected before secrets are supplied.
 - `proxy build` authorizes its own build output. Automatic builds use the installed static CLI and never automatically trust a project's Dockerfile.

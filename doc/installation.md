@@ -11,7 +11,7 @@
 
 ## インストールする版
 
-- この手順では署名付きのビルド済み配布版（v0.0.6）を導入します。
+- この手順では署名付きのビルド済み配布版（v0.0.7）を導入します。
 - 一続きの操作例：[インストールから初回起動まで](guides/first-run.md)。
 - このページの`releases/latest`は公開版を導入する手順です。
 
@@ -24,6 +24,7 @@
 | 実行アカウント | `sudo` が使える通常ユーザー |
 | 事前ツール | Bash・curl・CA証明書・GitHub CLI（署名検証用）。Go・Make・Gitは不要 |
 | ホストPython | uv管理の3.12。uv・Pythonがなければユーザー用領域へ自動準備 |
+| 専用ストレージ | v0.0.7以降：OSと別のXFSでproject quotaを有効化。2ワーカーは32 GiB以上が目安。[移行手順](guides/storage-migration.md) |
 | メモリ目安 | 既定の2ワーカー構成は8 GiB以上。ビルド用の余裕も確保 |
 | 通信 | GitHub Releases・uv/Python・固定ランタイム配布物・OSパッケージ・コンテナイメージの取得先に到達可能 |
 | WSL／VM | 上記要件に加え、nested virtualizationが必要 |
@@ -72,7 +73,7 @@ curl -fsSL https://github.com/pacificbelt30/sandbox-oasis/releases/latest/downlo
 
 ```text
 Plan: verified Ubuntu 26.04 amd64 node; Kata 4.2.0 / Dragonball / containerd 2.4.2 / BuildKit 0.34.0 / runc 1.4.3
-Bundle: /tmp/oaiso-release-<id>/bundle (version v0.0.6); operator: user; cache: /var/cache/codex-dock-setup; offline: no
+Bundle: /tmp/oaiso-release-<id>/bundle (version v0.0.7); operator: user; cache: /var/cache/codex-dock-setup; offline: no
 ```
 
 - 版・パス・利用者名は例。実際の環境とリリースにより変わります。
@@ -83,7 +84,7 @@ Bundle: /tmp/oaiso-release-<id>/bundle (version v0.0.6); operator: user; cache: 
 | コマンド・指定 | 動作 |
 |---|---|
 | 指定なし | 同じリリースのCLI・補助プログラムを取得・検証し、配置計画を表示 |
-| `--version v0.0.6` | 指定版を取得 |
+| `--version v0.0.7` | 指定版を取得 |
 | `--apply` | 計画成功後に `sudo` で配置。選択済みPythonの絶対パスも渡す |
 | operator省略 | スクリプトを実行した通常ユーザーを登録 |
 | `--operator USER` | 別の既存通常ユーザーを登録。rootから実行する場合は必須 |
@@ -101,13 +102,13 @@ Bundle: /tmp/oaiso-release-<id>/bundle (version v0.0.6); operator: user; cache: 
 
 ### 版を固定して取得・実行する
 
-**v0.0.6を指定する例。保存したスクリプトを確認してから、同じファイルで計画・適用します。**
+**v0.0.7を指定する例。保存したスクリプトを確認してから、同じファイルで計画・適用します。**
 
 ```bash
-curl -fsSL -o install.sh https://github.com/pacificbelt30/sandbox-oasis/releases/download/v0.0.6/install.sh
+curl -fsSL -o install.sh https://github.com/pacificbelt30/sandbox-oasis/releases/download/v0.0.7/install.sh
 less install.sh
-bash install.sh --version v0.0.6
-bash install.sh --version v0.0.6 --apply
+bash install.sh --version v0.0.7
+bash install.sh --version v0.0.7 --apply
 ```
 
 ## 4. 再ログインして確認

@@ -59,7 +59,7 @@ oaiso run -- npm test -- --watch=false
 
 ## When startup fails
 
-Stage-specific recovery hints are **unreleased (`main`)**. Startup failures from `run`, `codex`, and `claude` retain the cause and print `Next:` steps.
+Stage-specific recovery hints are **v0.0.7**. Startup failures from `run`, `codex`, and `claude` retain the cause and print `Next:` steps.
 
 | Stage | Next check |
 |---|---|
@@ -116,7 +116,8 @@ oaiso run --profile-size small --agent codex
 | `--model` | `-m` | | Model name passed to the selected agent |
 | `--read-only` | | `false` | Mount project directory read-only |
 | `--read-only-rootfs` | | `false` | Make the image rootfs read-only; use tmpfs for HOME and temporary files |
-| `--agent-state-size` | | `auto` (512MiB) | [Private Codex database disk](../guides/agent-state.md): `off` or 64MiB–8GiB; unreleased (`main`) |
+| `--create-only` | | `false` | Create without booting; Kata only, for offline database restore. v0.0.7 |
+| `--agent-state-size` | | `auto` (512MiB) | [Private Codex database disk](../guides/agent-state.md): `off` or 64MiB–8GiB; v0.0.7 |
 | `--profile-size` | | `standard` | Kata VM resource profile (`standard`, `small`, or `compact`) |
 | `--no-git-metadata` | | `false` | Do not automatically share linked worktree Git metadata |
 | `--mount` | | | Additional host directory to mount (repeatable): `<host-path>:<container-path>[:ro\|rw]` ([details](#--mount)) |

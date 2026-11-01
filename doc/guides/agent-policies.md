@@ -42,7 +42,7 @@ oaiso agent-policy plan
 
 ### TUIで選択・編集する
 
-利用可能：**未リリース（main）**。通常ユーザーで実行します。nodeが停止中でも開けます。
+利用可能：**v0.0.7**。通常ユーザーで実行します。nodeが停止中でも開けます。
 
 ```bash
 oaiso agent-policy configure

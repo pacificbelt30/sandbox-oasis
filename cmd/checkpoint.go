@@ -66,7 +66,20 @@ func init() {
 		return engine.CheckpointMaintenance(cmd.Context(), engine.Socket(), "pin", diskcheckpoint.PinRequest{ID: args[0], Pinned: !unpin}, &out)
 	}}
 	pin.Flags().BoolVar(&unpin, "unpin", false, "Remove retention protection; explicit rm remains available")
-	root.AddCommand(create, list, inspect, remove, prune, pin)
+	var output string
+	export := &cobra.Command{Use: "export ID", Args: cobra.ExactArgs(1), Short: "Export a verified OCI checkpoint to a new private file", RunE: func(cmd *cobra.Command, args []string) error {
+		return engine.ExportCheckpoint(cmd.Context(), engine.Socket(), args[0], output)
+	}}
+	export.Flags().StringVar(&output, "output", "", "New OCI archive path; never overwrites an existing file")
+	_ = export.MarkFlagRequired("output")
+	importCmd := &cobra.Command{Use: "import FILE", Args: cobra.ExactArgs(1), Short: "Validate and import one portable checkpoint without replacing image tags", RunE: func(cmd *cobra.Command, args []string) error {
+		info, err := engine.ImportCheckpoint(cmd.Context(), engine.Socket(), args[0])
+		if err != nil {
+			return err
+		}
+		return json.NewEncoder(cmd.OutOrStdout()).Encode(info)
+	}}
+	root.AddCommand(create, list, inspect, remove, prune, pin, export, importCmd)
 	rootCmd.AddCommand(root)
 	runCmd.Flags().String("checkpoint", "", "Restore this disk checkpoint as a NEW worker (image is selected automatically)")
 }

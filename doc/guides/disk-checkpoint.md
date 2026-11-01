@@ -3,7 +3,7 @@
 **日本語** | [English](../en/guides/disk-checkpoint.md)
 
 - 利用可能：**v0.0.4**。対応するCLI・node・Proxyが必要です。
-- 停止済みKata VMのroot filesystemを保存し、**同じnode上の新しいVM**へ復元します。
+- 停止済みKata VMのroot filesystemを保存し、**新しいVM**（v0.0.4は同一node。別nodeへの転送はv0.0.7）へ復元します。
 - メモリ上の処理、接続、実行位置を保存する機能ではありません。
 
 ## 保存するもの・除外するもの
@@ -14,7 +14,7 @@
 | ファイルの基本属性 | 権限、数値UID／GID、更新日時、symlinkを保持。hard linkは独立したファイルへ変換 |
 | 読み取り禁止にしたpath | 下のdiskに元データがあっても保存しない。別のpathへのhard linkも除外 |
 | `/workspace`・追加の共有mount | **内容を保存しない**。復元時に新しい共有元を指定。ホスト側のファイルを巻き戻さない |
-| Codex専用DBディスク | **内容を保存しない**。未リリース（main）の[状態保存](agent-state.md)。復元先は新しい空ディスク |
+| Codex専用DBディスク | **内容を保存しない**。v0.0.7の[状態保存](agent-state.md)。復元先は新しい空ディスク |
 | `/home`・`/root` | 内容を保存しない。認証情報・履歴・キャッシュ・ユーザー単位の依存も除外。ホーム直下の空ディレクトリと所有権だけ保持 |
 | `/run`・`/tmp`・`/var/tmp`・`/dev`・`/proc`・`/sys` | 内容を保存しない。tmpfs、起動時の管理ファイル、カーネル情報も除外 |
 | `/var/log`・hosts／hostname／resolv.conf | 保存しない。新しいVMの実行時に必要な設定を作る |
@@ -82,7 +82,7 @@ oaiso run --checkpoint "$checkpoint_id" --name restored-job \
 | 取消・障害 | 未公開contentはlease解放後にcontainerd GCの回収対象。削除直後の物理容量回復は保証しない |
 | node再起動 | 完成済みcheckpointは保持。保存中の処理は再開せず、新たに作成する |
 | 復元互換性 | `oaiso-disk-v1`、Linux amd64、現nodeと同じ標準entrypoint。現在のKata・guard・隔離検証を適用 |
-| 対象範囲 | 同一nodeの新規VM。別nodeへの転送、RAM snapshot、実行中streamの再開は提供しない |
+| 対象範囲 | 新規VM。別nodeへの転送は下記の対応版。RAM snapshot・実行中streamは再開しない |
 
 使わなくなったcheckpointの削除：
 
@@ -164,3 +164,32 @@ oaiso checkpoint list
 - 途中失敗時は一部が削除済みの場合があります。`list`を確認し、新しい計画を確認してから再実行してください。
 - 取得失敗を「未使用」と判断せず、回収を中止します。共有contentへの一括pruneは行いません。
 - Go API：`RetainCheckpoints(ctx, cxd.CheckpointRetentionOptions{...})`、`PinCheckpoint(ctx, id, true)`。適用時は`Apply: true`と`ExpectedPlan`を指定します。
+
+## 持ち出し・取り込み
+
+利用可能：**v0.0.7**。旧v0.0.6の書き出しは[移行手順](storage-migration.md)を使います。
+
+通常ユーザーで、IDを確認してから保存先を指定します。共有workspace外に保管してください。
+
+```bash
+install -d -m 0700 "$HOME/oaiso-backup"
+read -r -p 'Checkpoint ID: ' checkpoint_id
+```
+
+```bash
+oaiso checkpoint export "$checkpoint_id" --output "$HOME/oaiso-backup/checkpoint.oci"
+```
+
+別nodeでファイルを所有者専用に転送後、通常ユーザーで取り込みます。
+
+```bash
+oaiso checkpoint import "$HOME/oaiso-backup/checkpoint.oci"
+```
+
+- 出力ファイルは0600。既存ファイルは上書きせず、未完成の出力を完成品として公開しません。
+- OCIの参照・全blob hash・実際の標準entrypoint・除外対象を検査後に登録します。既存image tagを置き換えません。同じIDとdigestの再取り込みは同じ結果を返します。
+- pinは移行しません。必要なら取り込み先で再設定してください。
+- 暗号化・作成者の署名・workspaceや認証の転送は含みません。
+- Go API：`ExportCheckpoint(ctx, id, path)`・`ImportCheckpoint(ctx, path)`。
+
+持ち出し対象のlayerは、path・symlink先が各4,096 byte以内、path情報の合計が64 MiB以内である必要があります。

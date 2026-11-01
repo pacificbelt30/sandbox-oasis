@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/pacificbelt30/codex-dock/internal/diagnostics"
+	"github.com/pacificbelt30/codex-dock/internal/engine"
 	"github.com/pacificbelt30/codex-dock/internal/kataguard"
 	"os"
 	"os/exec"
@@ -108,6 +109,12 @@ func runtimeReport(ctx context.Context) diagnostics.Report {
 			}
 		}
 		r.Add("cgroups", "cgroup v2 has cpu, memory and pids", "Use cgroup v2 and check systemctl status codex-dock-node; see doc/setup.md.", err)
+	}
+	if isolation == sandbox.RuntimeKata && resolveErr == nil {
+		probe, cancel := context.WithTimeout(ctx, 5*time.Second)
+		storage, err := engine.StorageStatus(probe, engine.Socket())
+		cancel()
+		r.Add("storage", fmt.Sprintf("XFS project quotas enforced; free %.1f GiB / %.1f GiB; per-worker %d MiB / %d inodes", float64(storage.AvailableBytes)/(1<<30), float64(storage.TotalBytes)/(1<<30), storage.WorkerLimitBytes/(1<<20), storage.WorkerLimitInodes), diagnostics.Hint(err), err)
 	}
 	if resolveErr == nil {
 		m, err := sandbox.NewManager(managementConfig())

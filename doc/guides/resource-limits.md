@@ -6,7 +6,7 @@
 - 接続・帯域・FD・I/Oの追加設定は任意です。rootfsの必須条件は次節を参照してください。
 - 既存のCPU・メモリ・PID、要求本文のサイズ、[AIの実行別利用上限](usage-limits.md)とは別の設定です。
 
-## 書き込み可能なルート領域（未リリース：main）
+## 書き込み可能なルート領域（v0.0.7）
 
 - `/var/lib/codex-dock-containerd`に、project quotaを強制する専用XFSが必要です。setupは配置前に確認し、フォーマットや再マウントを行いません。
 - 書き込み可能なsnapshotごとに**4 GiB・65,536 inode**を強制します。ワーカーとrunc Proxyが対象です。停止後も上限を保持し、起動・node復旧時に検査します。
@@ -171,3 +171,5 @@ oaiso vm inspect limited-job --json
 | 起動時の選択 | 既存の`LaunchRequest.Profile`を使用 |
 
 - [試験・未確認範囲](../testing.md)。ローカルのrootや管理者からの変更を防ぐ仕組みではありません。
+
+既存ext4からの移行：[保存対象と移行手順](storage-migration.md)。

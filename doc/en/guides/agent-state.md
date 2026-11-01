@@ -2,7 +2,7 @@
 
 [日本語](../../guides/agent-state.md) | **English**
 
-Available: **unreleased (`main`)**, for newly created regular Kata workers after updating the matching CLI, node and worker-guard. Existing workers and data are not migrated automatically.
+Available: **v0.0.7**, for newly created regular Kata workers after updating the matching CLI, node and worker-guard. Existing workers and data are not migrated automatically.
 
 Codex SQLite databases use a private ext4 disk while HOME keeps its usual location. Shared workspace coherence settings remain in place. HOME configuration, authentication placeholders and conversation files retain their locations.
 
@@ -94,3 +94,33 @@ Capacity is fixed at creation. Existing disks are not automatically resized or r
 | Old node/bootstrap | Update and verify the matching components, then create a new worker |
 
 Conditions and unverified cases are recorded in [testing (Japanese)](../../testing.md).
+
+## Backup and restore to another VM
+
+Available: **v0.0.7**. Run on the host as the normal user. Source and destination must have identical private disk capacity and numeric UID/GID. This example uses `codex-work` with the default 512MiB disk; set the same `--agent-state-size` on the destination for other capacities.
+
+1. Save application data, stop the VM and export outside shared workspaces.
+
+```bash
+install -d -m 0700 "$HOME/oaiso-backup"
+oaiso stop codex-work &&
+  oaiso agent-state export codex-work --output "$HOME/oaiso-backup/codex-state.backup"
+```
+
+2. Create a new worker **without starting it**. Replace `/home/alice/restored-project` with the restored workspace. Select credentials, policies and shares explicitly.
+
+```bash
+oaiso run --name restored-codex --project /home/alice/restored-project   --agent-state-size 512MiB --create-only --keep --exec 'sleep infinity' &&
+  oaiso agent-state restore restored-codex --input "$HOME/oaiso-backup/codex-state.backup" &&
+  oaiso start restored-codex &&
+  oaiso connect restored-codex
+```
+
+- `--create-only` requires Kata and retains networks, snapshots and disks even before boot. Remove abandoned workers with `oaiso rm restored-codex`.
+- Add `--checkpoint ID` during creation to restore rootfs too. Save rootfs and database separately at the same stopped point; see [migration](storage-migration.md).
+- Live/paused exports, restoration into used/already-restored workers, UID/GID/capacity mismatches and corrupt/truncated/appended payloads are refused. Durable restore intent permits recovery after a node interruption.
+- Restoration reserves an additional temporary disk of the same capacity alongside the never-started target disk; allow extra free space in the node state filesystem.
+- Backups are 0600 and never overwrite existing files. They contain the entire disk, potentially including deleted blocks and sensitive conversation history. There is no encryption.
+- Only the private SQLite disk is captured: no HOME conversations, configuration/authentication, workspace, proxy or tokens. A database explicitly configured outside this disk is excluded.
+- Guest ext4 is never mounted or parsed on the host; it is used only inside a new Kata VM. Hashes do not authenticate creators; import only trusted backups.
+- Go API: `Create(ctx, request)` → `RestoreAgentState(ctx, workerID, path)` → `Start(ctx, workerID)`. Export with `ExportAgentState(ctx, workerID, path)`.

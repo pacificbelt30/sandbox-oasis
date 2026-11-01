@@ -9,14 +9,14 @@ import (
 )
 
 type Options struct {
-	Address, State, Runtime, KataConfig, Snapshotter string
-	Logger                                           string
-	DNS                                              []string
-	TemporaryStorage                                 bool
-	Retire                                           func(context.Context, string, string) error
-	AbortCreate                                      func(context.Context, string, string) error
-	ConfirmStopped                                   func(context.Context, string, string) error
-	Tools                                            map[string]string
+	Address, State, Runtime, KataConfig, Snapshotter, StorageRoot string
+	Logger                                                        string
+	DNS                                                           []string
+	TemporaryStorage                                              bool
+	Retire                                                        func(context.Context, string, string) error
+	AbortCreate                                                   func(context.Context, string, string) error
+	ConfirmStopped                                                func(context.Context, string, string) error
+	Tools                                                         map[string]string
 }
 type Backend struct{}
 
