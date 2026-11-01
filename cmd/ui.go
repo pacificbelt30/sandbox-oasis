@@ -21,7 +21,11 @@ var uiCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		return ui.RunWithPolicyOptions(managementConfig(), path, store.Path, viper.GetString("run.agent_policy"))
+		tasks, err := taskService()
+		if err != nil {
+			return err
+		}
+		return ui.RunWithTaskOptions(managementConfig(), path, store.Path, viper.GetString("run.agent_policy"), tasks)
 	},
 }
 

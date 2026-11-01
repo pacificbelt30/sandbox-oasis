@@ -25,6 +25,7 @@ The `C`, `X`, `/`, `O`, and `V` instance actions are available in v0.0.6 and lat
 | `/` | Filter text or `status:` / `branch:` / `task:` / `image:` / `policy:`; prefix `!` to exclude |
 | `O` | Cycle name, status, age, branch, and policy ordering |
 | `V` | Show lifecycle and metadata changes observed while the TUI is open |
+| `T` | Open [tasks and result review](../guides/tasks.md) (unreleased, main) |
 | `S` | Stop selected worker with a 10-second grace period |
 | `D` | Force-remove selected worker |
 | `A` | Stop all running workers in the list |

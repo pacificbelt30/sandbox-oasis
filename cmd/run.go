@@ -46,6 +46,8 @@ var shellTypeFlag string
 var runEnvironmentLock string
 var runStartHooks []string
 var runReadiness string
+var runTaskFile string
+var runHeadless bool
 var runOpts sandbox.RunOptions
 var (
 	proxyAdminURL           string
@@ -103,6 +105,8 @@ func init() {
   claude   launch Anthropic Claude Code
   Configure the default with "oaiso default codex" or "oaiso default shell".`)
 	f.StringVarP(&runOpts.Task, "task", "t", "", "Initial task prompt for the agent")
+	f.StringVar(&runTaskFile, "task-file", "", "Owner-private UTF-8 file containing the task (maximum 32 KiB)")
+	f.BoolVar(&runHeadless, "headless", false, "Run a single non-interactive task using the selected agent and host policy")
 	f.StringVarP(&runOpts.ExecCmd, "exec", "e", "", `Run this command instead of an interactive shell. An explicit --agent codex/claude takes priority; the configured default agent does not apply.
   Mutually exclusive with a "-- command..." trailing on the command line (see the "run" command's usage), which is usually easier for multi-word commands since it avoids having to quote the whole thing as one string.`)
 	f.StringVar(&approvalModeFlag, "approval-mode", "suggest", `Agent approval mode.
@@ -223,6 +227,9 @@ func runWorker(cmd *cobra.Command, args []string) (result error) {
 	// An explicit template selects both the image tag and its build source.
 	// A project build with the same tag must not replace that template.
 	buildCfg = projectBuildConfigForRun(cmd, projectCfg)
+	if err := applyHeadlessTask(cmd); err != nil {
+		return err
+	}
 	if runOpts.DirectAgent {
 		if agentFlag == string(sandbox.AgentClaude) {
 			if codexOptionPresent(runOpts.AgentArgs, "--model") {
@@ -241,6 +248,9 @@ func runWorker(cmd *cobra.Command, args []string) (result error) {
 		}
 	}
 	image, commandArgs := resolveRunPositionals(args, cmd.ArgsLenAtDash(), cmd.Flags().Changed("image") || cmd.Flags().Changed("template"))
+	if runHeadless && len(commandArgs) > 0 {
+		return fmt.Errorf("--headless cannot combine with a positional command")
+	}
 	if image != "" {
 		runOpts.Image = image
 	}

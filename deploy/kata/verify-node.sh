@@ -223,7 +223,7 @@ if [[ -x /acceptance.test ]]; then
   CODEX_DOCK_RESOURCE_WORKSPACE=/evidence/resource-workspaces \
   CODEX_DOCK_KATA_OWNER_FIXTURE=/home/kata-test/owner-fixture/project \
   CODEX_DOCK_NODE_RESTART_REQUEST_DIR=/run/setup-node-restart \
-  /acceptance.test -test.run "${CODEX_DOCK_KATA_ACCEPTANCE_RUN:-^TestKata(Acceptance|AgentState|AuthenticationSession|EncryptedProfile|KeyringProfile|WorkspaceSharing|PolicyFeatures|PrimaryTerminal|GoAPI)$}" -test.v -test.count=1 -test.timeout=45m > /evidence/acceptance.txt 2>&1 &
+  /acceptance.test -test.run "${CODEX_DOCK_KATA_ACCEPTANCE_RUN:-^TestKata(Acceptance|AgentState|AuthenticationSession|EncryptedProfile|KeyringProfile|WorkspaceSharing|PolicyFeatures|PrimaryTerminal|TaskBoard|GoAPI)$}" -test.v -test.count=1 -test.timeout=45m > /evidence/acceptance.txt 2>&1 &
  test_pid=$!
  while kill -0 "$test_pid" 2>/dev/null; do
   if [[ -f /run/setup-node-restart/request ]]; then

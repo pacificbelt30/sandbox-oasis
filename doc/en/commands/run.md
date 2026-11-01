@@ -411,3 +411,7 @@ oaiso run --template mytool
 - `--observe-dir PATH`: v0.0.4. Save redacted launch timings. [Diagnostics](../guides/observability.md).
 
 - `--checkpoint ID`: v0.0.4. Start a new Kata VM from a [disk checkpoint](../guides/disk-checkpoint.md), with new mounts/authentication/policies.
+
+## Non-interactive tasks
+
+Unreleased (main): use `--headless` and `--task-file` for a single batch task, preserving approval defaults. See [tasks and result review](../guides/tasks.md).

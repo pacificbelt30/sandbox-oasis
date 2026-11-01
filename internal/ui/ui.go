@@ -11,6 +11,7 @@ import (
 	"github.com/pacificbelt30/codex-dock/internal/engine"
 	"github.com/pacificbelt30/codex-dock/internal/instanceux"
 	"github.com/pacificbelt30/codex-dock/internal/policyevents"
+	"github.com/pacificbelt30/codex-dock/internal/taskboard"
 	"github.com/pacificbelt30/codex-dock/internal/workeregress"
 
 	"github.com/gdamore/tcell/v2"
@@ -31,6 +32,10 @@ func RunWithOptions(cfg sandbox.ManagerConfig, configPath string) error {
 }
 
 func RunWithPolicyOptions(cfg sandbox.ManagerConfig, configPath, policyPath, policyOverride string) error {
+	return RunWithTaskOptions(cfg, configPath, policyPath, policyOverride, nil)
+}
+
+func RunWithTaskOptions(cfg sandbox.ManagerConfig, configPath, policyPath, policyOverride string, tasks *taskboard.Service) error {
 	app := tview.NewApplication()
 
 	// Include a network manager so deleting a worker also removes its per-worker
@@ -231,6 +236,14 @@ func RunWithPolicyOptions(cfg sandbox.ManagerConfig, configPath, policyPath, pol
 		idx := row - 1 // header offset
 
 		switch event.Rune() {
+		case 't', 'T':
+			if tasks != nil {
+				page := newTaskBoardPage(app, tasks, showMain)
+				page.start(done)
+				pages.AddAndSwitchToPage("tasks", page.pages, true)
+				app.SetFocus(page.table)
+			}
+			return nil
 		case 'g', 'G':
 			openPolicies()
 			return nil
@@ -369,7 +382,8 @@ func RunWithPolicyOptions(cfg sandbox.ManagerConfig, configPath, policyPath, pol
 		}
 	}()
 
-	return app.SetRoot(pages, true).EnableMouse(true).EnablePaste(true).Run()
+	app.SetRoot(pages, true)
+	return runTerminal(app)
 }
 
 func statusIcon(status string) string {

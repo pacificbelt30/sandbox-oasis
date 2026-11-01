@@ -514,3 +514,7 @@ oaiso run --user 1000:1000
 - `--observe-dir PATH`: v0.0.4。起動時間を秘密を除いた形式で保存。[診断の保存](../guides/observability.md)。
 
 - `--checkpoint ID`: v0.0.4。[disk checkpoint](../guides/disk-checkpoint.md)から新しいKata VMを起動。workspace・認証・実行規則は新規設定。
+
+## 非対話タスク
+
+未リリース（main）：`--headless`と`--task-file`で1回の依頼を実行できます。承認の既定値は維持されます。[タスクと結果レビュー](../guides/tasks.md)を参照してください。

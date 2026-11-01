@@ -14,6 +14,7 @@
 | Use Claude API keys or subscriptions | [Claude Code](../claude-code.md) |
 | List, inspect logs, stop and restart workers | [Worker operations](../../operations.md) (Japanese) |
 | Manage workers in the TUI | [TUI](../commands/ui.md) |
+| Queue tasks and adopt reviewed changes | [Tasks and result review](tasks.md) |
 
 ## Prepare the workspace
 

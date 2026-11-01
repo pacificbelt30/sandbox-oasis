@@ -52,6 +52,7 @@ nav:
           - ホスト管理の既定値: guides/agent-policies.md
           - Codexの状態保存: guides/agent-state.md
           - Claude Code: claude-code.md
+      - タスクと結果レビュー: guides/tasks.md
       - ファイル共有とworktree: workspace.md
       - 実行ごとの利用上限: guides/usage-limits.md
       - 接続・帯域・FD・I/Oの上限: guides/resource-limits.md
@@ -138,6 +139,7 @@ nav:
           - Agents:
               - Launch methods and support: en/guides/agents.md
               - Host-managed defaults: en/guides/agent-policies.md
+              - Tasks and result review: en/guides/tasks.md
               - Codex state storage: en/guides/agent-state.md
               - Claude Code: en/claude-code.md
           - Per-execution usage limits: en/guides/usage-limits.md
