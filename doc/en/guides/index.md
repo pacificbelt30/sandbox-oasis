@@ -2,9 +2,20 @@
 
 [日本語](../../guides/index.md) | **English**
 
-- Prerequisites: complete [installation](../installation.md) and the [quick start](../getting-started.md).
+- Prerequisites: complete [installation](../installation.md), then check the execution host with `oaiso runtime-check`.
 - Choose the task you need below.
 - First use of v0.0.3+ keyring/login: [installation through first startup](first-run.md).
+
+## Use a sandbox
+
+Available: **unreleased (main)**. Use Kata VMs for development and tests without preparing AI credentials.
+
+| Task | Guide |
+|---|---|
+| Create a VM and connect to a shell | [Prepare and create](sandbox-ui.md#prerequisites-and-startup) |
+| Inspect and transfer files | [Workspace files](sandbox-ui.md#inspect-and-transfer-files) |
+| Check a web application | [Authenticated localhost preview](sandbox-ui.md#preview-a-web-application) |
+| Choose actions without memorizing keys | [TUI actions menu](../commands/ui.md#choose-actions-without-memorizing-keys) |
 
 ## Use an agent
 
@@ -15,7 +26,6 @@
 | List, inspect logs, stop and restart workers | [Worker operations](../../operations.md) (Japanese) |
 | Manage workers in the TUI | [TUI](../commands/ui.md) |
 | Queue tasks and adopt reviewed changes | [Tasks and result review](tasks.md) |
-| Create VMs, transfer files and preview apps without AI credentials | [Sandbox TUI](sandbox-ui.md) |
 
 ## Prepare the workspace
 

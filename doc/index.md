@@ -4,7 +4,7 @@
 
 | 項目 | 要点 |
 |---|---|
-| 用途 | Codex CLI・Claude CodeをKata VMで隔離実行 |
+| 用途 | 開発・テスト・AIエージェントをKata VMで隔離実行 |
 | コマンド | `oaiso` |
 | 実行基盤 | containerdが管理、DragonballがVMを実行 |
 | 実行ホスト | Linux x86_64 |
@@ -29,7 +29,7 @@
 | 読む順序 | 内容 |
 |---|---|
 | 1. [Installation — インストール](installation.md) | 依存ツールの取得・CLIと実行基盤の配置・動作確認 |
-| 2. [クイックスタート](getting-started.md) | 利用者向け。認証・イメージを用意して最初のワーカーを起動する |
+| 2. [クイックスタート](getting-started.md) | 利用者向け。サンドボックス利用とAIエージェント利用を選び、必要な準備を行う |
 | 3. [日常の運用](operations.md) | 一覧、ログ、停止、再起動、更新、後片付け |
 
 旧Docker環境を使っている場合は、[移行手順](migration.md)から始めてください。

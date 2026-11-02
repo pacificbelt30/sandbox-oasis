@@ -4,7 +4,7 @@
 
 | Item | At a glance |
 |---|---|
-| Purpose | Run Codex CLI and Claude Code in separate Kata VMs |
+| Purpose | Isolate development, tests and AI agents in separate Kata VMs |
 | Command | `oaiso` |
 | Runtime | Containerd manages workers; Dragonball runs VMs |
 | Images | Built with BuildKit |
@@ -27,7 +27,7 @@
 - For v0.0.3+ keyring/login, use the [complete installation-to-first-run guide](guides/first-run.md).
 
 1. Follow [Installation](installation.md) to install the CLI and execution host, then verify the setup.
-2. A user follows the [quick start](getting-started.md) to configure credentials and start a worker.
+2. Follow the [quick start](getting-started.md) to choose a general sandbox or an AI agent, then prepare the selected workflow.
 3. Use the [operations guide](../operations.md) (Japanese) for updates and cleanup.
 
 - The execution host must be Linux x86_64.

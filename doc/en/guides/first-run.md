@@ -5,6 +5,8 @@
 - This page covers v0.0.4 or later. Check `oaiso --version` first.
 - Requires Ubuntu 26.04, x86_64, systemd, KVM and cgroup v2. [Requirements](../installation.md#1-requirements).
 
+This page covers installation and authentication for AI agents. For use without AI credentials, follow the [sandbox guide](sandbox-ui.md), unreleased (main).
+
 ## 1. Install the prebuilt release
 
 Run as a normal user, review the plan, then apply it. First [prepare curl, CA certificates and GitHub CLI](../installation.md#2-prepare-tools). GitHub CLI verifies release signatures.

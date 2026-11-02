@@ -5,10 +5,19 @@
 | Current state | Start here |
 |---|---|
 | No execution host yet | Complete [Installation](installation.md) first |
-| Host is ready | Steps 1–4 start the first worker; steps 5–6 are optional |
+| Host is ready | Choose a workflow below, then check the host in step 1 |
 | Updating an existing installation | [Operations](../operations.md) (Japanese) |
 
-- This page covers v0.0.3 or later. A [complete installation-to-first-run guide](guides/first-run.md) is also available.
+- The AI-agent workflow covers v0.0.3 or later. A [complete installation-to-first-run guide](guides/first-run.md) is also available.
+
+## Choose a workflow
+
+| Purpose | Steps |
+|---|---|
+| Use VMs, files and web apps without AI credentials | Check the host in step 1, then follow the [sandbox guide](guides/sandbox-ui.md). Requires matching unreleased main CLI, node and helpers |
+| Use Codex or Claude Code | Steps 1–4 prepare credentials, images and proxies; steps 5–6 are optional |
+
+The credential-free sandbox workflow does not need the AI login, init or proxy preparation in steps 2–4 below. Keep existing credentials and running proxies intact.
 
 ## 1. Check the host
 
@@ -20,7 +29,7 @@
 oaiso runtime-check
 ```
 
-**Successful output (default Kata configuration)**
+**Successful output excerpt (default Kata configuration)**
 
 ```text
 [ok] egress-policy: Host rules are valid; private addresses stay blocked
@@ -55,7 +64,11 @@ oaiso runtime-check
 
 ```bash
 oaiso auth keyring check
-# If the keyring is unavailable:
+```
+
+If the keyring is unavailable, open the following shell and continue the credential and startup steps inside it.
+
+```bash
 oaiso auth keyring session
 ```
 
@@ -158,14 +171,28 @@ oaiso proxy run
 - The project is shared at `/workspace`.
 - Choose the invocation matching your prepared provider below.
 
+**With Codex credentials**
+
 ```bash
 oaiso codex
-# Or:
-oaiso claude
+```
 
-# With Codex credentials; a configured default can start an agent instead.
-oaiso run
-oaiso run -- ls -la
+**With Claude Code credentials**
+
+```bash
+oaiso claude
+```
+
+**Authenticated shell, with Codex credentials**
+
+```bash
+oaiso run --agent shell
+```
+
+**One command, with Codex credentials**
+
+```bash
+oaiso run --agent shell -- ls -la
 ```
 
 | Invocation | Result |

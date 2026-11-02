@@ -1,6 +1,6 @@
 # 御AgentISOlation（Oaiso）
 
-**Codex CLI・Claude Codeを、ワーカーごとのKata VMで隔離して実行。**
+**開発・テストを、ワーカーごとのKata VMで隔離して実行。Codex CLI・Claude Codeにも対応。**
 
 | 項目 | 内容 |
 |---|---|
@@ -12,7 +12,8 @@
 
 [日本語ドキュメント](doc/index.md) · [English documentation](doc/en/index.md)
 
-- [インストールから初回起動まで](doc/guides/first-run.md)。
+- AI認証なしで使う：[サンドボックスTUI](doc/guides/sandbox-ui.md)（未リリース・main）。
+- Codex／Claude Codeを使う：[インストールから初回起動まで](doc/guides/first-run.md)。
 
 ## Installation — インストール
 
@@ -39,9 +40,13 @@ oaiso --version
 oaiso runtime-check
 ```
 
-**3. 認証を選び、初回起動**
+**3. 利用目的を選ぶ**
 
-- [キーリング解錠・login・初回起動](doc/guides/first-run.md#3-キーリングを解錠する)へ進む。
+| 目的 | 次の手順 |
+|---|---|
+| AI認証なしのサンドボックス | [開発版の準備・イメージ作成・TUI操作](doc/guides/sandbox-ui.md)。未リリース（main）のCLI・node・補助ツールを同じ版で準備 |
+| Codex／Claude Code | [キーリング解錠・login・初回起動](doc/guides/first-run.md#3-キーリングを解錠する) |
+
 - 詳細・配置先・更新：[Installation](doc/installation.md)。[必要なツールの公式手順](doc/installation.md#ツールの公式手順)も掲載。
 - `--bundle`：[ビルド済みの実行ファイル一式を使う場合](doc/setup.md#ビルド済みバンドルとは)の指定。通常は不要。
 - `make install` はCLI・補助ツール・補完の配置のみ。実行ホストの準備には上の手順を使用。
@@ -50,6 +55,7 @@ oaiso runtime-check
 
 | 目的 | 機能・参照先 |
 |---|---|
+| 認証なしで検証する | [TUIでVM作成・ファイル転送・Web確認](doc/guides/sandbox-ui.md)。既定はAI認証なし・一般通信なし（未リリース・main） |
 | エージェントを動かす | Codex CLI・[Claude Code](doc/claude-code.md)。ClaudeはAPIキー／サブスクに対応 |
 | 作業を隔離する | ワーカーごとに独立したカーネル。CPU・メモリ・プロセス数を制限 |
 | 認証情報を分ける | 実資格情報は認証Proxyで保持。ワーカーには短命トークンを渡す |
@@ -64,8 +70,22 @@ oaiso runtime-check
 | 順序 | 担当 | 実施内容 |
 |---|---|---|
 | 1 | 管理者 | [インストール](doc/installation.md)。Ubuntu 26.04対応ホストでは配布インストーラーで計画、`--apply` で適用 |
-| 2 | 利用者 | [認証とイメージを準備](doc/getting-started.md)。新規利用は[キーリング＋login](doc/guides/first-run.md#3-キーリングを解錠する)で独立プロファイルを準備 |
+| 2 | 利用者 | [クイックスタート](doc/getting-started.md)で利用目的を選び、イメージを用意。AIを使う場合は認証も準備 |
 | 3 | 利用者 | プロジェクトでワーカーを起動 |
+
+### AI認証なしのサンドボックス
+
+利用可能：**未リリース（main）**。同じ版のCLI・node・補助ツールと互換イメージを[先に準備](doc/guides/sandbox-ui.md#前提と起動)し、通常ユーザーで作業プロジェクトから実行します。
+
+```bash
+oaiso ui
+```
+
+- `Actions F2`から操作を選択。`N`で作成、`C`で接続、`F`でファイル、`U`でWebプレビュー、`I`で詳細。
+- TUI終了後もVMは残ります。不要になったVMは停止・削除します。
+- [共有ファイルへの影響・転送制限・プレビューの終了条件](doc/guides/sandbox-ui.md)を確認してください。
+
+### Codex／Claude Code
 
 **先に認証を設定（いずれか1つ）**
 
@@ -83,10 +103,12 @@ oaiso runtime-check
 oaiso init --agent codex
 cd /path/to/your-project
 oaiso codex
+```
 
-# Codex CLI の引数もそのまま渡せる
+同じプロジェクトで、対話起動の代わりに依頼を渡す場合：
+
+```bash
 oaiso codex "このリポジトリを調べて"
-
 ```
 
 **Claude Code：初期設定 → 作業先で起動**
@@ -114,27 +136,20 @@ oaiso claude
 
 ## よく使う操作
 
-```bash
-# 独立したブランチでバックグラウンド実行
-oaiso run --agent codex --task "テストを追加して" \
-  --worktree --branch add-tests --new-branch -d
+通常ユーザーで実行します。`WORKER`は自分が管理する対象の名前またはIDへ置換し、必要な操作だけを選びます。
 
-oaiso ps -a
-oaiso vm ps -a
-oaiso logs WORKER --follow
-oaiso stop WORKER
-oaiso start WORKER
-oaiso stop WORKER
-oaiso rm WORKER
-oaiso ui
-```
-
-| 操作 | 対象・終了後の扱い |
+| 目的 | コマンド・操作 |
 |---|---|
-| `ps` | ワーカーの状態 |
-| `vm ps` | 台帳・containerd・ホストプロセスを照合したVMの状態 |
-| `stop` | 再起動用にワーカーを保持 |
-| 前面実行 | 終了時に削除。保持する場合は `run --keep` |
+| 操作を一覧から選ぶ | `oaiso ui`。開発版mainでは`Actions F2`メニューを利用可 |
+| ワーカー一覧 | `oaiso ps -a` |
+| VMの台帳・containerd・ホストプロセスを照合 | `oaiso vm ps -a` |
+| ログを追う | `oaiso logs WORKER --follow`。`Ctrl-C`で終了 |
+| 停止して保持 | `oaiso stop WORKER` |
+| 再起動 | `oaiso start WORKER` |
+| 削除 | 必要な成果を保存し、停止後に`oaiso rm WORKER` |
+
+- 前面実行は終了時に削除。保持する場合は`run --keep`を指定します。
+- 並列実行やworktree：[ワーカー起動](doc/commands/run.md)・[ファイル共有](doc/workspace.md)。
 
 ## プロジェクトごとの設定（任意）
 
@@ -145,10 +160,15 @@ oaiso ui
 ```bash
 oaiso project init       # oaiso.tomlを作成。既存ファイルは上書きしない
 oaiso project check      # 設定の書式・指定内容を確認
-git add oaiso.toml       # チームで共有する場合
 ```
 
-- ホストの準備と認証は、各利用者が[クイックスタート](doc/getting-started.md)で設定します。
+Gitを使うチームで共有する場合は、同じリポジトリで追加します。
+
+```bash
+git add oaiso.toml
+```
+
+- ホストの準備は各利用者が[クイックスタート](doc/getting-started.md)で確認します。AIを使う場合は認証も設定します。
 - 旧 `codex-dock.toml` を使っていた場合：[ファイル名を変更する手順](doc/migration.md#プロジェクト設定を-oaisotoml-に変更する)。
 
 | 設定先 | 書く内容 |

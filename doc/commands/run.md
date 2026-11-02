@@ -9,6 +9,7 @@
 | Codexを直接起動 | `oaiso codex` |
 | Claude Codeを直接起動 | `oaiso claude` |
 | イメージ・worktree・mountを指定 | `oaiso run --agent codex` / `--agent claude` |
+| AI認証なしのサンドボックス | `oaiso run --agent shell --no-ai --no-internet`（[未リリース・main](../guides/sandbox-ui.md)） |
 | 認証済みシェル | `oaiso run`（組み込み既定値） |
 | コマンドを1回実行 | `oaiso run -- COMMAND...` |
 
@@ -25,6 +26,8 @@
 - ネットワーク：[通信の仕組み](../network.md)。
 - 独自イメージ：[build](build.md)。
 - 設定の詳細：[プロジェクト設定](../configuration.md#プロジェクト設定)。
+
+未リリース（main）のTUIで作成するサンドボックスの既定はAI認証なしですが、通常の`oaiso run`の既定エージェント設定は維持されます。CLIで認証なしにする場合は`--agent shell --no-ai`を明示します。
 
 ## Codex CLI を直接起動する
 
@@ -122,6 +125,7 @@ oaiso run --profile-size small --agent codex
 | `--profile-size` | | `standard` | Kata VM の資源プロファイル（`standard` / `small` / `compact`） |
 | `--no-git-metadata` | | `false` | linked worktree の共通 Git metadata を自動共有しない |
 | `--mount` | | | 追加のホストディレクトリをマウント（繰り返し指定可）`<host-path>:<container-path>[:ro\|rw]`（[詳細](#--mount--任意ディレクトリの追加マウント)） |
+| `--no-ai` | | `false` | AI資格情報・認証Proxyなしで実行。`--agent shell`と併用。未リリース（main） |
 | `--no-internet` | | `false` | 一般egressプロキシを接続せず、AI API経路だけを維持 |
 | `--keep` | | `false` | フォアグラウンド実行の終了時にコンテナと専用ネットワークを削除しない（既定では削除し、ネットワークの蓄積を防ぐ） |
 | `--force-recreate-proxy` | | `false` | ホストとAuth Proxyの認証状態が異なる場合、稼働中ワーカーがあってもAuth Proxyを再作成する（既存ワーカーの認証は失効） |

@@ -14,20 +14,22 @@ oaiso ui
 
 ## 画面レイアウト
 
-**配置を示す概略図。枠・幅・名前・時間は表示例。**
+**未リリース（main）の狭い画面の配置例。図・名前・時間は表示例で、実画面の取得結果ではありません。**
 
 ```text
-┌──────────────────────────────────────────────────────────────┐
-│ 御AgentISOlation  2 running / 3 total  3 shown  sort=name     │
-│ Filter:                                                       │
-├──────────────────────────────────────────────────────────────┤
-│ NAME       STATUS   POLICY          TASK       │ Instance     │
-│ worker-a   running  approve-for-me  テスト作成 │ Status ●     │
-│ worker-b   exited   review          完了       │ Branch main  │
-├──────────────────────────────────────────────────────────────┤
-│ [Enter] Logs [C] Connect [/] Filter [V] Activity [?] Help    │
-└──────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│ Oaiso  1 running / 2 total  2 shown  sort=name                       │
+│ Filter:                                                            │
+│ NAME                   STATUS          UPTIME                      │
+│ sandbox-a              running         2m                          │
+│ sandbox-b              exited          -                           │
+│                                                                    │
+│ [Actions F2]  N New  F Files  U Preview  I Info  / Filter            │
+│               Enter Logs  C Connect  ? Help  Q Quit                │
+└─────────────────────────────────────────────────────────────────────┘
 ```
+
+110桁以上では詳細欄と追加の列も表示します。狭い画面の全情報は`I`で確認できます。
 
 ---
 

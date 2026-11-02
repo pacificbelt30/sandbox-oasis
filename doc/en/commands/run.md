@@ -6,6 +6,7 @@
 
 | Goal | Invocation |
 |---|---|
+| Sandbox without AI credentials | `oaiso run --agent shell --no-ai --no-internet` ([unreleased, main](../guides/sandbox-ui.md)) |
 | Start Codex directly | `oaiso codex` |
 | Start Claude Code directly | `oaiso claude` |
 | Select image, worktree or mounts | `oaiso run --agent codex` / `--agent claude` |
@@ -25,6 +26,8 @@
 - Network: [network guide](../network.md).
 - Custom images: [build](build.md).
 - Configuration: [project settings](../configuration.md#project-settings).
+
+The unreleased main TUI defaults to creating sandboxes without AI credentials. Normal `oaiso run` keeps its configured default agent; specify `--agent shell --no-ai` explicitly for a credential-free CLI run.
 
 ## Launch Codex CLI directly
 
@@ -121,6 +124,7 @@ oaiso run --profile-size small --agent codex
 | `--profile-size` | | `standard` | Kata VM resource profile (`standard`, `small`, or `compact`) |
 | `--no-git-metadata` | | `false` | Do not automatically share linked worktree Git metadata |
 | `--mount` | | | Additional host directory to mount (repeatable): `<host-path>:<container-path>[:ro\|rw]` ([details](#--mount)) |
+| `--no-ai` | | `false` | Run without AI credentials or auth proxy; use with `--agent shell`. Unreleased (main) |
 | `--no-internet` | | `false` | Disconnect general egress; keep fixed AI API routes |
 | `--keep` | | `false` | Keep the container and its per-worker network after a foreground run exits (default: remove them so networks don't accumulate) |
 | `--force-recreate-proxy` | | `false` | Recreate the Auth Proxy when its credential state differs from the host even if workers are running (existing workers lose authentication) |

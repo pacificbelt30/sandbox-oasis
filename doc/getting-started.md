@@ -5,10 +5,19 @@
 | 今の状態 | 次の操作 |
 |---|---|
 | 実行ホストをまだ用意していない | 先に[Installation — インストール](installation.md)を実施 |
-| 実行ホストは準備済み | 1〜4で最初のワーカーを起動。5〜6は任意 |
+| 実行ホストは準備済み | 下表で利用目的を選び、1でホストを確認 |
 | 既存環境を更新したい | [日常の運用](operations.md) |
 
-- このページはv0.0.3以降向けです。[インストールから一続きの手順](guides/first-run.md)も用意しています。
+- AIエージェントの手順はv0.0.3以降向けです。[インストールから一続きの手順](guides/first-run.md)も用意しています。
+
+## 利用目的を選ぶ
+
+| 目的 | 読む手順 |
+|---|---|
+| AI認証なしでVM・ファイル・Webアプリを使う | 1でホストを確認し、[サンドボックスガイド](guides/sandbox-ui.md)へ。未リリース（main）の同じ版のCLI・node・補助ツールが必要 |
+| Codex／Claude Codeを使う | 1〜4で認証・イメージ・Proxyを準備して起動。5〜6は任意 |
+
+認証なしのサンドボックスでは、以下の2〜4のAI用`login`・`init`・Proxy準備は不要です。既存の認証設定や稼働中Proxyを削除する必要はありません。
 
 ## 1. 実行ホストを確認する
 
@@ -55,7 +64,11 @@ oaiso runtime-check
 
 ```bash
 oaiso auth keyring check
-# キーリングを利用できない場合：
+```
+
+キーリングを利用できない場合は、次のシェルを開き、その中で以降の認証・起動手順を続けます。
+
+```bash
 oaiso auth keyring session
 ```
 
@@ -164,9 +177,15 @@ oaiso proxy run
 - 製品ソースにいる場合は、起動前に自分の作業プロジェクトへ `cd`。
 - 下の起動例は、準備した認証に合うものを1つ選択。
 
+**Codexの認証を準備した場合**
+
 ```bash
 oaiso codex
-# Anthropicを準備した場合はこちら
+```
+
+**Claude Codeの認証を準備した場合**
+
+```bash
 oaiso claude
 ```
 
@@ -174,9 +193,16 @@ oaiso claude
 
 - 以下はCodex認証を準備した場合の例。`oaiso run` の既定を変更済みなら、そのエージェントが起動。
 
+**認証済みシェル**
+
 ```bash
-oaiso run
-oaiso run -- ls -la
+oaiso run --agent shell
+```
+
+**単発コマンド**
+
+```bash
+oaiso run --agent shell -- ls -la
 ```
 
 | 起動方法 | 動作 |

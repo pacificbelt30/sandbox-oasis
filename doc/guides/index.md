@@ -2,9 +2,20 @@
 
 **日本語** | [English](../en/guides/index.md)
 
-- 前提：[インストール](../installation.md)と[初回起動](../getting-started.md)を完了。
+- 前提：[インストール](../installation.md)を完了し、`oaiso runtime-check`で実行ホストを確認。
 - 以下から、行いたい操作だけを選択。
 - v0.0.3以降を初めて使う場合：[導入から初回起動](first-run.md)。
+
+## サンドボックスとして使う
+
+利用可能：**未リリース（main）**。AI認証を準備せず、開発・テスト用のKata VMを使います。
+
+| やりたいこと | ガイド |
+|---|---|
+| VMを作成し、シェルへ接続する | [準備と作成](sandbox-ui.md#前提と起動) |
+| ファイルを閲覧・転送する | [workspaceのファイル操作](sandbox-ui.md#ファイルを確認転送する) |
+| Webアプリを確認する | [認証付きlocalhostプレビュー](sandbox-ui.md#webアプリを確認する) |
+| キーを覚えずに操作する | [TUIの操作メニュー](../commands/ui.md#キーを覚えずに操作する) |
 
 ## エージェントを使う
 
@@ -15,7 +26,6 @@
 | 一覧・ログ・停止・再起動を使う | [ワーカーの基本操作](../operations.md) |
 | TUIで管理する | [TUI](../commands/ui.md) |
 | 依頼を管理し、結果を選んで採用する | [タスクと結果レビュー](tasks.md) |
-| AI認証なしでVM作成・ファイル転送・Web確認 | [TUIでサンドボックスを使う](sandbox-ui.md) |
 
 ## 作業環境を用意する
 

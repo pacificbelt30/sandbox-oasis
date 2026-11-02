@@ -1,5 +1,5 @@
 site_name: 御AgentISOlation (Oaiso)
-site_description: 御AgentISOlation（Oaiso）— AIエージェントの隔離実行基盤。コマンドは oaiso。
+site_description: 御AgentISOlation（Oaiso）— 開発・テスト・AIエージェントの隔離実行基盤。コマンドは oaiso。
 site_url: https://pacificbelt30.github.io/sandbox-oasis/
 repo_name: pacificbelt30/sandbox-oasis
 repo_url: https://github.com/pacificbelt30/sandbox-oasis
@@ -46,13 +46,13 @@ nav:
       - リリース情報: release-notes.md
   - 利用ガイド:
       - 概要: guides/index.md
-      - 導入から初回起動: guides/first-run.md
+      - サンドボックスの作成・ファイル・Web: guides/sandbox-ui.md
+      - AIエージェントの初回起動: guides/first-run.md
       - エージェント:
           - 起動方法と対応状況: guides/agents.md
           - ホスト管理の既定値: guides/agent-policies.md
           - Codexの状態保存: guides/agent-state.md
           - Claude Code: claude-code.md
-      - サンドボックスの作成・ファイル・Web: guides/sandbox-ui.md
       - タスクと結果レビュー: guides/tasks.md
       - ファイル共有とworktree: workspace.md
       - 実行ごとの利用上限: guides/usage-limits.md
@@ -136,14 +136,14 @@ nav:
           - Quick start: en/getting-started.md
       - Guides:
           - Overview: en/guides/index.md
-          - Installation to first run: en/guides/first-run.md
+          - Sandbox creation, files and web: en/guides/sandbox-ui.md
+          - AI agent first startup: en/guides/first-run.md
           - Agents:
               - Launch methods and support: en/guides/agents.md
               - Host-managed defaults: en/guides/agent-policies.md
               - Tasks and result review: en/guides/tasks.md
               - Codex state storage: en/guides/agent-state.md
               - Claude Code: en/claude-code.md
-          - Sandbox creation, files and web: en/guides/sandbox-ui.md
           - Per-execution usage limits: en/guides/usage-limits.md
           - Connection, bandwidth, FD and I/O limits: en/guides/resource-limits.md
           - Save diagnostics: en/guides/observability.md

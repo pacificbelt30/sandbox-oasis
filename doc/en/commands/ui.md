@@ -12,6 +12,25 @@ Launches a terminal UI for real-time monitoring and management of all workers.
 
 ---
 
+## Layout
+
+**Example narrow-screen layout for unreleased main. Values are illustrative, not a captured screen.**
+
+```text
+┌─────────────────────────────────────────────────────────────────────┐
+│ Oaiso  1 running / 2 total  2 shown  sort=name                       │
+│ Filter:                                                            │
+│ NAME                   STATUS          UPTIME                      │
+│ sandbox-a              running         2m                          │
+│ sandbox-b              exited          -                           │
+│                                                                    │
+│ [Actions F2]  N New  F Files  U Preview  I Info  / Filter            │
+│               Enter Logs  C Connect  ? Help  Q Quit                │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+At 110 columns or wider, the detail pane and additional columns are also shown. Press `I` for full details on a narrow screen.
+
 ## Key Bindings
 
 The `C`, `X`, `/`, `O`, and `V` instance actions are available in v0.0.6 and later.
