@@ -21,6 +21,10 @@ func bindUsageFlags(command *cobra.Command) {
 }
 
 func applyUsageRunDefaults(command *cobra.Command) error {
+	if noAIEnabled(command) {
+		runOpts.TokenUsagePolicy = nil
+		return nil
+	}
 	for _, setting := range []struct {
 		flag, key string
 		target    *int64

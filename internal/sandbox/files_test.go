@@ -79,3 +79,42 @@ func TestGuestFileProgramRejectsSymlinksAndWritesAtomically(t *testing.T) {
 type zeroFileReader struct{}
 
 func (zeroFileReader) Read(p []byte) (int, error) { clear(p); return len(p), nil }
+
+func TestGuestFileExclusiveCreateAndEntryTypes(t *testing.T) {
+	python, err := exec.LookPath("python3")
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := t.TempDir()
+	program := strings.Replace(fileProgram, "os.open('/workspace',", "os.open(sys.argv[3],", 1)
+	run := func(op, name, input string) ([]byte, error) {
+		c := exec.CommandContext(t.Context(), python, "-I", "-c", program, op, name, root)
+		c.Stdin = strings.NewReader(input)
+		return c.CombinedOutput()
+	}
+	if b, e := run("create", "new.txt", "original"); e != nil {
+		t.Fatalf("create: %v %s", e, b)
+	}
+	if _, e := run("create", "new.txt", "replacement"); e == nil {
+		t.Fatal("exclusive create replaced a file")
+	}
+	if b, _ := os.ReadFile(filepath.Join(root, "new.txt")); string(b) != "original" {
+		t.Fatal("existing content lost")
+	}
+	if e := os.Symlink("new.txt", filepath.Join(root, "link")); e != nil {
+		t.Fatal(e)
+	}
+	if _, e := run("create", "link", "replacement"); e == nil {
+		t.Fatal("symlink replaced")
+	}
+	b, e := run("entries", ".", "")
+	if e != nil || !strings.Contains(string(b), `"kind": "symlink"`) || !strings.Contains(string(b), `"kind": "file"`) {
+		t.Fatalf("metadata: %s %v", b, e)
+	}
+	entries, _ := os.ReadDir(root)
+	for _, e := range entries {
+		if strings.HasPrefix(e.Name(), ".cxd-upload-") {
+			t.Fatal("failed create left a temporary file")
+		}
+	}
+}

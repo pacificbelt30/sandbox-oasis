@@ -415,3 +415,17 @@ oaiso run --template mytool
 ## Non-interactive tasks
 
 Unreleased (main): use `--headless` and `--task-file` for a single batch task, preserving approval defaults. See [tasks and result review](../guides/tasks.md).
+
+## Sandbox without AI credentials
+
+Unreleased (main): `--no-ai` skips auth-proxy and AI credential preparation. Requires `--agent shell`; cannot combine with AI tasks or explicit AI usage budgets. Agent state is disabled unless explicitly configured. Existing host policy governs general egress.
+
+On a prepared node, run as your normal user from the project directory to share:
+
+```bash
+oaiso run --agent shell --no-ai --no-internet
+```
+
+Exiting the shell follows normal worker cleanup. See the [sandbox guide](../guides/sandbox-ui.md) for TUI creation and transfers.
+
+Unreleased (main): `--headless --task-file -` reads a UTF-8 task of at most 32 KiB from stdin, allowing command text to stay out of host process arguments.

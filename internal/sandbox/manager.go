@@ -1315,6 +1315,15 @@ func (m *Manager) buildEnv(name string, opts RunOptions, installScript string) (
 		}
 	}
 
+	if m.proxy == nil && !opts.NoInternet && m.httpProxyURL != "" {
+		egress, err := kataProxyEndpoint(m.httpProxyURL, opts.proxyHosts)
+		if err != nil {
+			return nil, err
+		}
+		excluded := strings.Join(dedupeNonEmpty(proxyEndpointHost(egress), "localhost", "127.0.0.1"), ",")
+		env = append(env, "HTTP_PROXY="+egress, "HTTPS_PROXY="+egress, "http_proxy="+egress, "https_proxy="+egress, "NO_PROXY="+excluded, "no_proxy="+excluded)
+	}
+
 	if opts.WatchPolling {
 		env = append(env, "CHOKIDAR_USEPOLLING=true", "CHOKIDAR_INTERVAL=1000", "WATCHPACK_POLLING=1000")
 	}

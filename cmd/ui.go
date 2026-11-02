@@ -3,6 +3,8 @@ package cmd
 import (
 	"fmt"
 	"github.com/pacificbelt30/codex-dock/internal/proxysettings"
+	"github.com/pacificbelt30/codex-dock/internal/sandboxux"
+	"github.com/pacificbelt30/codex-dock/internal/taskboard"
 	"github.com/pacificbelt30/codex-dock/internal/ui"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -25,7 +27,12 @@ var uiCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		return ui.RunWithTaskOptions(managementConfig(), path, store.Path, viper.GetString("run.agent_policy"), tasks)
+		runtime, ok := tasks.Runtime.(*taskboard.CLIRuntime)
+		if !ok {
+			return fmt.Errorf("CLI launch configuration unavailable")
+		}
+		launcher := &sandboxux.CLILauncher{Executable: runtime.Executable, GlobalArgs: runtime.GlobalArgs, PassphraseFD: runtime.PassphraseFD, Config: managementConfig()}
+		return ui.RunWithSandboxOptions(managementConfig(), path, store.Path, viper.GetString("run.agent_policy"), tasks, launcher)
 	},
 }
 

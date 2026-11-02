@@ -16,7 +16,7 @@ const fileProgram = `
 import os,sys,json,tempfile
 op,rel=sys.argv[1:3]
 parts=rel.split('/')
-if rel.startswith('/') or (any(p in ('','.', '..') for p in parts) and not (op=='list' and rel=='.')):
+if rel.startswith('/') or (any(p in ('','.', '..') for p in parts) and not (op in ('list','entries') and rel=='.')):
     raise SystemExit('path must be relative to /workspace without dot components')
 fd=os.open('/workspace',os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
 for part in parts[:-1]:
@@ -36,7 +36,7 @@ if op=='read':
             total+=len(data)
             if total>67108864:raise ValueError('file exceeds 64 MiB')
             sys.stdout.buffer.write(data)
-elif op=='write':
+elif op in ('write','create'):
     import secrets
     temp='.cxd-upload-'+secrets.token_hex(16)
     f=os.open(temp,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600,dir_fd=fd)
@@ -56,19 +56,27 @@ elif op=='write':
             mode=os.stat(name,dir_fd=fd,follow_symlinks=False).st_mode
             if not stat.S_ISREG(mode):raise ValueError('regular destinations only')
         except FileNotFoundError:pass
-        os.rename(temp,name,src_dir_fd=fd,dst_dir_fd=fd)
+        if op=='create':
+            os.link(temp,name,src_dir_fd=fd,dst_dir_fd=fd,follow_symlinks=False)
+        else:
+            os.rename(temp,name,src_dir_fd=fd,dst_dir_fd=fd)
         os.fsync(fd)
     finally:
         try:os.unlink(temp,dir_fd=fd)
         except FileNotFoundError:pass
-elif op=='list':
+elif op in ('list','entries'):
     d=os.open(name,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=fd)
     names=[]
     with os.scandir(d) as entries:
         for entry in entries:
-            names.append(entry.name)
+            if op=='entries':
+                import stat
+                s=entry.stat(follow_symlinks=False)
+                kind='directory' if stat.S_ISDIR(s.st_mode) else 'file' if stat.S_ISREG(s.st_mode) else 'symlink' if stat.S_ISLNK(s.st_mode) else 'other'
+                names.append(dict(name=entry.name,kind=kind,size=s.st_size))
+            else:names.append(entry.name)
             if len(names)>10000:raise SystemExit('directory exceeds 10000 entries')
-    print(json.dumps(sorted(names)))
+    print(json.dumps(sorted(names,key=lambda x:x['name'] if isinstance(x,dict) else x)))
 else:raise SystemExit('unknown operation')
 `
 
@@ -78,11 +86,11 @@ func (m *Manager) fileOperation(ctx context.Context, id, op, path string, in io.
 	}
 	var stderr bytes.Buffer
 	limit := MaxFileBytes
-	if op == "list" {
+	if op == "list" || op == "entries" {
 		// 10,000 names, including JSON escaping, fit within this bound.
 		limit = 16 << 20
 	}
-	if op == "write" {
+	if op == "write" || op == "create" {
 		limit = 0
 		if in != nil {
 			// One extra byte makes the guest's atomic upload reject overflow.
@@ -152,4 +160,14 @@ func (m *Manager) Commit(ctx context.Context, id, message string) error {
 		return fmt.Errorf("git commit exited %d (stage desired files and configure guest Git identity first)", code)
 	}
 	return nil
+}
+
+// CreateFile atomically publishes a new guest file without replacing any entry.
+func (m *Manager) CreateFile(ctx context.Context, id, path string, in io.Reader) error {
+	return m.fileOperation(ctx, id, "create", path, in, nil)
+}
+
+// ListFileEntries reports guest metadata without following symbolic links.
+func (m *Manager) ListFileEntries(ctx context.Context, id, path string, out io.Writer) error {
+	return m.fileOperation(ctx, id, "entries", path, nil, out)
 }

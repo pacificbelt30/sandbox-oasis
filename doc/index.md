@@ -38,6 +38,7 @@
 
 | 目的 | ページ |
 |---|---|
+| AI認証なしでVM作成・ファイル転送・Web確認 | [サンドボックスTUI](guides/sandbox-ui.md)（未リリース・main） |
 | Codex／Claude Codeを使う | [エージェント](guides/agents.md)・[Claude Code](claude-code.md) |
 | ホストと製品の認証を分ける | [認証方式とプロファイル](guides/authentication.md) |
 | ファイル共有・所有者・権限を確認する | [workspace](workspace.md) |

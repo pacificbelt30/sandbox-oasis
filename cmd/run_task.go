@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"strings"
 	"unicode/utf8"
 
@@ -14,7 +15,13 @@ func applyHeadlessTask(cmd *cobra.Command) error {
 		if cmd.Flags().Changed("task") {
 			return fmt.Errorf("--task-file and --task are mutually exclusive")
 		}
-		data, err := privatefile.Read(runTaskFile)
+		var data []byte
+		var err error
+		if runTaskFile == "-" {
+			data, err = io.ReadAll(io.LimitReader(cmd.InOrStdin(), 32769))
+		} else {
+			data, err = privatefile.Read(runTaskFile)
+		}
 		if err != nil {
 			return err
 		}

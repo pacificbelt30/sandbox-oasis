@@ -14,9 +14,13 @@ import (
 // workerEgressSpec creates an immutable policy-specific egress proxy. A worker
 // network connects to exactly this instance rather than the unrestricted one.
 func workerEgressSpec(cmd *cobra.Command, domains []string) (proxyRunArgs, error) {
+	return workerEgressSpecForMode(cmd, domains, false)
+}
+
+func workerEgressSpecForMode(cmd *cobra.Command, domains []string, allowHostPolicy bool) (proxyRunArgs, error) {
 	applyForwardPolicyDefaults(cmd)
 	host := forwardPolicyRules()
-	if len(domains) == 0 && !host.DefaultDeny {
+	if len(domains) == 0 && !host.DefaultDeny && !allowHostPolicy {
 		return proxyRunArgs{}, fmt.Errorf("empty worker egress allowlist requires default-deny mode")
 	}
 	rules, _, err := workeregress.ResolvePreset(host, "", domains)
@@ -37,7 +41,7 @@ func workerEgressSpec(cmd *cobra.Command, domains []string) (proxyRunArgs, error
 
 func ensureWorkerEgressProxy(cmd *cobra.Command, domains []string) (string, error) {
 	ctx := cmd.Context()
-	spec, err := workerEgressSpec(cmd, domains)
+	spec, err := workerEgressSpecForMode(cmd, domains, noAIEnabled(cmd))
 	if err != nil {
 		return "", err
 	}

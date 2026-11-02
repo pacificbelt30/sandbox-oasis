@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/pacificbelt30/codex-dock/internal/authproxy"
+	"github.com/pacificbelt30/codex-dock/internal/networkpolicy"
 	"github.com/spf13/viper"
 )
 
@@ -35,5 +37,25 @@ func TestWorkerEgressProxyUsesPolicySpecificIdentity(t *testing.T) {
 	}
 	if _, err := workerEgressSpec(runCmd, []string{"bad domain"}); err == nil {
 		t.Fatal("invalid domain accepted")
+	}
+}
+
+func TestNoAIEgressRetainsHostPolicyWithoutCredentials(t *testing.T) {
+	oldRules, oldAllow := proxyForwardRules, proxyForwardAllow
+	oldDeny := viper.Get("proxy.forward_default_deny")
+	viper.Set("proxy.forward_default_deny", false)
+	t.Cleanup(func() { viper.Set("proxy.forward_default_deny", oldDeny) })
+	t.Cleanup(func() { proxyForwardRules, proxyForwardAllow = oldRules, oldAllow })
+	proxyForwardRules = networkpolicy.Rules{DenyDomains: []string{"blocked.example"}}
+	proxyForwardAllow = nil
+	if _, err := workerEgressSpec(runCmd, nil); err == nil {
+		t.Fatal("ordinary worker unexpectedly accepted an empty grant")
+	}
+	spec, err := workerEgressSpecForMode(runCmd, nil, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if spec.role != authproxy.RoleEgress || spec.mountCreds || spec.adminPort != 0 || !spec.blockPrivate || len(spec.forwardPolicy.DenyDomains) != 1 || spec.forwardPolicy.DefaultDeny {
+		t.Fatalf("no-AI egress changed host policy or gained credentials: %+v", spec)
 	}
 }

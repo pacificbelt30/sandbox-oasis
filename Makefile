@@ -140,7 +140,7 @@ contracts-check:
 
 ## kata-e2e: run real Kata acceptance on a configured execution host (no prerequisite skips)
 kata-e2e: build
-	CODEX_DOCK_KATA_E2E=1 CODEX_DOCK_KATA_POLICY_E2E=1 CODEX_DOCK_KATA_TEST_BINARY="$(CURDIR)/$(BINARY)" go test $(LDFLAGS) ./internal/sandbox -run '^TestKata(Acceptance|AuthenticationSession|EncryptedProfile|KeyringProfile|WorkspaceSharing|PolicyFeatures|PrimaryTerminal|TaskBoard|GoAPI)$$' -count=1 -v -timeout=25m
+	CODEX_DOCK_KATA_E2E=1 CODEX_DOCK_KATA_POLICY_E2E=1 CODEX_DOCK_KATA_TEST_BINARY="$(CURDIR)/$(BINARY)" go test $(LDFLAGS) ./internal/sandbox -run '^TestKata(Acceptance|AuthenticationSession|EncryptedProfile|KeyringProfile|WorkspaceSharing|PolicyFeatures|PrimaryTerminal|SandboxDesktop|TaskBoard|GoAPI)$$' -count=1 -v -timeout=25m
 
 ## kata-api-e2e: public Go API failure/recovery acceptance with synthetic upstreams
 kata-api-e2e: build
@@ -187,3 +187,4 @@ security-fuzz:
 	go test ./internal/authproxy -run '^$$' -fuzz '^FuzzBrokerURLScope$$' -fuzztime=5s -parallel=2
 	go test ./internal/networkpolicy -run '^$$' -fuzz '^FuzzDestinationCannotBypassPrivateDeny$$' -fuzztime=5s -parallel=2
 	go test ./internal/taskboard -run '^$$' -fuzz '^FuzzReviewSelection$$' -fuzztime=5s -parallel=2
+	go test ./internal/sandboxux -run '^$$' -fuzz '^FuzzGuestPath$$' -fuzztime=5s -parallel=2

@@ -98,8 +98,9 @@ func TestLiveEgressClosesHTTPAndCONNECTPersistsAndRejectsStaleUpdates(t *testing
 	if _, err = io.ReadFull(stream.Body, buf); err != nil {
 		t.Fatal(err)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	// Each control call has its own client timeout. A shared five-second
+	// deadline expires across unrelated steps on busy race-test hosts.
+	ctx := t.Context()
 	state, err := egresscontrol.Call(ctx, dir, nil)
 	if err != nil || state.Generation != 1 {
 		t.Fatal(state, err)
@@ -140,7 +141,7 @@ func TestLiveEgressClosesHTTPAndCONNECTPersistsAndRejectsStaleUpdates(t *testing
 		}
 	}
 	if successes != 1 {
-		t.Fatal("concurrent generation updates both applied", successes)
+		t.Fatal("expected exactly one concurrent generation update to apply", successes)
 	}
 	p.Stop()
 	restarted, err := NewProxy(cfg)

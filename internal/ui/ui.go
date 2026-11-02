@@ -11,6 +11,7 @@ import (
 	"github.com/pacificbelt30/codex-dock/internal/engine"
 	"github.com/pacificbelt30/codex-dock/internal/instanceux"
 	"github.com/pacificbelt30/codex-dock/internal/policyevents"
+	"github.com/pacificbelt30/codex-dock/internal/sandboxux"
 	"github.com/pacificbelt30/codex-dock/internal/taskboard"
 	"github.com/pacificbelt30/codex-dock/internal/workeregress"
 
@@ -36,6 +37,10 @@ func RunWithPolicyOptions(cfg sandbox.ManagerConfig, configPath, policyPath, pol
 }
 
 func RunWithTaskOptions(cfg sandbox.ManagerConfig, configPath, policyPath, policyOverride string, tasks *taskboard.Service) error {
+	return RunWithSandboxOptions(cfg, configPath, policyPath, policyOverride, tasks, nil)
+}
+
+func RunWithSandboxOptions(cfg sandbox.ManagerConfig, configPath, policyPath, policyOverride string, tasks *taskboard.Service, launcher sandboxux.Launcher) error {
 	app := tview.NewApplication()
 
 	// Include a network manager so deleting a worker also removes its per-worker
@@ -97,6 +102,7 @@ func RunWithTaskOptions(cfg sandbox.ManagerConfig, configPath, policyPath, polic
 	model := instanceux.NewModel()
 	var workers []sandbox.Worker
 
+	var desktop *sandboxDesktop
 	refreshData := func() {
 		ws, err := mgr.List(true)
 		if err != nil {
@@ -120,6 +126,9 @@ func RunWithTaskOptions(cfg sandbox.ManagerConfig, configPath, policyPath, polic
 			model.Replace(ws)
 			workers = append(workers[:0], model.Visible...)
 			renderDashboard(views, model, time.Now())
+			if desktop != nil {
+				desktop.refreshPreviews()
+			}
 		})
 	}
 
@@ -146,6 +155,15 @@ func RunWithTaskOptions(cfg sandbox.ManagerConfig, configPath, policyPath, polic
 		app.SetFocus(table)
 		footer.SetText(dashboardHelp(false))
 	}
+	desktopCtx, cancelDesktop := context.WithCancel(context.Background())
+	desktop = newSandboxDesktop(app, desktopCtx, managerDesktop(cfg, mgr, launcher), showMain, func() { go refreshData() })
+	defer func() { cancelDesktop(); desktop.close() }()
+	openDesktop := func(action func()) {
+		pages.AddAndSwitchToPage("sandbox", desktop.pages, true)
+		action()
+		app.SetFocus(desktop.pages)
+	}
+
 	openPolicies := func() {
 		page := newAgentPolicyPage(policyPath, policyOverride, app.SetFocus, func() {
 			pages.RemovePage("agent-policies")
@@ -207,6 +225,8 @@ func RunWithTaskOptions(cfg sandbox.ManagerConfig, configPath, policyPath, polic
 		app.SetFocus(form)
 	}
 
+	filterBefore := ""
+	beginFilter := func() { filterBefore = model.Query.Raw; app.SetFocus(views.filter) }
 	views.filter.SetChangedFunc(func(text string) {
 		if err := model.SetQuery(text); err != nil {
 			footer.SetText("[red]" + tview.Escape(err.Error()) + "[-]")
@@ -214,11 +234,16 @@ func RunWithTaskOptions(cfg sandbox.ManagerConfig, configPath, policyPath, polic
 		}
 		workers = append(workers[:0], model.Visible...)
 		renderDashboard(views, model, time.Now())
+		footer.SetText(dashboardHelp(false))
 	})
 	views.filter.SetDoneFunc(func(key tcell.Key) {
 		if key == tcell.KeyEscape {
-			views.filter.SetText(model.Query.Raw)
+			views.filter.SetText(filterBefore)
 		}
+		if key == tcell.KeyEnter && views.filter.GetText() != model.Query.Raw {
+			return
+		}
+		footer.SetText(dashboardHelp(false))
 		app.SetFocus(table)
 	})
 
@@ -230,12 +255,90 @@ func RunWithTaskOptions(cfg sandbox.ManagerConfig, configPath, policyPath, polic
 		}
 	})
 
+	showActions := func() {
+		var selected *sandbox.Worker
+		if worker, ok := model.Selected(); ok {
+			selected = &worker
+		}
+		closeMenu := func() { pages.RemovePage("actions"); showMain() }
+		menu := dashboardActionMenu(selected, tasks != nil, func() string { return model.SelectedID }, func(event *tcell.EventKey) {
+			closeMenu()
+			table.InputHandler()(event, func(p tview.Primitive) { app.SetFocus(p) })
+		}, func() { closeMenu(); footer.SetText("Selection changed. Choose an instance and open Actions again.") }, closeMenu)
+		pages.AddAndSwitchToPage("actions", dashboardMenuPage(menu), true)
+		app.SetFocus(menu)
+	}
+	views.actions.SetSelectedFunc(showActions)
+	views.actions.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyF2 {
+			showActions()
+			return nil
+		}
+		if event.Key() == tcell.KeyTab || event.Key() == tcell.KeyBacktab || event.Key() == tcell.KeyEscape {
+			app.SetFocus(table)
+			return nil
+		}
+		return event
+	})
+	app.SetBeforeDrawFunc(func(screen tcell.Screen) bool {
+		width, _ := screen.Size()
+		if resizeDashboard(views, width) {
+			renderDashboard(views, model, time.Now())
+		}
+		return false
+	})
 	// Key handling
 	table.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		row, _ := table.GetSelection()
 		idx := row - 1 // header offset
+		switch event.Key() {
+		case tcell.KeyF2:
+			showActions()
+			return nil
+		case tcell.KeyTab, tcell.KeyBacktab:
+			app.SetFocus(views.actions)
+			return nil
+		case tcell.KeyEscape:
+			views.filter.SetText("")
+			footer.SetText(dashboardHelp(false))
+			return nil
+		}
+		if event.Key() == tcell.KeyRune && event.Rune() == ' ' {
+			showActions()
+			return nil
+		}
 
 		switch event.Rune() {
+		case 'n', 'N':
+			openDesktop(desktop.create)
+			return nil
+		case 'i', 'I':
+			if idx >= 0 && idx < len(workers) {
+				page := dashboardDetailPage(workers[idx], func() { pages.RemovePage("details"); showMain() })
+				pages.AddAndSwitchToPage("details", page, true)
+				app.SetFocus(page)
+			}
+			return nil
+		case 'f', 'F':
+			if idx >= 0 && idx < len(workers) {
+				worker := workers[idx]
+				if worker.Status != "running" {
+					footer.SetText("Start this sandbox with R before opening files or previews.")
+					return nil
+				}
+				openDesktop(func() { desktop.files(worker) })
+			}
+			return nil
+		case 'u', 'U':
+			if idx >= 0 && idx < len(workers) {
+				worker := workers[idx]
+				if worker.Status != "running" {
+					footer.SetText("Start this sandbox with R before opening files or previews.")
+					return nil
+				}
+				openDesktop(func() { desktop.preview(worker) })
+			}
+			return nil
 		case 't', 'T':
 			if tasks != nil {
 				page := newTaskBoardPage(app, tasks, showMain)
@@ -248,7 +351,7 @@ func RunWithTaskOptions(cfg sandbox.ManagerConfig, configPath, policyPath, polic
 			openPolicies()
 			return nil
 		case '/':
-			app.SetFocus(views.filter)
+			beginFilter()
 			return nil
 		case '?', 'h', 'H':
 			showHelp()

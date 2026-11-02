@@ -12,60 +12,93 @@ import (
 )
 
 type dashboardViews struct {
-	header *tview.TextView
-	table  *tview.Table
-	detail *tview.TextView
-	footer *tview.TextView
-	filter *tview.InputField
+	header  *tview.TextView
+	table   *tview.Table
+	detail  *tview.TextView
+	footer  *tview.TextView
+	filter  *tview.InputField
+	actions *tview.Button
+	layout  *dashboardLayout
 }
 
 func newDashboardViews() dashboardViews {
 	header := tview.NewTextView().SetDynamicColors(true).SetTextAlign(tview.AlignLeft)
 	table := tview.NewTable().SetBorders(false).SetSelectable(true, false).SetFixed(1, 0)
-	setupTableHeader(table)
+	setupTableHeader(table, false)
 	detail := tview.NewTextView().SetDynamicColors(true).SetScrollable(true).SetWrap(true)
 	detail.SetTitle(" Instance ").SetBorder(true)
 	footer := tview.NewTextView().SetDynamicColors(true)
 	footer.SetText(dashboardHelp(false))
 	filter := tview.NewInputField().SetLabel(" Filter: ").SetFieldWidth(0)
 	filter.SetPlaceholder(`name, task, or field:value; prefix ! to exclude`)
-	return dashboardViews{header: header, table: table, detail: detail, footer: footer, filter: filter}
+	return dashboardViews{header: header, table: table, detail: detail, footer: footer, filter: filter, actions: tview.NewButton("Actions F2"), layout: &dashboardLayout{}}
 }
 
-func dashboardHelp(compact bool) string {
-	if compact {
-		return "[yellow]Enter[-] logs  [yellow]C[-] connect  [yellow]/[-] filter  [yellow]?[-] help  [yellow]T[-] tasks  [yellow]Q[-] quit"
+func dashboardHelp(_ bool) string {
+	return "[yellow]N[-] New  [yellow]F[-] Files  [yellow]U[-] Preview  [yellow]I[-] Info  [yellow]/[-] Filter\n[yellow]Enter[-] Logs  [yellow]C[-] Connect  [yellow]?[-] Help  [yellow]Q[-] Quit"
+}
+
+type dashboardLayout struct {
+	body   *tview.Flex
+	narrow bool
+	width  int
+}
+
+// The instance list gets the full width on smaller terminals. Detailed fields
+// remain available in the wide layout; actions never depend on visible columns.
+func resizeDashboard(v dashboardViews, width int) bool {
+	narrow := width < 110
+	if narrow == v.layout.narrow && width == v.layout.width {
+		return false
 	}
-	return "[yellow][↑↓][-] Select  [yellow][Enter][-] Logs  [yellow][C][-] Connect  [yellow][X][-] Exec  [yellow][/][-] Filter  [yellow][O][-] Sort  [yellow][V][-] Activity  [yellow][T][-] Tasks  [yellow][G][-] Policies  [yellow][S/R/D][-] Manage  [yellow][?][-] Help  [yellow][Q][-] Quit"
+	v.layout.narrow = narrow
+	v.layout.width = width
+	v.layout.body.RemoveItem(v.detail)
+	if !narrow {
+		v.layout.body.AddItem(v.detail, 38, 0, false)
+	}
+	return true
 }
 
 func dashboardBody(views dashboardViews) *tview.Flex {
 	body := tview.NewFlex().SetDirection(tview.FlexColumn).
 		AddItem(views.table, 0, 3, true).
 		AddItem(views.detail, 38, 1, false)
+	views.layout.body = body
+	controls := tview.NewFlex().AddItem(views.actions, 14, 0, false).AddItem(views.footer, 0, 1, false)
 	return tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(views.header, 1, 0, false).
 		AddItem(views.filter, 1, 0, false).
 		AddItem(body, 0, 1, true).
-		AddItem(views.footer, 1, 0, false)
+		AddItem(controls, 2, 0, false)
 }
 
 func renderDashboard(views dashboardViews, model *instanceux.Model, now time.Time) {
 	selected := model.SelectedID
-	for row := views.table.GetRowCount() - 1; row > 0; row-- {
-		views.table.RemoveRow(row)
-	}
+	views.table.Clear()
+	setupTableHeader(views.table, views.layout.narrow)
 	for index, worker := range model.Visible {
 		uptime := "-"
 		if worker.StartedAt != nil {
 			uptime = formatDuration(now.Sub(*worker.StartedAt))
 		}
-		views.table.SetCell(index+1, 0, tview.NewTableCell(worker.Name).SetExpansion(1))
-		views.table.SetCell(index+1, 1, tview.NewTableCell(orDash(worker.Branch)).SetExpansion(1))
-		views.table.SetCell(index+1, 2, tview.NewTableCell(statusIcon(worker.Status)+worker.Status).SetExpansion(1))
-		views.table.SetCell(index+1, 3, tview.NewTableCell(uptime).SetExpansion(0))
-		views.table.SetCell(index+1, 4, tview.NewTableCell(orDash(worker.AgentPolicy)).SetExpansion(1))
-		views.table.SetCell(index+1, 5, tview.NewTableCell(truncate(interactiveTask(worker.Task), 34)).SetExpansion(2))
+		values := []string{worker.Name, orDash(worker.Branch), statusIcon(worker.Status) + worker.Status, uptime, orDash(worker.AgentPolicy), truncate(interactiveTask(worker.Task), 34)}
+		if views.layout.narrow {
+			values = []string{worker.Name, statusIcon(worker.Status) + worker.Status, uptime}
+		}
+		for col, text := range values {
+			cell := tview.NewTableCell(tview.Escape(text)).SetExpansion(1)
+			if views.layout.narrow {
+				limit := 14
+				if col == 0 {
+					limit = max(12, views.layout.width/2)
+				}
+				cell.SetMaxWidth(limit)
+			} else {
+				cell.SetMaxWidth([]int{24, 12, 14, 10, 18, 34}[col])
+			}
+			views.table.SetCell(index+1, col, cell)
+		}
 		if worker.ID == selected {
 			views.table.Select(index+1, 0)
 		}
@@ -73,7 +106,10 @@ func renderDashboard(views dashboardViews, model *instanceux.Model, now time.Tim
 	if worker, ok := model.Selected(); ok {
 		renderDetail(views.detail, worker, now)
 	} else {
-		views.detail.SetText("[gray]No matching instance[-]")
+		views.detail.SetText("[gray]No matching instance. Use / to edit the filter or Esc to clear it.[-]")
+		if len(model.All) == 0 {
+			views.detail.SetText("Create your first sandbox with N or Actions F2.\n\nAfter creation, select it and use C to connect, F for files, or U for a Web preview.")
+		}
 	}
 	running := 0
 	for _, worker := range model.All {
@@ -93,8 +129,11 @@ func renderDetail(view *tview.TextView, worker sandbox.Worker, now time.Time) {
 	view.ScrollToBeginning()
 }
 
-func setupTableHeader(table *tview.Table) {
+func setupTableHeader(table *tview.Table, compact bool) {
 	headers := []string{"NAME", "BRANCH", "STATUS", "UPTIME", "POLICY", "TASK"}
+	if compact {
+		headers = []string{"NAME", "STATUS", "UPTIME"}
+	}
 	for index, header := range headers {
 		table.SetCell(0, index, tview.NewTableCell("[::b]"+header).
 			SetSelectable(false).
@@ -105,6 +144,13 @@ func setupTableHeader(table *tview.Table) {
 func helpModal(done func()) *tview.Modal {
 	text := `Instance dashboard
 
+F2 / Space   choose an action using arrows and Enter; Esc cancels
+Tab     focus the Actions button; Tab again returns to the list
+Esc     clear the instance filter
+N       create a general sandbox (AI routes disabled by default)
+F       browse, view and transfer workspace files
+U       manage authenticated localhost Web previews
+I       inspect full instance details, including on a narrow screen
 Enter   view recent logs
 C       open a new interactive login shell; exit returns here
 X       run a command and show its output

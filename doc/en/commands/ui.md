@@ -18,6 +18,10 @@ The `C`, `X`, `/`, `O`, and `V` instance actions are available in v0.0.6 and lat
 
 | Key | Action on the worker list |
 |---|---|
+| `I` | Scrollable full instance details (unreleased, main) |
+| `F2` / `Space` | Open actions; select with arrows, then Enter or the displayed shortcut (unreleased, main) |
+| `Tab` | Focus the Actions button; Tab again returns to the list (unreleased, main) |
+| `Esc` | Clear the list filter, or restore the previous query while editing (unreleased, main) |
 | `↑` / `↓` | Select worker |
 | `Enter` | Fetch the selected worker's last 200 log lines |
 | `C` | Open a separate login shell; `exit` returns to this TUI |
@@ -25,6 +29,9 @@ The `C`, `X`, `/`, `O`, and `V` instance actions are available in v0.0.6 and lat
 | `/` | Filter text or `status:` / `branch:` / `task:` / `image:` / `policy:`; prefix `!` to exclude |
 | `O` | Cycle name, status, age, branch, and policy ordering |
 | `V` | Show lifecycle and metadata changes observed while the TUI is open |
+| `N` | [Create a sandbox](../guides/sandbox-ui.md) (unreleased, main) |
+| `F` | Browse workspace files and transfer new files (unreleased, main) |
+| `U` | Manage authenticated web previews (unreleased, main) |
 | `T` | Open [tasks and result review](../guides/tasks.md) (unreleased, main) |
 | `S` | Stop selected worker with a 10-second grace period |
 | `D` | Force-remove selected worker |
@@ -41,7 +48,7 @@ The `C`, `X`, `/`, `O`, and `V` instance actions are available in v0.0.6 and lat
 - Remove and stop-all ask for confirmation; save required artifacts first.
 - Connect creates a separate exec session instead of attaching to the primary agent. Exiting the shell leaves the agent and worker running.
 - Logs and denials are fetched on opening, not followed. For live following, use `logs --follow` or `policy events --worker WORKER --follow`.
-- Authentication uses the same global settings as the CLI; [configure the profile and admin secret](../guides/authentication.md) first.
+- When AI routes are enabled, authentication uses the same global settings as the CLI; [configure the profile and admin secret](../guides/authentication.md) first.
 
 > **Refresh interval**: Container list updates every 2 seconds.
 
@@ -85,3 +92,11 @@ Saved. Recreate the desired proxies/workers explicitly to apply the new settings
 ## Inspect rootfs capacity
 
 Available: **v0.0.7**. Details show host-observed writable rootfs bytes/inodes and limits. This excludes total image, shared workspace and private database usage. Failed queries show unavailable and suggest `oaiso runtime-check`. See [dedicated storage](../guides/storage-migration.md#inspect-usage).
+
+## Choose actions without memorizing keys
+
+Unreleased (main): click `Actions F2`, or press `F2` / `Space`, then use arrows and Enter or a displayed shortcut. Stopped instances offer Start instead of connection, files and previews. Delete retains its confirmation.
+
+- Below 110 columns, the detail pane collapses and the list prioritizes name, status and uptime. Widening restores details. Press `I` for full details at any width.
+- Esc closes the menu; Esc on the instance list clears its filter.
+- If selection changes while the menu is open, choose the target again before acting.

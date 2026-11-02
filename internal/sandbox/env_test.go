@@ -495,3 +495,29 @@ func TestWatchPollingIsOptInAndDoesNotEnableEgress(t *testing.T) {
 		}
 	}
 }
+
+func TestCredentialFreeSandboxHasOnlyPolicyEgress(t *testing.T) {
+	m := &Manager{httpProxyURL: "http://egress:18082"}
+	opts := RunOptions{Agent: AgentNone, proxyHosts: []string{"egress:10.253.2.2"}}
+	env, err := m.buildEnv("pure", opts, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	joined := strings.Join(env, "\n")
+	if !strings.Contains(joined, "HTTP_PROXY=http://10.253.2.2:18082") {
+		t.Fatal(env)
+	}
+	for _, key := range []string{"CODEX_TOKEN=", "CODEX_AUTH_PROXY_URL=", "OPENAI_API_KEY=", "ANTHROPIC_API_KEY="} {
+		if strings.Contains(joined, key) {
+			t.Fatal("AI credentials configured", key)
+		}
+	}
+	opts.NoInternet = true
+	env, err = m.buildEnv("offline", opts, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(strings.Join(env, "\n"), "HTTP_PROXY=") {
+		t.Fatal("offline sandbox received egress", env)
+	}
+}

@@ -105,7 +105,7 @@ func init() {
   claude   launch Anthropic Claude Code
   Configure the default with "oaiso default codex" or "oaiso default shell".`)
 	f.StringVarP(&runOpts.Task, "task", "t", "", "Initial task prompt for the agent")
-	f.StringVar(&runTaskFile, "task-file", "", "Owner-private UTF-8 file containing the task (maximum 32 KiB)")
+	f.StringVar(&runTaskFile, "task-file", "", "Owner-private UTF-8 task file, or - for stdin (maximum 32 KiB)")
 	f.BoolVar(&runHeadless, "headless", false, "Run a single non-interactive task using the selected agent and host policy")
 	f.StringVarP(&runOpts.ExecCmd, "exec", "e", "", `Run this command instead of an interactive shell. An explicit --agent codex/claude takes priority; the configured default agent does not apply.
   Mutually exclusive with a "-- command..." trailing on the command line (see the "run" command's usage), which is usually easier for multi-word commands since it avoids having to quote the whole thing as one string.`)
@@ -145,6 +145,7 @@ func init() {
   Format: <host-path>:<container-path>[:ro|rw]
   <container-path> must be absolute and cannot be /workspace (use --project/--read-only for that).
   Trailing ":ro" mounts it read-only; ":rw" (default) mounts it read-write.`)
+	f.Bool("no-ai", false, "Start a general sandbox without AI credentials or auth-proxy access; requires --agent shell")
 	f.BoolVar(&runOpts.NoInternet, "no-internet", false, "Disable general egress for the worker: do not set HTTP(S)_PROXY, so only the auth proxy's API routes are reachable (no git/npm/pip egress through the router)")
 	f.StringVar(&runPolicyPreset, "policy-preset", "", "Opt-in egress preset: offline, test, dependencies, api")
 	f.StringArrayVar(&runEgressAllow, "egress-allow-domain", nil, "Allow general egress to domain and subdomains; prefix = for exact match (repeatable; per-worker)")
@@ -199,8 +200,10 @@ func runWorker(cmd *cobra.Command, args []string) (result error) {
 		return err
 	}
 	stage = "agent policy"
-	if err := applyAgentPolicyDefaults(cmd); err != nil {
-		return err
+	if !noAIEnabled(cmd) {
+		if err := applyAgentPolicyDefaults(cmd); err != nil {
+			return err
+		}
 	}
 	stage = "configuration"
 	applyRunConfigDefaults(cmd)
@@ -334,6 +337,9 @@ func runWorker(cmd *cobra.Command, args []string) (result error) {
 		return err
 	}
 	runOpts.Agent = agent
+	if err := applyNoAIRun(cmd); err != nil {
+		return err
+	}
 
 	if runOpts.ExecCmd != "" && runOpts.ShellMode {
 		return fmt.Errorf("--exec and --shell are mutually exclusive (--shell bypasses entrypoint.sh entirely, so --exec would never run)")
@@ -355,33 +361,38 @@ func runWorker(cmd *cobra.Command, args []string) (result error) {
 	}
 	defer func() { _ = netMgr.Close() }()
 
-	stage = "authentication"
-	adminSecret, err := effectiveRunProxySecret()
-	if err != nil {
-		return err
-	}
-	stage = "auth proxy"
-	proxy, err := authproxy.NewRemoteProxy(proxyAdminURL, proxyContainerURL, adminSecret)
-	if err != nil {
-		// If the proxy simply isn't running and we're on a terminal with the
-		// default proxy URLs, offer to build/start it now instead of failing.
-		proxy, err = offerToStartProxy(cmd, err)
+	var proxy authproxy.Service
+	if !noAIEnabled(cmd) {
+		stage = "authentication"
+		adminSecret, err := effectiveRunProxySecret()
 		if err != nil {
-			return fmt.Errorf("connecting external auth proxy: %w", err)
+			return err
 		}
-	}
+		stage = "auth proxy"
+		remote, err := authproxy.NewRemoteProxy(proxyAdminURL, proxyContainerURL, adminSecret)
+		if err != nil {
+			// If the proxy simply isn't running and we're on a terminal with the
+			// default proxy URLs, offer to build/start it now instead of failing.
+			remote, err = offerToStartProxy(cmd, err)
+			if err != nil {
+				return fmt.Errorf("connecting external auth proxy: %w", err)
+			}
+		}
 
-	stage = "authentication"
-	proxy, err = reconcileProxyAuthState(cmd.Context(), proxy, forceRecreateProxy)
-	if err != nil {
-		return err
-	}
+		stage = "authentication"
+		remote, err = reconcileProxyAuthState(cmd.Context(), remote, forceRecreateProxy)
+		if err != nil {
+			return err
+		}
 
-	if runOpts.Agent == sandbox.AgentClaude && !proxy.IsAnthropicMode() {
-		return fmt.Errorf("--agent claude requires Anthropic credentials on the auth proxy; " +
-			"set ANTHROPIC_API_KEY / CLAUDE_CODE_OAUTH_TOKEN or run `claude auth login` (~/.claude/.credentials.json) before starting the proxy")
+		if runOpts.Agent == sandbox.AgentClaude && !remote.IsAnthropicMode() {
+			return fmt.Errorf("--agent claude requires Anthropic credentials on the auth proxy; " +
+				"set ANTHROPIC_API_KEY / CLAUDE_CODE_OAUTH_TOKEN or run `claude auth login` (~/.claude/.credentials.json) before starting the proxy")
+		}
+
+		proxy = remote
 	}
-	if (len(runEgressAllow) > 0 || configuredPolicy().DefaultDeny) && !runOpts.NoInternet {
+	if (noAIEnabled(cmd) || len(runEgressAllow) > 0 || configuredPolicy().DefaultDeny) && !runOpts.NoInternet {
 		stage = "configuration"
 		if cmd.Flags().Changed("http-proxy-url") || httpProxyURL != "http://codex-http-proxy:18082" {
 			return fmt.Errorf("--egress-allow-domain requires the managed egress proxy")
