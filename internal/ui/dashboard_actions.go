@@ -23,11 +23,12 @@ func dashboardActions(worker *sandbox.Worker, tasks bool) []dashboardAction {
 	if worker != nil {
 		switch worker.Status {
 		case "running":
-			items = append(items, runeAction("Connect to shell", "C · exit the shell to return here", 'c', true), runeAction("Browse workspace files", "F · view, upload or download files", 'f', true), runeAction("Web previews", "U · authenticated localhost URLs", 'u', true), runeAction("Run a command", "X · execute in the selected sandbox", 'x', true))
+			items = append(items, runeAction("Connect to shell", "C · exit the shell to return here", 'c', true), runeAction("Browse workspace files", "F · view, upload or download files", 'f', true), runeAction("Workspace changes and export", "W · guest Git diff and selected artifacts", 'w', true), runeAction("Web previews", "U · authenticated localhost URLs", 'u', true), runeAction("Run a command", "X · execute in the selected sandbox", 'x', true))
 		case "exited", "stopped", "created":
 			items = append(items, runeAction("Start sandbox", "R · start the selected sandbox", 'r', true))
 		}
 		items = append(items, runeAction("Instance details", "I · full name, image, policy and storage", 'i', true), dashboardAction{"View logs", "Enter · recent output", tcell.NewEventKey(tcell.KeyEnter, 0, 0), true})
+		items = append(items, runeAction("Lifetime and storage", "L · deadlines, host quota, scoped supervision", 'l', true))
 		if worker.Status == "running" {
 			items = append(items, runeAction("Stop sandbox", "S · preserve it for a later restart", 's', true))
 		}

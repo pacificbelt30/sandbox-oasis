@@ -168,6 +168,10 @@ forward_allow_ports = [80, 443]
 | `default_shell_type` | Detect from host shell | bash/zsh |
 | `verbose`, `debug` | `false` | CLI logging |
 
+### Sandbox environments saved by the TUI
+
+Available: **unreleased (main)**. Named environments use a separate `~/.config/codex-dock/sandbox-environments/config.json`, under `XDG_CONFIG_HOME` when set. Loading never launches a VM or rewrites global/project configuration. See [saved fields, permissions and review](guides/sandbox-ui.md#save-reusable-environments).
+
 ### `auto_build`
 
 - Compare the template Dockerfile mtime to the image creation timestamp.

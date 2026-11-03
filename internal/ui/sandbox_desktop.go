@@ -28,11 +28,17 @@ type desktopPreview struct {
 	Port   int
 }
 type desktopBackend struct {
-	Launcher sandboxux.Launcher
-	Files    sandboxux.Files
-	Profiles func(context.Context) ([]kataguard.ResourceProfile, error)
-	Storage  func(context.Context) (storageinfo.Status, error)
-	Preview  func(context.Context, string, int, time.Duration) (desktopPreview, error)
+	Launcher  sandboxux.Launcher
+	Files     sandboxux.Files
+	Profiles  func(context.Context) ([]kataguard.ResourceProfile, error)
+	Storage   func(context.Context) (storageinfo.Status, error)
+	Preview   func(context.Context, string, int, time.Duration) (desktopPreview, error)
+	Lifecycle func(context.Context, string) (sandbox.LifecycleStatus, error)
+	Usage     func(context.Context, string) (storageinfo.Usage, error)
+	Reap      func(context.Context, time.Time, bool, []string) ([]sandbox.ReapAction, error)
+	ApplyDue  func(context.Context, time.Time, []sandbox.ReapAction) ([]sandbox.ReapAction, error)
+	Artifacts sandboxux.ArtifactBackend
+	Changes   func(context.Context, string) (string, error)
 }
 type sandboxDesktop struct {
 	uploadMu       sync.Mutex
@@ -51,6 +57,8 @@ type sandboxDesktop struct {
 	entries        []sandboxux.FileEntry
 	fileTable      *tview.Table
 	fileStatus     *tview.TextView
+	environments   *sandboxux.EnvironmentStore
+	supervisor     sandboxux.Supervisor
 }
 
 func managerDesktop(cfg sandbox.ManagerConfig, m *sandbox.Manager, launcher sandboxux.Launcher) desktopBackend {
@@ -58,7 +66,7 @@ func managerDesktop(cfg sandbox.ManagerConfig, m *sandbox.Manager, launcher sand
 	if socket == "" {
 		socket = engine.Socket()
 	}
-	return desktopBackend{Launcher: launcher, Files: sandboxux.Files{Guest: m}, Profiles: m.ResourceProfiles, Storage: func(ctx context.Context) (storageinfo.Status, error) { return engine.StorageStatus(ctx, socket) }, Preview: func(ctx context.Context, id string, port int, lifetime time.Duration) (desktopPreview, error) {
+	return desktopBackend{Launcher: launcher, Files: sandboxux.Files{Guest: m}, Lifecycle: m.InspectLifecycle, Usage: m.RootFSUsage, Reap: m.ReapWorkers, ApplyDue: m.ApplyReapActions, Artifacts: m, Changes: func(ctx context.Context, id string) (string, error) { return sandboxux.WorkspaceChanges(ctx, m, id) }, Profiles: m.ResourceProfiles, Storage: func(ctx context.Context) (storageinfo.Status, error) { return engine.StorageStatus(ctx, socket) }, Preview: func(ctx context.Context, id string, port int, lifetime time.Duration) (desktopPreview, error) {
 		p, e := m.Preview(ctx, id, port, lifetime)
 		if e != nil {
 			return desktopPreview{}, e
@@ -68,6 +76,10 @@ func managerDesktop(cfg sandbox.ManagerConfig, m *sandbox.Manager, launcher sand
 }
 func newSandboxDesktop(app *tview.Application, ctx context.Context, backend desktopBackend, back, changed func()) *sandboxDesktop {
 	d := &sandboxDesktop{app: app, pages: tview.NewPages(), ctx: ctx, backend: backend, changed: changed, uploads: map[*sandboxux.Upload]bool{}}
+	d.environments, _ = sandboxux.DefaultEnvironmentStore()
+	if backend.Reap != nil {
+		go d.supervisor.Run(ctx, backend.Reap)
+	}
 	d.back = func() {
 		if !d.busy {
 			back()
@@ -184,6 +196,15 @@ func readMode(index int) *bool {
 	v := index == 1
 	return &v
 }
+func readModeIndex(v *bool) int {
+	if v == nil {
+		return 0
+	}
+	if *v {
+		return 1
+	}
+	return 2
+}
 func (d *sandboxDesktop) create() {
 	if d.backend.Launcher == nil {
 		d.message("Sandbox creation is unavailable for this dashboard connection.")
@@ -210,27 +231,53 @@ func (d *sandboxDesktop) create() {
 func (d *sandboxDesktop) createForm(profiles []kataguard.ResourceProfile, storage storageinfo.Status, storageErr error) {
 	project, _ := os.Getwd()
 	spec := sandboxux.LaunchSpec{Project: project, Network: "offline"}
-	domains, mounts := "", ""
-	form := tview.NewForm()
-	form.AddInputField("Name (optional)", "", 42, nil, func(v string) { spec.Name = v }).AddInputField("Project /workspace", project, 56, nil, func(v string) { spec.Project = v }).AddInputField("Image (blank: defaults)", "", 48, nil, func(v string) { spec.Image = v }).AddTextArea("Command (blank: keep alive)", "", 56, 3, 32768, func(v string) { spec.Command = v })
-	labels := []string{"Host/project default"}
-	for _, p := range profiles {
-		labels = append(labels, fmt.Sprintf("%s · %d CPU / %.0f MiB guest / %.0f MiB host", p.Name, p.CPUCores, float64(p.GuestMemoryBytes)/(1<<20), float64(p.HostMemoryBytes)/(1<<20)))
+	d.createFormSpec(profiles, storage, storageErr, spec)
+}
+func (d *sandboxDesktop) createFormSpec(profiles []kataguard.ResourceProfile, storage storageinfo.Status, storageErr error, spec sandboxux.LaunchSpec) {
+	domains, mounts := strings.Join(spec.Domains, ","), strings.Join(spec.Mounts, "\n")
+	maxLifetime, idleTimeout, retention := "", "", ""
+	if spec.LifecycleSet || spec.Lifecycle.MaxLifetime > 0 || spec.Lifecycle.IdleTimeout > 0 || spec.Lifecycle.Retention > 0 {
+		maxLifetime, idleTimeout, retention = spec.Lifecycle.MaxLifetime.String(), spec.Lifecycle.IdleTimeout.String(), spec.Lifecycle.Retention.String()
 	}
-	form.AddDropDown("CPU / memory", labels, 0, func(_ string, i int) {
+	supervise := false
+	form := tview.NewForm()
+	form.AddInputField("Name (optional)", spec.Name, 42, nil, func(v string) { spec.Name = v }).AddInputField("Project /workspace", spec.Project, 56, nil, func(v string) { spec.Project = v; spec.CloneRevision = "" }).AddInputField("Image (blank: defaults)", spec.Image, 48, nil, func(v string) { spec.Image = v }).AddTextArea("Command (blank: keep alive)", spec.Command, 56, 3, 32768, func(v string) { spec.Command = v })
+	labels := []string{"Host/project default"}
+	profileIndex := 0
+	for i, p := range profiles {
+		labels = append(labels, fmt.Sprintf("%s · %d CPU / %.0f MiB guest / %.0f MiB host", p.Name, p.CPUCores, float64(p.GuestMemoryBytes)/(1<<20), float64(p.HostMemoryBytes)/(1<<20)))
+		if p.Name == spec.Profile {
+			profileIndex = i + 1
+		}
+	}
+	if spec.Profile != "" && profileIndex == 0 {
+		d.message("Saved resource profile is not available on this node: " + spec.Profile)
+		return
+	}
+	form.AddDropDown("CPU / memory", labels, profileIndex, func(_ string, i int) {
 		spec.Profile = ""
 		if i > 0 {
 			spec.Profile = profiles[i-1].Name
 		}
 	})
-	form.AddDropDown("Project access", []string{"Host/project default", "Read-only", "Read-write"}, 0, func(_ string, i int) { spec.ReadOnly = readMode(i) }).AddDropDown("Image rootfs", []string{"Host/project default", "Read-only", "Writable with node quota"}, 0, func(_ string, i int) { spec.ReadOnlyRoot = readMode(i) })
-	form.AddDropDown("Internet access", []string{"Offline", "Host policy", "Dependency registries", "Explicit domains"}, 0, func(_ string, i int) { spec.Network = []string{"offline", "host", "dependencies", "allowlist"}[i] }).AddInputField("Allowed domains (comma)", "", 50, nil, func(v string) { domains = v }).AddCheckbox("Enable AI services (optional)", false, func(v bool) { spec.AI = v }).AddTextArea("Extra mounts (one/line)", "", 56, 2, 8192, func(v string) { mounts = v })
+	form.AddDropDown("Project access", []string{"Host/project default", "Read-only", "Read-write"}, readModeIndex(spec.ReadOnly), func(_ string, i int) { spec.ReadOnly = readMode(i) }).AddDropDown("Image rootfs", []string{"Host/project default", "Read-only", "Writable with node quota"}, readModeIndex(spec.ReadOnlyRoot), func(_ string, i int) { spec.ReadOnlyRoot = readMode(i) })
+	networkIndex := map[string]int{"offline": 0, "host": 1, "dependencies": 2, "allowlist": 3}[spec.Network]
+	form.AddDropDown("Internet access", []string{"Offline", "Host policy", "Dependency registries", "Explicit domains"}, networkIndex, func(_ string, i int) { spec.Network = []string{"offline", "host", "dependencies", "allowlist"}[i] }).AddInputField("Allowed domains (comma)", domains, 50, nil, func(v string) { domains = v }).AddCheckbox("Enable AI services (optional)", spec.AI, func(v bool) { spec.AI = v }).AddTextArea("Extra mounts (one/line)", mounts, 56, 2, 8192, func(v string) { mounts = v })
+	copyIndex := 0
+	if spec.Workspace == "copy" {
+		copyIndex = 1
+	}
+	form.AddDropDown("Workspace source", []string{"Share host project", "Independent Git copy"}, copyIndex, func(_ string, i int) { spec.Workspace = []string{"shared", "copy"}[i]; spec.CloneRevision = "" })
+	form.AddInputField("New copy directory", spec.CloneDir, 56, nil, func(v string) { spec.CloneDir = v; spec.CloneRevision = "" })
+	form.AddInputField("Maximum lifetime", maxLifetime, 24, nil, func(v string) { maxLifetime = v }).AddInputField("Idle timeout", idleTimeout, 24, nil, func(v string) { idleTimeout = v }).AddInputField("Retention after exit", retention, 24, nil, func(v string) { retention = v })
+	form.AddCheckbox("Protect running main from idle", spec.Lifecycle.ProtectMain, func(v bool) { spec.Lifecycle.ProtectMain = v }).AddCheckbox("Supervise this VM while TUI is open", false, func(v bool) { supervise = v })
+	form.AddTextView("Lifetime help", "Blank: host/project defaults. Set all three when overriding (e.g. 2h, 0s, 24h). Idle tracks management execution, not CPU. After TUI exit, use oaiso reap --watch for continued enforcement.", 56, 4, false, false)
 	storageText := fmt.Sprintf("Node rootfs ceiling: %.1f GiB / %d inodes. Shared host folders use host storage.", float64(storage.WorkerLimitBytes)/(1<<30), storage.WorkerLimitInodes)
 	if storageErr != nil {
 		storageText = "Storage diagnostics: " + storageErr.Error() + ". The launch gate validates the selected rootfs mode."
 	}
 	form.AddTextView("Storage", storageText, 56, 3, false, false)
-	form.AddButton("Review", func() {
+	collect := func() error {
 		spec.Domains = nil
 		for _, v := range strings.Split(domains, ",") {
 			if v = strings.TrimSpace(v); v != "" {
@@ -243,26 +290,93 @@ func (d *sandboxDesktop) createForm(profiles []kataguard.ResourceProfile, storag
 				spec.Mounts = append(spec.Mounts, v)
 			}
 		}
+		if spec.Workspace != "copy" {
+			spec.CloneDir = ""
+			spec.CloneRevision = ""
+		}
+		var err error
+		spec.LifecycleSet = maxLifetime != "" || idleTimeout != "" || retention != "" || spec.Lifecycle.ProtectMain
+		if spec.LifecycleSet {
+			if maxLifetime == "" || idleTimeout == "" || retention == "" {
+				return fmt.Errorf("set all three lifetime fields, using 0s to disable a limit")
+			}
+			if spec.Lifecycle.MaxLifetime, err = time.ParseDuration(maxLifetime); err != nil {
+				return fmt.Errorf("invalid maximum lifetime: %w", err)
+			}
+			if spec.Lifecycle.IdleTimeout, err = time.ParseDuration(idleTimeout); err != nil {
+				return fmt.Errorf("invalid idle timeout: %w", err)
+			}
+			if spec.Lifecycle.Retention, err = time.ParseDuration(retention); err != nil {
+				return fmt.Errorf("invalid retention: %w", err)
+			}
+		} else {
+			spec.Lifecycle.MaxLifetime = 0
+			spec.Lifecycle.IdleTimeout = 0
+			spec.Lifecycle.Retention = 0
+		}
+		return spec.Lifecycle.Validate()
+	}
+	form.AddButton("Review", func() {
+		if err := collect(); err != nil {
+			d.message(err.Error())
+			return
+		}
 		prepared, _, err := sandboxux.PrepareLaunch(spec)
 		if err != nil {
 			d.message(err.Error())
 			return
 		}
 		spec = prepared
-		d.confirmation(launchReview(spec, storageText), func() {
+		review := launchReview(spec, storageText) + fmt.Sprintf("\nSupervise this VM while TUI is open: %t. After exit, run oaiso reap --watch.", supervise)
+		d.reviewPage("confirm", " Review sandbox launch ", review, func() {
 			d.pages.SwitchToPage("create")
 			d.work(func(ctx context.Context) (func(), error) {
 				result, err := d.backend.Launcher.Launch(ctx, spec)
 				return func() {
+					if supervise && d.backend.Reap != nil {
+						d.supervisor.Watch(result.ID, true)
+					}
 					d.changed()
-					d.message("Created sandbox " + result.Name + "\n" + result.ID + "\nReturn to the instance list to connect or inspect logs.")
+					next := spec
+					next.Name, next.CloneDir, next.CloneRevision = "", "", ""
+					d.createFormSpec(profiles, storage, storageErr, next)
+					d.message("Created sandbox " + result.Name + "\n" + result.ID + "\nRetained independent copy: " + result.Workspace + "\nReturn to the instance list: C connect, W changes/export, L lifetime/storage.")
 				}, err
 			})
 		}, func() { d.pages.SwitchToPage("create"); d.app.SetFocus(form) })
+	}).AddButton("Load environment", func() {
+		if err := collect(); err != nil {
+			d.message(err.Error())
+			return
+		}
+		d.loadEnvironment(spec, profiles, storage, storageErr, form)
+	}).AddButton("Save environment", func() {
+		if err := collect(); err != nil {
+			d.message(err.Error())
+			return
+		}
+		d.saveEnvironment(spec, form)
 	}).AddButton("Cancel", d.back)
 	form.SetBorder(true).SetTitle(" New sandbox · Esc cancels ")
 	d.cancelForm(form, d.back)
-	hint := tview.NewTextView().SetDynamicColors(false).SetText("Tab / Shift-Tab: move   Enter: select   Esc: cancel\nSpace: toggle options. Review settings before launch.\nProject: host folder → /workspace. Blank command keeps VM alive.")
+	previousCapture := form.GetInputCapture()
+	form.SetInputCapture(func(e *tcell.EventKey) *tcell.EventKey {
+		button := -1
+		switch e.Key() {
+		case tcell.KeyCtrlR:
+			button = 0
+		case tcell.KeyCtrlO:
+			button = 1
+		case tcell.KeyCtrlS:
+			button = 2
+		}
+		if button >= 0 {
+			form.GetButton(button).InputHandler()(tcell.NewEventKey(tcell.KeyEnter, 0, 0), func(tview.Primitive) {})
+			return nil
+		}
+		return previousCapture(e)
+	})
+	hint := tview.NewTextView().SetDynamicColors(false).SetText("Tab / Shift-Tab move · Ctrl-R review · Ctrl-O load · Ctrl-S save · Esc cancel\nCopy: committed files only; new destination under a private (0700) parent.\nBlank command keeps VM alive. Saved commands run only after launch review.")
 	body := tview.NewFlex().SetDirection(tview.FlexRow).AddItem(form, 0, 1, true).AddItem(hint, 4, 0, false)
 	d.pages.AddAndSwitchToPage("create", body, true)
 	d.app.SetFocus(form)
@@ -289,7 +403,15 @@ func launchReview(s sandboxux.LaunchSpec, storage string) string {
 	if image == "" {
 		image = "configured default"
 	}
-	return fmt.Sprintf("Create %s?\nProject: %s → /workspace (%s)\nImage: %s | profile: %s\nRootfs: %s\nEgress: %s %s | AI routes: %t\nCommand: %s\nExtra mounts: %s\n%s\nHost/project defaults still apply to unspecified options. No host settings are changed.", s.Name, s.Project, mode(s.ReadOnly), image, profile, mode(s.ReadOnlyRoot), s.Network, strings.Join(s.Domains, ","), s.AI, command, strings.Join(s.Mounts, ", "), storage)
+	copyInfo := "Shared project: guest writes affect the host project when writable."
+	if s.Workspace == "copy" {
+		copyInfo = fmt.Sprintf("Independent copy: %s\nCommit: %s\nOnly committed files are copied, including any secrets committed to Git. Uncommitted, untracked and ignored files are excluded. The original project is not mounted automatically. Extra mounts can still expose host data. Copy remains after launch failure or VM removal.", s.CloneDir, s.CloneRevision)
+	}
+	lifetime := "Lifetime: configured defaults"
+	if s.LifecycleSet {
+		lifetime = fmt.Sprintf("Lifetime: max %s | idle %s | retention %s | protect main %t", s.Lifecycle.MaxLifetime, s.Lifecycle.IdleTimeout, s.Lifecycle.Retention, s.Lifecycle.ProtectMain)
+	}
+	return fmt.Sprintf("Create %s?\nProject: %s → /workspace (%s)\n%s\nImage: %s | profile: %s\nRootfs: %s\nEgress: %s %s | AI routes: %t\nCommand: %s\nExtra mounts: %s\n%s\n%s\nHost/project defaults still apply to unspecified options. No host settings are changed.", s.Name, s.Project, mode(s.ReadOnly), copyInfo, image, profile, mode(s.ReadOnlyRoot), s.Network, strings.Join(s.Domains, ","), s.AI, command, strings.Join(s.Mounts, ", "), storage, lifetime)
 }
 func (d *sandboxDesktop) files(worker sandbox.Worker) {
 	d.worker = worker

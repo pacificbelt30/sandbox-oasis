@@ -319,6 +319,22 @@ func RunWithSandboxOptions(cfg sandbox.ManagerConfig, configPath, policyPath, po
 				app.SetFocus(page)
 			}
 			return nil
+		case 'w', 'W':
+			if idx >= 0 && idx < len(workers) {
+				worker := workers[idx]
+				if worker.Status != "running" {
+					footer.SetText("Start this sandbox with R before inspecting guest changes or exporting files.")
+					return nil
+				}
+				openDesktop(func() { desktop.changes(worker) })
+			}
+			return nil
+		case 'l', 'L':
+			if idx >= 0 && idx < len(workers) {
+				worker := workers[idx]
+				openDesktop(func() { desktop.limits(worker) })
+			}
+			return nil
 		case 'f', 'F':
 			if idx >= 0 && idx < len(workers) {
 				worker := workers[idx]

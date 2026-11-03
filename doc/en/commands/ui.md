@@ -49,6 +49,8 @@ The `C`, `X`, `/`, `O`, and `V` instance actions are available in v0.0.6 and lat
 | `O` | Cycle name, status, age, branch, and policy ordering |
 | `V` | Show lifecycle and metadata changes observed while the TUI is open |
 | `N` | [Create a sandbox](../guides/sandbox-ui.md) (unreleased, main) |
+| `W` | Guest changes and selected artifact export (unreleased, main) |
+| `L` | Lifetime, storage and supervision of the selected VM (unreleased, main) |
 | `F` | Browse workspace files and transfer new files (unreleased, main) |
 | `U` | Manage authenticated web previews (unreleased, main) |
 | `T` | Open [tasks and result review](../guides/tasks.md) (unreleased, main) |

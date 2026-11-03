@@ -55,7 +55,7 @@ func TestSandboxCreationReviewAndCancelKeepAgentDisabled(t *testing.T) {
 		t.Fatal("creation skipped review", name)
 	}
 	_, modal := d.pages.GetFrontPage()
-	modal.(*tview.Modal).InputHandler()(tcell.NewEventKey(tcell.KeyEscape, 0, 0), func(tview.Primitive) {})
+	modal.(*tview.Flex).GetInputCapture()(tcell.NewEventKey(tcell.KeyEscape, 0, 0))
 	if name, _ := d.pages.GetFrontPage(); name != "create" || *back {
 		t.Fatal("cancel did not return to creation form")
 	}
@@ -140,6 +140,7 @@ func TestSandboxDesktopPTYHelper(t *testing.T) {
 	d := newSandboxDesktop(app, ctx, desktopBackend{Launcher: recordingDesktopLauncher{filepath.Join(root, "launched.json")}, Profiles: func(context.Context) ([]kataguard.ResourceProfile, error) { return kataguard.ResourceProfiles(), nil }, Storage: func(context.Context) (storageinfo.Status, error) {
 		return storageinfo.Status{Enforced: true, WorkerLimitBytes: 4 << 30}, nil
 	}}, app.Stop, func() {})
+	d.environments = &sandboxux.EnvironmentStore{Path: filepath.Join(root, "private", "environments.json")}
 	defer d.close()
 	d.createForm(kataguard.ResourceProfiles(), storageinfo.Status{Enforced: true, WorkerLimitBytes: 4 << 30}, nil)
 	app.SetRoot(d.pages, true)

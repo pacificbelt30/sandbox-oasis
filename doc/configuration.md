@@ -180,6 +180,10 @@ forward_allow_ports = [80, 443]
 | `default_shell_type` | 自動判定 | `bash` または `zsh` |
 | `verbose` / `debug` | `false` | CLIの詳細ログ |
 
+### TUIで保存するサンドボックス環境
+
+利用可能：**未リリース（main）**。名前付き環境は`~/.config/codex-dock/sandbox-environments/config.json`へ別に保存します。`XDG_CONFIG_HOME`指定時はその配下です。設定を読み込んだだけでは起動せず、グローバル設定・プロジェクト設定も書き換えません。[保存項目・権限・レビュー手順](guides/sandbox-ui.md#よく使う環境を保存する)を参照してください。
+
 ### `auto_build`
 
 - テンプレートのDockerfile更新日時と、イメージの作成日時を比較します。

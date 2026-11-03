@@ -55,7 +55,7 @@ oaiso runtime-check
 
 | 目的 | 機能・参照先 |
 |---|---|
-| 認証なしで検証する | [TUIでVM作成・ファイル転送・Web確認](doc/guides/sandbox-ui.md)。既定はAI認証なし・一般通信なし（未リリース・main） |
+| 認証なしで検証する | [TUIでVM作成・独立コピー・成果物回収](doc/guides/sandbox-ui.md)。既定はAI認証なし・一般通信なし（未リリース・main） |
 | エージェントを動かす | Codex CLI・[Claude Code](doc/claude-code.md)。ClaudeはAPIキー／サブスクに対応 |
 | 作業を隔離する | ワーカーごとに独立したカーネル。CPU・メモリ・プロセス数を制限 |
 | 認証情報を分ける | 実資格情報は認証Proxyで保持。ワーカーには短命トークンを渡す |

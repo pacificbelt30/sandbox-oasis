@@ -51,6 +51,33 @@ type ReapAction struct {
 // control-plane exec/session activity, not guest CPU or filesystem activity.
 // dryRun returns the same decisions without changing workers.
 func (m *Manager) Reap(ctx context.Context, now time.Time, dryRun bool) ([]ReapAction, error) {
+	return m.reap(ctx, now, dryRun, nil, nil)
+}
+
+// ReapWorkers applies lifecycle policies only to the supplied full worker IDs.
+// An empty selection never expands to all managed workers.
+func (m *Manager) ReapWorkers(ctx context.Context, now time.Time, dryRun bool, ids []string) ([]ReapAction, error) {
+	selected := make(map[string]bool, len(ids))
+	for _, id := range ids {
+		selected[id] = true
+	}
+	return m.reap(ctx, now, dryRun, selected, nil)
+}
+
+// ApplyReapActions refuses a different action/reason from the reviewed plan.
+// In particular, a reviewed stop must never turn into retention removal while
+// the operator is reading the confirmation page.
+func (m *Manager) ApplyReapActions(ctx context.Context, now time.Time, expected []ReapAction) ([]ReapAction, error) {
+	selected := map[string]bool{}
+	approved := map[string]ReapAction{}
+	for _, a := range expected {
+		selected[a.Worker] = true
+		approved[a.Worker] = a
+	}
+	return m.reap(ctx, now, false, selected, approved)
+}
+
+func (m *Manager) reap(ctx context.Context, now time.Time, dryRun bool, selected map[string]bool, approved map[string]ReapAction) ([]ReapAction, error) {
 	workers, err := m.ListContext(ctx, true)
 	if err != nil {
 		return nil, err
@@ -58,6 +85,9 @@ func (m *Manager) Reap(ctx context.Context, now time.Time, dryRun bool) ([]ReapA
 	var actions []ReapAction
 	var failures []error
 	for _, w := range workers {
+		if selected != nil && !selected[w.ID] {
+			continue
+		}
 		if err := ctx.Err(); err != nil {
 			return actions, err
 		}
@@ -120,6 +150,10 @@ func (m *Manager) Reap(ctx context.Context, now time.Time, dryRun bool) ([]ReapA
 		}
 		if dryRun {
 			actions = append(actions, a)
+			continue
+		}
+		if approved != nil && a != approved[w.ID] {
+			failures = append(failures, fmt.Errorf("worker %s lifecycle action changed; review the due action again", w.ID))
 			continue
 		}
 		if a.Reason == "idle_timeout" {

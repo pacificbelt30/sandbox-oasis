@@ -121,9 +121,9 @@ try:
     paste(image)
     send(b"\t")
     paste("exec python3 -u -m http.server 3000 --bind 127.0.0.1 --directory /workspace")
-    send(b"\x1b[Z" * 5 + b"\r")
+    send(bytes([18]))  # Ctrl-R opens the scrollable launch review.
     expect(b"false")
-    approve()
+    send(b"\t\t\r")  # review text -> Cancel -> Confirm
     expect(b"Created", 90)
     print("verified: sandbox created from the public TUI", flush=True)
     send(b"\r")

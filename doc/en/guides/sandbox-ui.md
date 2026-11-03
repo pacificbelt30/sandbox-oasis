@@ -45,6 +45,7 @@ oaiso ui
 | Select, confirm, cancel in menus | Arrows select; Enter or a displayed shortcut confirms; Esc returns |
 | Create and connect | `N` creates; select a VM and press `C` for a shell |
 | Files, web and details | `F` files, `U` previews, `I` full details |
+| Changes, artifacts and limits | `W` changes/export, `L` lifetime/storage/supervision |
 | Move within forms | Tab / Shift-Tab; Space toggles checkboxes |
 
 Menus show actions appropriate to the VM state. Use `I` to inspect fields hidden on a narrow screen.
@@ -74,6 +75,70 @@ Menus show actions appropriate to the VM state. Use `I` to inspect fields hidden
 - Writable projects expose guest edits to the shared host folder. Use a copied project or read-only sharing when needed.
 - Configure [authentication](authentication.md) first if enabling `Enable AI services (optional)`.
 
+## Try changes without modifying the original project
+
+Available: **unreleased (main)**. Select `Independent Git copy` under `Workspace source` and enter a new absolute `New copy directory` in the creation form.
+
+1. As your normal user, prepare a private parent directory outside the shared source project. This example creates a new directory; skip it when using an existing owner-private directory.
+
+    ```bash
+    mkdir -m 700 "$HOME/oaiso-copies"
+    ```
+
+2. Choose a destination such as `/home/alice/oaiso-copies/experiment-1`, replacing `alice` with your username. Its parent must be owned by you with mode 0700; the destination must not exist.
+3. Choose `Review` or press `Ctrl-R` to check the source, destination and pinned commit. Scroll through the settings, then Tab to Cancel or Confirm.
+4. Confirmation creates the independent copy and shares it at `/workspace`. The original project is not mounted automatically. Extra mounts can still expose host data.
+
+| Data or action | Copy behavior |
+|---|---|
+| Committed files | Pinned to the reviewed commit, including any secrets committed to Git |
+| Uncommitted, untracked and ignored files | Not copied |
+| Git metadata | Independent objects; external `.git` pointers, linked worktrees, shared object stores and metadata symlinks are rejected; metadata is limited to 100,000 entries and 64 directory levels |
+| Launch failure, VM removal or retention expiry | The host copy remains; retries never overwrite or automatically adopt it |
+| Normal sharing | Remains available, including read-only Project access |
+
+For destination errors, check parent ownership, mode 0700, symlinks and existing paths. The source must be a standalone repository root with a real `.git` directory. Cancelling review does not create a copy.
+
+## Save reusable environments
+
+Available: **unreleased (main)**. Fill in creation settings, choose `Save environment` / `Ctrl-S`, enter a name and review before saving. Choose `Load environment` / `Ctrl-O` and review the saved settings before loading. Loading still requires a separate normal launch review.
+
+| Saved | Excluded or reset when loading |
+|---|---|
+| Image, startup command and resource profile | No worker name, project path or copy destination |
+| Shared/copy workspace mode and read-only settings | Form-entered extra mounts are excluded and cleared on load |
+| Network mode, explicit domains and lifecycle | No AI credentials, authentication settings or AI enablement; AI is disabled after loading |
+
+- Host/project defaults still apply. Loading does not disable extra mounts or other defaults configured on the host.
+- Avoid embedding secrets in startup commands. Save review displays the full command.
+- Names support Japanese and other letters/numbers, plus `.`, `_` and `-`, with 1–64 characters and a letter/number first. For example, `Python検証`.
+- The host file is `~/.config/codex-dock/sandbox-environments/config.json`, or under `XDG_CONFIG_HOME` when configured. The parent is 0700, the file 0600, and at most 32 environments can be stored.
+- `D` on the saved list confirms deletion of settings only; existing VMs are unaffected. Saving an existing name explicitly reviews replacement. Concurrent changes reject the save and retain the draft; reopen the save form and review again.
+- Loading rejects a resource profile unavailable on the node. Host egress permission limits remain in force.
+
+## Inspect and manage lifetime and storage
+
+Available: **unreleased (main)**. New VMs can optionally set these fields. Leave all three duration fields blank to preserve host/project defaults. When overriding, fill in all three, using `0s` to disable a limit.
+
+| Creation field | Behavior and example |
+|---|---|
+| Maximum lifetime | Since creation, e.g. `2h`; restarting does not reset its origin |
+| Idle timeout | Since management exec/activity, e.g. `30m`; not guest CPU, filesystem or network idle |
+| Retention after exit | Time until removal after stopping/exiting, e.g. `24h` |
+| Protect running main from idle | Protect a running primary process from idle collection; never extend maximum lifetime |
+| Supervise this VM while TUI is open | Enforce policy every two seconds for this newly created VM only |
+
+- Press `L` on a selected VM for deadlines, remaining time at refresh, and host-observed rootfs bytes/inode usage and limits. Use Refresh to update. Failed observations are shown as unavailable. Shared folders and independent copies use host storage and are outside rootfs quota.
+- `Supervise this VM…` confirms supervision of that one VM's existing policy. Already expired policy can immediately stop or remove it. `Stop TUI supervision` stops only this TUI's supervision.
+- `Review due action…` previews that VM's due action. Approval rechecks current state before applying it. A reviewed stop cannot silently become retention removal; a changed action requires another review. Stop retains the VM; retention removal also reclaims managed worktrees. Independent copies remain.
+- **Saving a lifetime policy does not start automatic collection.** This TUI's supervisor ends on exit. For continued enforcement, run the following in another normal-user host terminal or supervised service. This command covers all workers with explicitly configured lifecycle policies.
+
+    ```bash
+    oaiso reap --watch
+    ```
+
+- This page does not write new lifecycle settings into existing VMs. See [lifetime and reproducibility](../../sandbox-features.md#寿命と再現性) (Japanese).
+
 ## Inspect and transfer files
 
 Select a running VM and press `F`. Operations stay within guest `/workspace`.
@@ -93,6 +158,19 @@ Select a running VM and press `F`. Operations stay within guest `/workspace`.
 - Upload freezes the contents before confirmation, showing size and SHA-256. `Esc` cancels it.
 - Download fetches after confirmation and publishes a new `0600` host file only on success. A guest modifying its file during transfer can still change the retrieved contents.
 - Uploading into a shared workspace also changes the host project.
+
+## Inspect changes and recover selected artifacts
+
+Available: **unreleased (main)**. Select a running VM and press `W`.
+
+1. Inspect guest Git status and **uncommitted diff against its current HEAD**, up to 256 KiB. This is not a history comparison of commits created by the guest and does not display untracked file contents. Guest Git configuration is never executed on the host for inspection.
+2. Tab to `Export selected files…`. Enter workspace-relative file paths, one per line, and choose a new host tar file.
+3. Choose Review export to inspect selected files, size, guest HEAD and destination; approve from the scrollable review page.
+4. `Saved reviewed artifacts` confirms completion. The VM and independent copy remain. Inspecting/adopting the saved content and removing the VM are separate actions.
+
+- Existing host files, symlinks, credential paths and selections over 256 files / 32 MiB are rejected. A change to selected content, diff or HEAD after review rejects export without publishing a partial file.
+- The tar contains selected files, their `changes.patch` and a manifest. The host file is mode 0600. No changes are automatically applied to the original project.
+- A non-Git workspace or oversized diff displays an error. Use `F` for individual file recovery. See [artifact specifications](artifacts.md).
 
 ## Preview a web application
 

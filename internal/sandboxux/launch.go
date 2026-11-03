@@ -14,9 +14,12 @@ import (
 	"regexp"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/pacificbelt30/codex-dock/internal/engine"
 	"github.com/pacificbelt30/codex-dock/internal/sandbox"
+	"github.com/pacificbelt30/codex-dock/internal/workerpolicy"
+	"github.com/pacificbelt30/codex-dock/internal/workspace"
 )
 
 type LaunchSpec struct {
@@ -26,8 +29,11 @@ type LaunchSpec struct {
 	Domains                                []string
 	ReadOnly, ReadOnlyRoot                 *bool // nil preserves configured defaults
 	Mounts                                 []string
+	Workspace, CloneDir, CloneRevision     string
+	Lifecycle                              workerpolicy.Lifecycle
+	LifecycleSet                           bool
 }
-type LaunchResult struct{ ID, Name string }
+type LaunchResult struct{ ID, Name, Workspace string }
 type Launcher interface {
 	Launch(context.Context, LaunchSpec) (LaunchResult, error)
 }
@@ -64,7 +70,40 @@ func PrepareLaunch(spec LaunchSpec) (LaunchSpec, []string, error) {
 		return spec, nil, fmt.Errorf("project must be an existing host directory")
 	}
 	spec.Project = p
+	if err := spec.Lifecycle.Validate(); err != nil {
+		return spec, nil, err
+	}
+	if spec.Workspace != "" && spec.Workspace != "shared" && spec.Workspace != "copy" {
+		return spec, nil, fmt.Errorf("choose shared workspace or independent copy")
+	}
+	if spec.Workspace == "copy" {
+		if err := validateCopyDestination(p, spec.CloneDir); err != nil {
+			return spec, nil, err
+		}
+		if spec.CloneRevision == "" {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			spec.CloneRevision, err = workspace.ReviewCommit(ctx, p)
+			if err != nil {
+				return spec, nil, err
+			}
+		}
+	} else if spec.CloneDir != "" || spec.CloneRevision != "" {
+		return spec, nil, fmt.Errorf("clone destination and revision require independent copy")
+	}
 	args := []string{"run", "--name", spec.Name, "--project", p, "--runtime", "kata", "--agent", "shell", "--detach", "--keep"}
+	for _, v := range []struct {
+		name  string
+		value time.Duration
+	}{{"--max-lifetime", spec.Lifecycle.MaxLifetime}, {"--idle-timeout", spec.Lifecycle.IdleTimeout}, {"--retention", spec.Lifecycle.Retention}} {
+		// Explicit zero also prevents a saved environment inheriting a shorter host setting.
+		if spec.LifecycleSet || spec.Lifecycle != (workerpolicy.Lifecycle{}) {
+			args = append(args, v.name, v.value.String())
+		}
+	}
+	if spec.LifecycleSet || spec.Lifecycle != (workerpolicy.Lifecycle{}) {
+		args = append(args, fmt.Sprintf("--protect-main=%t", spec.Lifecycle.ProtectMain))
+	}
 	if !spec.AI {
 		args = append(args, "--no-ai")
 	}
@@ -125,6 +164,19 @@ func (l *CLILauncher) Launch(ctx context.Context, spec LaunchSpec) (LaunchResult
 	if err != nil {
 		return result, err
 	}
+	if spec.Workspace == "copy" {
+		if err := workspace.CloneAt(ctx, spec.Project, spec.CloneDir, spec.CloneRevision); err != nil {
+			return result, err
+		}
+		result.Workspace = spec.CloneDir
+		// The ordinary launch command validates the copied project and mounts.
+		for i := range args {
+			if args[i] == "--project" {
+				args[i+1] = spec.CloneDir
+				break
+			}
+		}
+	}
 	globals := append([]string{}, l.GlobalArgs...)
 	var passphrase *os.File
 	if spec.AI && l.PassphraseFD >= 3 {
@@ -138,6 +190,9 @@ func (l *CLILauncher) Launch(ctx context.Context, spec LaunchSpec) (LaunchResult
 	}
 	c := exec.CommandContext(ctx, l.Executable, append(globals, args...)...)
 	c.Dir = spec.Project
+	if result.Workspace != "" {
+		c.Dir = result.Workspace
+	}
 	command := spec.Command
 	if command == "" {
 		// A detached interactive shell receives EOF. Keep the sandbox alive;
@@ -152,7 +207,7 @@ func (l *CLILauncher) Launch(ctx context.Context, spec LaunchSpec) (LaunchResult
 	c.Stdout = out
 	c.Stderr = out
 	if err = c.Run(); err != nil {
-		return result, fmt.Errorf("launch %s: %w: %s; inspect this name before retrying", spec.Name, err, strings.TrimSpace(out.String()))
+		return result, fmt.Errorf("launch %s: %w: %s; inspect this name before retrying; retained copy: %s", spec.Name, err, strings.TrimSpace(out.String()), result.Workspace)
 	}
 	socket := l.Config.Socket
 	if socket == "" {

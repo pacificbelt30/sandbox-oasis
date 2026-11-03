@@ -149,6 +149,8 @@ Tab     focus the Actions button; Tab again returns to the list
 Esc     clear the instance filter
 N       create a general sandbox (AI routes disabled by default)
 F       browse, view and transfer workspace files
+W       guest Git changes and selected artifact export
+L       lifetime, host quota and selected-VM supervision
 U       manage authenticated localhost Web previews
 I       inspect full instance details, including on a narrow screen
 Enter   view recent logs
