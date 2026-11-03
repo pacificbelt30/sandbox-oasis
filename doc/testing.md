@@ -1,5 +1,26 @@
 # テストと動作確認
 
+## 容量付き管理workspaceと復元点（2026-11-03）
+
+対象：**未リリース（main）**。[操作・制限](guides/managed-workspaces.md)。通常のホスト共有・独立Gitコピーも維持しています。
+
+| 検査 | 確認した範囲 |
+|---|---|
+| 現在のファイル | Gitの未コミット・未追跡とGit管理外の通常ファイル、UTF-8名、hash付きレビュー、秘密用パス・cache・symlink・hardlink・特殊ファイルの除外、レビュー後の変更拒否 |
+| 容量と所有 | 先取りした64MiBディスク・1024 inodeの両上限で実際にENOSPC、非root所有者、単一VM lease、差し替えディスクの拒否、VM削除後のデータ保持、途中の確保・削除の再試行 |
+| 成果物 | 管理workspaceの初回取り込みとの差分一覧、Git不要の選択ファイル回収、ホスト元データへ自動適用しないこと |
+| 保存・復元 | 停止VMのrootfsとraw workspaceの組保存、実node再起動後の保持、新しいVM・新しいworkspaceへの復元、元VMとホストデータの保持、参照中の削除拒否、snapshot hashと保存したrootfs digestの検査 |
+| TUI・PTY | Nからの作成、Kからの保存、Zからの新規復元、Mの一覧・詳細、承認前の資源非作成、Esc取消、日本語・端末復元。狭い画面の通常フォーム・レビューは既存PTY／画面試験も通過 |
+| 静的・回帰 | build、全件race、vet、lint、8系統のsecurity fuzz、scriptsのPython 69件、CLI名・help、strict文書ビルド |
+| 実Kata | 最終版の`TestKataManagedWorkspace`（116.57秒）と`TestKataPolicyFeatures`（47.36秒）。直前版ではPrimaryTerminal（15.19秒）・SandboxDesktop（74.24秒）・SandboxWorkflows（36.92秒）も成功 |
+| 導入・更新・復旧 | 最終版の使い捨てノードで新規setup、稼働中更新の拒否、対応版への更新、新サービス起動失敗時の自動復旧、明示rollback、VM・コンテナ・ネットワークの残留なし |
+
+- 管理workspaceのパス別マスクは、元ホストフォルダーを検査して安全と誤認させないため拒否します。ディスク全体の読み取り専用は検証しています。
+- 実Kata受入後は、作成用ランチャーがない旧UI接続で復元・再利用を選んだ場合の案内だけを補い、単体・race検査で確認しています。通常CLIの作成・保存・復元経路は維持しています。
+- 最初の実Kata試験は、試験コードが通常イメージの非rootユーザーで`/opt`へ作成しようとして失敗しました。製品の権限は緩和せず、試験の前提を修正して再実行しています。
+- 実アカウントの認証・AI推論、物理端末での目視、ホスト全体の電源断、全Kataスイートの再受入は対象外です。
+- 証跡：`.kata-verification/managed-workspaces-20261103/`。最初の失敗：`.kata-verification/setup-e2e/3dfc59a9c20d/`。5系統成功：`.kata-verification/setup-e2e/5bd983c2f8c6/`。最終版の保存を含む公開TUI受入：`.kata-verification/setup-e2e/b86310f801bb/`。
+
 ## 独立コピー・保存環境・期限管理（2026-11-03）
 
 対象：**未リリース（main）**。[利用手順](guides/sandbox-ui.md)。実資格情報を使わず、分離した使い捨てノードとローカルfixtureで確認しました。

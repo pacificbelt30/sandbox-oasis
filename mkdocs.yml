@@ -47,6 +47,7 @@ nav:
   - 利用ガイド:
       - 概要: guides/index.md
       - サンドボックスの作成・ファイル・Web: guides/sandbox-ui.md
+      - 管理workspaceと復元点: guides/managed-workspaces.md
       - AIエージェントの初回起動: guides/first-run.md
       - エージェント:
           - 起動方法と対応状況: guides/agents.md
@@ -137,6 +138,7 @@ nav:
       - Guides:
           - Overview: en/guides/index.md
           - Sandbox creation, files and web: en/guides/sandbox-ui.md
+          - Managed workspaces and recovery points: en/guides/managed-workspaces.md
           - AI agent first startup: en/guides/first-run.md
           - Agents:
               - Launch methods and support: en/guides/agents.md

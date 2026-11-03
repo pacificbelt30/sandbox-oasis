@@ -15,6 +15,7 @@
 | [`oaiso claude`](claude-code.md) | Run official Claude Code | Native flags; API or subscription |
 | [`oaiso codex`](commands/run.md#launch-codex-cli-directly) | Pass Codex CLI arguments through unchanged | Mount current directory and exec Codex |
 | [`oaiso run`](commands/run.md) | Start a sandbox container | Options, approval modes, parallel execution, package management |
+| [`oaiso workspace`](guides/managed-workspaces.md) / [`oaiso recovery-point`](guides/managed-workspaces.md) | Bounded workspaces and stopped-VM recovery points (unreleased, main) | plan / create / list / inspect / clone / rm |
 | [`oaiso task`](guides/tasks.md) | Task records and reviewed adoption (unreleased, main) | create / run / stop / retry / test / review / plan / accept / board |
 | [`oaiso completion`](commands/completion.md) | Generate Tab completion scripts | Bash, Zsh, Fish, PowerShell |
 | [`oaiso profile`](commands/run.md#resource-profiles) | Inspect profiles or generate definition JSON | `--node`, `--json`, `define --pids-limit` |

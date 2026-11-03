@@ -44,6 +44,7 @@ import (
 	"github.com/moby/sys/signal"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/pacificbelt30/codex-dock/internal/managedworkspace"
 	"github.com/pacificbelt30/codex-dock/internal/workerpolicy"
 )
 
@@ -67,16 +68,18 @@ type Options struct {
 	Tools          map[string]string
 }
 type Backend struct {
-	volumeRoot    string // Test override; production uses Kata's fixed direct-volume root.
-	client        *cd.Client
-	opts          Options
-	checkpointMu  sync.Mutex
-	checkpointing map[string]bool
-	mu            sync.Mutex
-	hubs          map[string]*hub
-	execs         map[string]*execution
-	ports         map[string][]net.Listener
-	closed        bool
+	workspaceMu            sync.Mutex
+	workspaceCapacityCheck func(context.Context, int64) error // Unit-test capacity provider; production always checks dedicated storage.
+	volumeRoot             string                             // Test override; production uses Kata's fixed direct-volume root.
+	client                 *cd.Client
+	opts                   Options
+	checkpointMu           sync.Mutex
+	checkpointing          map[string]bool
+	mu                     sync.Mutex
+	hubs                   map[string]*hub
+	execs                  map[string]*execution
+	ports                  map[string][]net.Listener
+	closed                 bool
 }
 type record struct {
 	RootFSQuota             *rootFSQuota    `json:",omitempty"`
@@ -536,6 +539,9 @@ func (b *Backend) create(ctx context.Context, c container.Config, h container.Ho
 		if err := b.provisionAgentState(ctx, r, s); err != nil {
 			return err
 		}
+		if err := b.attachManagedWorkspace(r, s); err != nil {
+			return err
+		}
 		r.Spec = *s
 		return b.save(r)
 	})
@@ -638,6 +644,9 @@ func (b *Backend) start(ctx context.Context, r *record, c cd.Container) error {
 		return err
 	}
 	if err := b.validateRootFSQuota(r); err != nil {
+		return err
+	}
+	if err := b.ensureManagedWorkspace(r); err != nil {
 		return err
 	}
 	if t, err := c.Task(ctx, nil); err == nil {
@@ -930,11 +939,22 @@ func (b *Backend) serveHTTP(w http.ResponseWriter, r *http.Request) {
 		if b.opts.Tools["mkfs"] != "" {
 			features = append(features, [2]string{"cxd.agent-state-disk", "1"})
 		}
+		if b.opts.Tools["mkfs"] != "" && b.storageStatus().Enforced {
+			features = append(features, [2]string{"cxd.managed-workspaces", "1"})
+		}
 		reply(w, system.Info{DriverStatus: features, OSType: "linux", CgroupDriver: "cgroupfs", CgroupVersion: "2", Runtimes: map[string]system.RuntimeWithStatus{"io.containerd.kata.v2": {Runtime: system.Runtime{Type: b.opts.Runtime}}, "runc": {Runtime: system.Runtime{Type: "io.containerd.runc.v2"}}}})
 		return
 	}
 	if strings.HasPrefix(path, "/agent-state/") {
 		b.agentBackupHTTP(w, r, ctx, path)
+		return
+	}
+	if path == "/workspaces" || strings.HasPrefix(path, "/workspaces/") {
+		b.workspacesHTTP(w, r, ctx, path)
+		return
+	}
+	if path == "/recovery-points" || strings.HasPrefix(path, "/recovery-points/") {
+		b.recoveryPointsHTTP(w, r, ctx, path)
 		return
 	}
 	if path == "/storage" && r.Method == http.MethodGet {
@@ -998,12 +1018,28 @@ func (b *Backend) serveHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if strings.HasPrefix(path, "/images/") && r.Method == http.MethodDelete {
+		if !b.checkpointMu.TryLock() {
+			failure(w, fmt.Errorf("checkpoint operation active: %w", errdefs.ErrConflict))
+			return
+		}
+		defer b.checkpointMu.Unlock()
 		b.mu.Lock()
 		defer b.mu.Unlock()
 		name, err := imageName(strings.TrimPrefix(path, "/images/"))
 		if err != nil {
 			failure(w, err)
 			return
+		}
+		if strings.HasPrefix(name, "docker.io/library/oaiso-checkpoint:") {
+			pinned, e := b.checkpointReferencedByPoint(strings.TrimPrefix(name, "docker.io/library/oaiso-checkpoint:"))
+			if e != nil {
+				failure(w, e)
+				return
+			}
+			if pinned {
+				failure(w, fmt.Errorf("image is retained by a recovery point: %w", errdefs.ErrConflict))
+				return
+			}
 		}
 		// Remove one reference only, never force deletion or prune shared
 		// content/snapshots. Retained containers must remain restartable.
@@ -1139,6 +1175,19 @@ func (b *Backend) serveHTTP(w http.ResponseWriter, r *http.Request) {
 		failure(w, fmt.Errorf("worker checkpoint is active: %w", errdefs.ErrConflict))
 		return
 	}
+	if workspaceID := rec.Config.Labels[managedworkspace.Label]; workspaceID != "" && action != "json" && action != "storage" {
+		b.workspaceMu.Lock()
+		workspace, workspaceErr := b.loadWorkspace(workspaceID)
+		b.workspaceMu.Unlock()
+		if workspaceErr == nil && workspace.Info.State == "saving" {
+			failure(w, fmt.Errorf("workspace recovery point save is active: %w", errdefs.ErrConflict))
+			return
+		}
+		if workspaceErr != nil && action != "stop" {
+			failure(w, workspaceErr)
+			return
+		}
+	}
 	switch action {
 	case "storage":
 		if r.Method != http.MethodGet {
@@ -1258,6 +1307,9 @@ func (b *Backend) serveHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		if err == nil {
 			err = c.Delete(ctx, cd.WithSnapshotCleanup)
+		}
+		if err == nil {
+			err = b.releaseManagedWorkspace(rec)
 		}
 		if err == nil {
 			for eid, e := range b.execs {

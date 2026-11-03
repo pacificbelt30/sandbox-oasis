@@ -14,6 +14,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/pacificbelt30/codex-dock/internal/engine"
 	"github.com/pacificbelt30/codex-dock/internal/kataguard"
+	"github.com/pacificbelt30/codex-dock/internal/managedworkspace"
 	"github.com/pacificbelt30/codex-dock/internal/sandbox"
 	"github.com/pacificbelt30/codex-dock/internal/sandboxux"
 	"github.com/pacificbelt30/codex-dock/internal/storageinfo"
@@ -28,17 +29,20 @@ type desktopPreview struct {
 	Port   int
 }
 type desktopBackend struct {
-	Launcher  sandboxux.Launcher
-	Files     sandboxux.Files
-	Profiles  func(context.Context) ([]kataguard.ResourceProfile, error)
-	Storage   func(context.Context) (storageinfo.Status, error)
-	Preview   func(context.Context, string, int, time.Duration) (desktopPreview, error)
-	Lifecycle func(context.Context, string) (sandbox.LifecycleStatus, error)
-	Usage     func(context.Context, string) (storageinfo.Usage, error)
-	Reap      func(context.Context, time.Time, bool, []string) ([]sandbox.ReapAction, error)
-	ApplyDue  func(context.Context, time.Time, []sandbox.ReapAction) ([]sandbox.ReapAction, error)
-	Artifacts sandboxux.ArtifactBackend
-	Changes   func(context.Context, string) (string, error)
+	Launcher     sandboxux.Launcher
+	Files        sandboxux.Files
+	Profiles     func(context.Context) ([]kataguard.ResourceProfile, error)
+	Storage      func(context.Context) (storageinfo.Status, error)
+	Preview      func(context.Context, string, int, time.Duration) (desktopPreview, error)
+	Lifecycle    func(context.Context, string) (sandbox.LifecycleStatus, error)
+	Usage        func(context.Context, string) (storageinfo.Usage, error)
+	Reap         func(context.Context, time.Time, bool, []string) ([]sandbox.ReapAction, error)
+	ApplyDue     func(context.Context, time.Time, []sandbox.ReapAction) ([]sandbox.ReapAction, error)
+	Artifacts    sandboxux.ArtifactBackend
+	Changes      func(context.Context, string) (string, error)
+	Workspaces   sandboxux.WorkspaceService
+	ManagedInfo  func(context.Context, string) (*managedworkspace.Info, error)
+	ManagedUsage func(context.Context, string) (string, error)
 }
 type sandboxDesktop struct {
 	uploadMu       sync.Mutex
@@ -66,7 +70,16 @@ func managerDesktop(cfg sandbox.ManagerConfig, m *sandbox.Manager, launcher sand
 	if socket == "" {
 		socket = engine.Socket()
 	}
-	return desktopBackend{Launcher: launcher, Files: sandboxux.Files{Guest: m}, Lifecycle: m.InspectLifecycle, Usage: m.RootFSUsage, Reap: m.ReapWorkers, ApplyDue: m.ApplyReapActions, Artifacts: m, Changes: func(ctx context.Context, id string) (string, error) { return sandboxux.WorkspaceChanges(ctx, m, id) }, Profiles: m.ResourceProfiles, Storage: func(ctx context.Context) (storageinfo.Status, error) { return engine.StorageStatus(ctx, socket) }, Preview: func(ctx context.Context, id string, port int, lifetime time.Duration) (desktopPreview, error) {
+	return desktopBackend{Launcher: launcher, Workspaces: engine.WorkspaceClient{Socket: socket}, ManagedInfo: m.ManagedWorkspaceInfo, ManagedUsage: m.ManagedWorkspaceUsage, Files: sandboxux.Files{Guest: m}, Lifecycle: m.InspectLifecycle, Usage: m.RootFSUsage, Reap: m.ReapWorkers, ApplyDue: m.ApplyReapActions, Artifacts: m, Changes: func(ctx context.Context, id string) (string, error) {
+		info, err := m.ManagedWorkspaceInfo(ctx, id)
+		if err != nil {
+			return "", err
+		}
+		if info != nil {
+			return m.ManagedWorkspaceChanges(ctx, id)
+		}
+		return sandboxux.WorkspaceChanges(ctx, m, id)
+	}, Profiles: m.ResourceProfiles, Storage: func(ctx context.Context) (storageinfo.Status, error) { return engine.StorageStatus(ctx, socket) }, Preview: func(ctx context.Context, id string, port int, lifetime time.Duration) (desktopPreview, error) {
 		p, e := m.Preview(ctx, id, port, lifetime)
 		if e != nil {
 			return desktopPreview{}, e
@@ -263,12 +276,24 @@ func (d *sandboxDesktop) createFormSpec(profiles []kataguard.ResourceProfile, st
 	form.AddDropDown("Project access", []string{"Host/project default", "Read-only", "Read-write"}, readModeIndex(spec.ReadOnly), func(_ string, i int) { spec.ReadOnly = readMode(i) }).AddDropDown("Image rootfs", []string{"Host/project default", "Read-only", "Writable with node quota"}, readModeIndex(spec.ReadOnlyRoot), func(_ string, i int) { spec.ReadOnlyRoot = readMode(i) })
 	networkIndex := map[string]int{"offline": 0, "host": 1, "dependencies": 2, "allowlist": 3}[spec.Network]
 	form.AddDropDown("Internet access", []string{"Offline", "Host policy", "Dependency registries", "Explicit domains"}, networkIndex, func(_ string, i int) { spec.Network = []string{"offline", "host", "dependencies", "allowlist"}[i] }).AddInputField("Allowed domains (comma)", domains, 50, nil, func(v string) { domains = v }).AddCheckbox("Enable AI services (optional)", spec.AI, func(v bool) { spec.AI = v }).AddTextArea("Extra mounts (one/line)", mounts, 56, 2, 8192, func(v string) { mounts = v })
-	copyIndex := 0
-	if spec.Workspace == "copy" {
-		copyIndex = 1
-	}
-	form.AddDropDown("Workspace source", []string{"Share host project", "Independent Git copy"}, copyIndex, func(_ string, i int) { spec.Workspace = []string{"shared", "copy"}[i]; spec.CloneRevision = "" })
+	copyIndex := map[string]int{"copy": 1, "managed": 2, "existing": 3}[spec.Workspace]
+	form.AddDropDown("Workspace source", []string{"Share host project", "Independent Git copy", "Managed current files (bounded)", "Existing managed workspace"}, copyIndex, func(_ string, i int) {
+		spec.Workspace = []string{"shared", "copy", "managed", "existing"}[i]
+		spec.CloneRevision = ""
+		spec.CopyPlan = nil
+	})
 	form.AddInputField("New copy directory", spec.CloneDir, 56, nil, func(v string) { spec.CloneDir = v; spec.CloneRevision = "" })
+	workspaceMiB, workspaceInodes := "1024", "16384"
+	if spec.WorkspaceBytes > 0 {
+		workspaceMiB = strconv.FormatInt(spec.WorkspaceBytes>>20, 10)
+	}
+	if spec.WorkspaceInodes > 0 {
+		workspaceInodes = strconv.FormatUint(spec.WorkspaceInodes, 10)
+	}
+	form.AddInputField("Managed capacity (MiB)", workspaceMiB, 12, nil, func(v string) { workspaceMiB = v }).AddInputField("Managed inode ceiling", workspaceInodes, 12, nil, func(v string) { workspaceInodes = v }).AddInputField("Existing workspace ID", spec.WorkspaceID, 64, nil, func(v string) { spec.WorkspaceID = v })
+	if spec.Checkpoint != "" {
+		form.AddTextView("Restore", "NEW VM from rootfs "+spec.Checkpoint+". Saved workspace is cloned; original data is never rolled back.", 56, 3, false, false)
+	}
 	form.AddInputField("Maximum lifetime", maxLifetime, 24, nil, func(v string) { maxLifetime = v }).AddInputField("Idle timeout", idleTimeout, 24, nil, func(v string) { idleTimeout = v }).AddInputField("Retention after exit", retention, 24, nil, func(v string) { retention = v })
 	form.AddCheckbox("Protect running main from idle", spec.Lifecycle.ProtectMain, func(v bool) { spec.Lifecycle.ProtectMain = v }).AddCheckbox("Supervise this VM while TUI is open", false, func(v bool) { supervise = v })
 	form.AddTextView("Lifetime help", "Blank: host/project defaults. Set all three when overriding (e.g. 2h, 0s, 24h). Idle tracks management execution, not CPU. After TUI exit, use oaiso reap --watch for continued enforcement.", 56, 4, false, false)
@@ -278,6 +303,17 @@ func (d *sandboxDesktop) createFormSpec(profiles []kataguard.ResourceProfile, st
 	}
 	form.AddTextView("Storage", storageText, 56, 3, false, false)
 	collect := func() error {
+		if spec.Workspace == "managed" {
+			n, e := strconv.ParseInt(workspaceMiB, 10, 32)
+			if e != nil || n < 64 || n > 4096 {
+				return fmt.Errorf("managed capacity requires 64–4096 MiB")
+			}
+			spec.WorkspaceBytes = n << 20
+			spec.WorkspaceInodes, e = strconv.ParseUint(workspaceInodes, 10, 32)
+			if e != nil {
+				return e
+			}
+		}
 		spec.Domains = nil
 		for _, v := range strings.Split(domains, ",") {
 			if v = strings.TrimSpace(v); v != "" {
@@ -321,29 +357,55 @@ func (d *sandboxDesktop) createFormSpec(profiles []kataguard.ResourceProfile, st
 			d.message(err.Error())
 			return
 		}
-		prepared, _, err := sandboxux.PrepareLaunch(spec)
-		if err != nil {
-			d.message(err.Error())
-			return
+		prepare := func(ctx context.Context) (func(), error) {
+			var prepared sandboxux.LaunchSpec
+			var err error
+			if launcher, ok := d.backend.Launcher.(interface {
+				Prepare(context.Context, sandboxux.LaunchSpec) (sandboxux.LaunchSpec, error)
+			}); ok {
+				prepared, err = launcher.Prepare(ctx, spec)
+			} else {
+				prepared, _, err = sandboxux.PrepareLaunch(spec)
+			}
+			if err != nil {
+				return nil, err
+			}
+			return func() {
+				spec = prepared
+				review := launchReview(spec, storageText) + fmt.Sprintf("\nSupervise this VM while TUI is open: %t. After exit, run oaiso reap --watch.", supervise)
+				d.reviewPage("confirm", " Review sandbox launch ", review, func() {
+					d.pages.SwitchToPage("create")
+					d.work(func(ctx context.Context) (func(), error) {
+						result, err := d.backend.Launcher.Launch(ctx, spec)
+						return func() {
+							if supervise && d.backend.Reap != nil {
+								d.supervisor.Watch(result.ID, true)
+							}
+							d.changed()
+							next := spec
+							next.Name, next.CloneDir, next.CloneRevision = "", "", ""
+							next.CopyPlan, next.Recovery = nil, nil
+							next.Checkpoint, next.WorkspaceID = "", ""
+							if next.Workspace == "existing" {
+								next.Workspace = "shared"
+							}
+							d.createFormSpec(profiles, storage, storageErr, next)
+							d.message("Created sandbox " + result.Name + "\n" + result.ID + "\nRetained workspace/copy: " + result.Workspace + "\nC connect, F files/download, L lifetime/storage, M managed workspaces.")
+						}, err
+					})
+				}, func() { d.pages.SwitchToPage("create"); d.app.SetFocus(form) })
+			}, nil
 		}
-		spec = prepared
-		review := launchReview(spec, storageText) + fmt.Sprintf("\nSupervise this VM while TUI is open: %t. After exit, run oaiso reap --watch.", supervise)
-		d.reviewPage("confirm", " Review sandbox launch ", review, func() {
-			d.pages.SwitchToPage("create")
-			d.work(func(ctx context.Context) (func(), error) {
-				result, err := d.backend.Launcher.Launch(ctx, spec)
-				return func() {
-					if supervise && d.backend.Reap != nil {
-						d.supervisor.Watch(result.ID, true)
-					}
-					d.changed()
-					next := spec
-					next.Name, next.CloneDir, next.CloneRevision = "", "", ""
-					d.createFormSpec(profiles, storage, storageErr, next)
-					d.message("Created sandbox " + result.Name + "\n" + result.ID + "\nRetained independent copy: " + result.Workspace + "\nReturn to the instance list: C connect, W changes/export, L lifetime/storage.")
-				}, err
-			})
-		}, func() { d.pages.SwitchToPage("create"); d.app.SetFocus(form) })
+		if spec.Workspace == "managed" || spec.Workspace == "existing" {
+			d.work(prepare)
+		} else {
+			next, err := prepare(d.ctx)
+			if err != nil {
+				d.message(err.Error())
+			} else {
+				next()
+			}
+		}
 	}).AddButton("Load environment", func() {
 		if err := collect(); err != nil {
 			d.message(err.Error())
@@ -376,7 +438,7 @@ func (d *sandboxDesktop) createFormSpec(profiles []kataguard.ResourceProfile, st
 		}
 		return previousCapture(e)
 	})
-	hint := tview.NewTextView().SetDynamicColors(false).SetText("Tab / Shift-Tab move · Ctrl-R review · Ctrl-O load · Ctrl-S save · Esc cancel\nCopy: committed files only; new destination under a private (0700) parent.\nBlank command keeps VM alive. Saved commands run only after launch review.")
+	hint := tview.NewTextView().SetDynamicColors(false).SetText("Tab / Shift-Tab move · Ctrl-R review · Ctrl-O load · Ctrl-S save · Esc cancel\nGit copy: committed files. Managed: current files; credentials, caches and links excluded.\nManaged data remains after VM removal. Review shows exact copied files and exclusions.")
 	body := tview.NewFlex().SetDirection(tview.FlexRow).AddItem(form, 0, 1, true).AddItem(hint, 4, 0, false)
 	d.pages.AddAndSwitchToPage("create", body, true)
 	d.app.SetFocus(form)
@@ -406,6 +468,26 @@ func launchReview(s sandboxux.LaunchSpec, storage string) string {
 	copyInfo := "Shared project: guest writes affect the host project when writable."
 	if s.Workspace == "copy" {
 		copyInfo = fmt.Sprintf("Independent copy: %s\nCommit: %s\nOnly committed files are copied, including any secrets committed to Git. Uncommitted, untracked and ignored files are excluded. The original project is not mounted automatically. Extra mounts can still expose host data. Copy remains after launch failure or VM removal.", s.CloneDir, s.CloneRevision)
+	}
+	if s.Workspace == "managed" || s.Workspace == "existing" {
+		var text strings.Builder
+		fmt.Fprintf(&text, "Managed workspace: %s\nFixed capacity: %d MiB / %d inodes | VM owner %d:%d\nOriginal project is not mounted. Data survives VM deletion. Extra mounts may expose host data.\n", s.WorkspaceID, s.WorkspaceBytes>>20, s.WorkspaceInodes, s.WorkspaceOwner.UID, s.WorkspaceOwner.GID)
+		if s.Recovery != nil {
+			fmt.Fprintf(&text, "Restore point: %s / %s\nCreate a NEW workspace from snapshot %s. Original workspace is unchanged.\n", s.Recovery.Name, s.Recovery.ID, s.Recovery.Workspace)
+		}
+		if p := s.CopyPlan; p != nil {
+			fmt.Fprintf(&text, "Current-files plan: %s\n%d regular files / %d bytes. Git metadata is excluded; W compares initial import hashes and exports selected files. Filename exclusions cannot detect every secret: review the contents before launch.\n", p.Manifest.ID, len(p.Manifest.Files), p.Manifest.Bytes)
+			for _, f := range p.Manifest.Files {
+				fmt.Fprintf(&text, "COPY %s · %d bytes · %s\n", f.Path, f.Bytes, f.SHA256)
+			}
+			for _, f := range p.Skipped {
+				fmt.Fprintf(&text, "SKIP %s · %s\n", f.Path, f.Reason)
+			}
+		}
+		copyInfo = text.String()
+	}
+	if s.Checkpoint != "" {
+		copyInfo += "\nRootfs checkpoint: " + s.Checkpoint + ". NEW VM; homes, RAM and host bind mounts are not restored."
 	}
 	lifetime := "Lifetime: configured defaults"
 	if s.LifecycleSet {

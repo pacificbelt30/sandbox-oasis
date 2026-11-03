@@ -113,6 +113,7 @@ type RunOptions struct {
 	Lifecycle             workerpolicy.Lifecycle
 	Environment           workerpolicy.Environment
 	CloneDir              string
+	ManagedWorkspace      string
 	pendingPlaceholder    string
 	proxyHosts            []string
 	// Runtime selects the isolation boundary, not the container management API.

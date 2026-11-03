@@ -3,7 +3,8 @@
 **日本語** | [English](../en/guides/artifacts.md)
 
 - 利用可能：**v0.0.4**。
-- 対象：起動中のワーカー。workspaceはHEADのあるGitリポジトリで、Gitメタデータを利用できる必要があります。ホスト側で `oaiso` を操作します。
+- 対象：起動中のワーカー。通常のworkspaceはHEADのあるGitリポジトリで、Gitメタデータを利用できる必要があります。
+- 未リリース（main）：[管理workspace](managed-workspaces.md)ではGit不要です。`head`は`workspace:取り込みmanifest ID`、`changes.patch`は空です。選択内容のhash・上限・レビュー後の変更拒否は同じです。ホスト側で `oaiso` を操作します。
 - 指定したファイル、指定範囲のGit差分、内容一覧をtarに保存します。
 
 ## 保存される内容

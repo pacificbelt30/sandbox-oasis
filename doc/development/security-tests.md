@@ -13,6 +13,7 @@
 | モデル指定 | JSONの重複・大小文字違い・余分なJSON | 許可モデルだけを使用。転送本文を書き換えて整合性を崩さない |
 | brokerのURL・path | 別origin、`..`、二重slash、percent encoding、禁止method | 固定origin・許可path・methodから広げない |
 | 通信先 | IPv4/IPv6、metadata、混在DNS回答、不正authority | 拒否した宛先・アドレスへdialしない |
+| 管理workspace manifest（未リリース・main） | 相対パス、重複、秘密用パス、hash・サイズ不一致 | 取り込み前に拒否。archiveのリンク・追加ファイルも回帰試験で拒否 |
 | 管理JSON | 重複key、Unicodeによる同一fieldの別表記、末尾JSON、未知field、サイズ・深さ超過 | 認証・Storeの変更前に拒否 |
 | token期限 | 負数・過大値・TLSの上限超過 | 不正な期限で既存の権限を置換しない。HTTPのTTL省略は設定済み既定値を使用 |
 | 保存失敗 | `ENOSPC`を注入、破損した監査head、OAuth保存失敗 | 利用枠や新しい資格情報を発行しない。復旧後に勝手に利用枠を初期化しない |
@@ -34,7 +35,7 @@
 make test
 ```
 
-5系統のfuzz探索：
+8系統のfuzz探索（管理workspace manifestの検査は未リリース・main）：
 
 ```bash
 make security-fuzz
@@ -50,6 +51,7 @@ make security-fuzz
 - [使い捨てノードの手順](../testing.md#新規導入更新復旧を検証する)を使用します。
 - TLS通信・失効：`--acceptance-run '^TestKataWorkerMTLS$'`。
 - Go API・ケース分離・保存したProxy監査：`--acceptance-run '^TestKataGoAPI$'`。
+- 管理workspace・実ディスクの容量／inode枯渇・TUI保存と新規VM復元：`--acceptance-run '^TestKataManagedWorkspace$'`。共有ホストではなく、使い捨てVMの有限ディスクだけを埋めます。
 - 認証保存：`TestKataEncryptedProfile`／`TestKataKeyringProfile`。
 - 署名のCIはGitHub／Sigstoreへ通信します。上流CLIの通常契約検査はオフライン、AIの実認証・推論とは区別します。
 - 実行結果・失敗からの修正・未確認範囲：[テストと動作確認](../testing.md)。

@@ -79,6 +79,9 @@ func (b *Backend) checkpointInfo(ctx context.Context, id string) (diskcheckpoint
 	}
 	info.Pinned = metadata.Labels[diskcheckpoint.PinLabel] == "true"
 	info.Digest = img.Target().Digest.String()
+	if err = b.verifyPointCheckpointDigest(id, info.Digest); err != nil {
+		return diskcheckpoint.Info{}, err
+	}
 	return info, nil
 }
 func (b *Backend) checkpointCatalog(ctx context.Context) (diskcheckpoint.Catalog, error) {
@@ -96,6 +99,11 @@ func (b *Backend) checkpointCatalog(ctx context.Context) (diskcheckpoint.Catalog
 			return catalog, err
 		}
 		catalog.UsedBytes += info.Bytes
+		retained, e := b.checkpointReferencedByPoint(info.ID)
+		if e != nil {
+			return catalog, e
+		}
+		info.Pinned = info.Pinned || retained
 		catalog.Items = append(catalog.Items, info)
 	}
 	slices.SortFunc(catalog.Items, func(a, b diskcheckpoint.Info) int { return strings.Compare(a.ID, b.ID) })
@@ -107,6 +115,10 @@ func (b *Backend) createCheckpoint(ctx context.Context, worker string, options d
 		return result, fmt.Errorf("another checkpoint operation is active: %w", errdefs.ErrConflict)
 	}
 	defer b.checkpointMu.Unlock()
+	return b.createCheckpointLocked(ctx, worker, options)
+}
+
+func (b *Backend) createCheckpointLocked(ctx context.Context, worker string, options diskcheckpoint.Options) (result diskcheckpoint.Info, resultErr error) {
 	b.mu.Lock()
 	rec, c, err := b.load(ctx, worker)
 	if err != nil {
@@ -320,6 +332,15 @@ func (b *Backend) checkpointHTTP(w http.ResponseWriter, r *http.Request, ctx con
 			return
 		}
 		defer b.checkpointMu.Unlock()
+		retained, e := b.checkpointReferencedByPoint(id)
+		if e != nil {
+			failure(w, e)
+			return
+		}
+		if retained {
+			failure(w, fmt.Errorf("checkpoint is retained by a recovery point: %w", errdefs.ErrConflict))
+			return
+		}
 		b.mu.Lock()
 		defer b.mu.Unlock()
 		all, err := b.client.Containers(ctx)

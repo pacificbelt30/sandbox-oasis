@@ -137,6 +137,7 @@ func init() {
 	f.DurationVar(&runOpts.Environment.ReadinessTimeout, "readiness-timeout", 0, "Hook/readiness deadline (default 60s)")
 	f.StringVar(&runOpts.Environment.ImageID, "image-id", "", "Require this exact image digest (sha256:...)")
 	f.StringVar(&runOpts.CloneDir, "clone-dir", "", "Create an independent local clone at a new absolute directory; retained for recovery")
+	f.StringVar(&runOpts.ManagedWorkspace, "managed-workspace", "", "Attach an available node-owned workspace by full ID (Kata only; project directory is used for configuration, not mounted)")
 	f.BoolVar(&runOpts.ReadOnly, "read-only", false, "Mount project as read-only")
 	f.BoolVar(&runOpts.ReadOnlyRootFS, "read-only-rootfs", false, "Make the image rootfs read-only; use tmpfs for temporary files and agent HOME")
 	f.StringVar(&runOpts.AgentStateSize, "agent-state-size", "", "Private Codex SQLite disk for new writable Kata workers: auto (512MiB), off, or 64MiB–8GiB")

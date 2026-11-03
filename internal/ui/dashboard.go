@@ -148,6 +148,9 @@ F2 / Space   choose an action using arrows and Enter; Esc cancels
 Tab     focus the Actions button; Tab again returns to the list
 Esc     clear the instance filter
 N       create a general sandbox (AI routes disabled by default)
+M       managed workspaces: reservations, reuse and deletion
+Z       recovery points: inspect and restore as a NEW VM
+K       save selected stopped VM (filtered rootfs, optional workspace)
 F       browse, view and transfer workspace files
 W       guest Git changes and selected artifact export
 L       lifetime, host quota and selected-VM supervision

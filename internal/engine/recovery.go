@@ -27,6 +27,9 @@ func (b *Backend) recover(ctx context.Context) error {
 	if err = b.recoverIntents(ctx); err != nil {
 		return err
 	}
+	if err = b.recoverWorkspaceOperations(); err != nil {
+		return err
+	}
 	if err = b.recoverNetworks(ctx, all); err != nil {
 		return err
 	}
@@ -63,6 +66,12 @@ func (b *Backend) recover(ctx context.Context) error {
 			// management traffic. Storage migration never silently drops data.
 			if err := b.stop(ctx, r, c, 0); err != nil {
 				return fmt.Errorf("stopping unbounded worker %s: %w", r.ID, err)
+			}
+			continue
+		}
+		if workspaceErr := b.ensureManagedWorkspace(r); workspaceErr != nil {
+			if err = b.stop(ctx, r, c, 0); err != nil {
+				return fmt.Errorf("stopping worker with unverifiable managed workspace: %w", err)
 			}
 			continue
 		}

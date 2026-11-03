@@ -154,14 +154,22 @@ func environmentSummary(e sandboxux.Environment) string {
 		command = "keep VM alive; connect to a shell after creation"
 	}
 	workspace := e.Workspace
-	if workspace == "" || workspace == "shared" {
+	switch workspace {
+	case "", "shared":
 		workspace = "share selected host project"
-	} else {
+	case "copy":
 		workspace = "independent committed Git copy; choose a new destination"
+	case "managed":
+		workspace = "managed current files; secrets/cache/links excluded"
+	default:
+		workspace = "existing managed workspace; choose an unleased ID"
 	}
 	lifetime := "host/project defaults"
 	if e.LifecycleSet || e.Lifecycle != (workerpolicy.Lifecycle{}) {
 		lifetime = fmt.Sprintf("maximum %s · idle %s · retention %s · protect main %t", e.Lifecycle.MaxLifetime, e.Lifecycle.IdleTimeout, e.Lifecycle.Retention, e.Lifecycle.ProtectMain)
+	}
+	if e.Workspace == "managed" || e.Workspace == "existing" {
+		workspace += fmt.Sprintf(" · %d MiB / %d inodes (zero uses defaults)", e.WorkspaceBytes>>20, e.WorkspaceInodes)
 	}
 	return fmt.Sprintf("Image: %s\nResource profile: %s\nWorkspace: %s\nProject access: %s\nRootfs: %s\nInternet: %s\nAllowed domains: %s\nLifetime: %s\n\nStartup command:\n%s", value(e.Image), value(e.Profile), workspace, access(e.ReadOnly), access(e.ReadOnlyRoot), e.Network, strings.Join(e.Domains, ", "), lifetime, command)
 }

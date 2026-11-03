@@ -24,6 +24,8 @@ type Environment struct {
 	ReadOnly, ReadOnlyRoot                      *bool
 	Lifecycle                                   workerpolicy.Lifecycle
 	LifecycleSet                                bool
+	WorkspaceBytes                              int64
+	WorkspaceInodes                             uint64
 }
 type EnvironmentFile struct {
 	Version      int                    `json:"version"`
@@ -45,12 +47,15 @@ func DefaultEnvironmentStore() (*EnvironmentStore, error) {
 	return &EnvironmentStore{Path: filepath.Join(dir, "codex-dock", "sandbox-environments", "config.json")}, nil
 }
 func EnvironmentFrom(s LaunchSpec) Environment {
-	return Environment{Image: s.Image, Command: s.Command, Profile: s.Profile, Network: s.Network, Workspace: s.Workspace, Domains: append([]string(nil), s.Domains...), ReadOnly: s.ReadOnly, ReadOnlyRoot: s.ReadOnlyRoot, Lifecycle: s.Lifecycle, LifecycleSet: s.LifecycleSet}
+	return Environment{Image: s.Image, Command: s.Command, Profile: s.Profile, Network: s.Network, Workspace: s.Workspace, Domains: append([]string(nil), s.Domains...), ReadOnly: s.ReadOnly, ReadOnlyRoot: s.ReadOnlyRoot, Lifecycle: s.Lifecycle, LifecycleSet: s.LifecycleSet, WorkspaceBytes: s.WorkspaceBytes, WorkspaceInodes: s.WorkspaceInodes}
 }
 func (e Environment) Apply(s LaunchSpec) LaunchSpec {
 	s.Image, s.Command, s.Profile, s.Network, s.Workspace = e.Image, e.Command, e.Profile, e.Network, e.Workspace
 	s.Domains, s.ReadOnly, s.ReadOnlyRoot, s.Lifecycle = append([]string(nil), e.Domains...), e.ReadOnly, e.ReadOnlyRoot, e.Lifecycle
 	s.LifecycleSet = e.LifecycleSet
+	s.WorkspaceBytes, s.WorkspaceInodes = e.WorkspaceBytes, e.WorkspaceInodes
+	s.WorkspaceID, s.Checkpoint = "", ""
+	s.CopyPlan, s.Recovery = nil, nil
 	// A saved command always goes through the normal launch review. Credentials
 	// and mounts are not inherited from an earlier form or from the saved file.
 	s.AI, s.Mounts, s.CloneDir, s.CloneRevision = false, nil, "", ""
@@ -63,8 +68,11 @@ func (e Environment) validate() error {
 	if e.Network != "offline" && e.Network != "host" && e.Network != "dependencies" && e.Network != "allowlist" {
 		return fmt.Errorf("invalid environment network mode")
 	}
-	if e.Workspace != "" && e.Workspace != "shared" && e.Workspace != "copy" {
+	if e.Workspace != "" && e.Workspace != "shared" && e.Workspace != "copy" && e.Workspace != "managed" && e.Workspace != "existing" {
 		return fmt.Errorf("invalid environment workspace mode")
+	}
+	if e.WorkspaceBytes != 0 && (e.WorkspaceBytes < 64<<20 || e.WorkspaceBytes > 4<<30 || e.WorkspaceBytes%(64<<20) != 0) || e.WorkspaceInodes != 0 && (e.WorkspaceInodes < 1024 || e.WorkspaceInodes > 65536 || e.WorkspaceInodes&(e.WorkspaceInodes-1) != 0) {
+		return fmt.Errorf("invalid saved workspace capacity")
 	}
 	for _, d := range e.Domains {
 		if len(d) == 0 || len(d) > 253 || bytes.ContainsAny([]byte(d), "\x00\r\n\t ") {

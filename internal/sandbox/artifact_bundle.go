@@ -9,6 +9,8 @@ import (
 	"slices"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/pacificbelt30/codex-dock/internal/managedworkspace"
 )
 
 type ArtifactOptions struct {
@@ -62,18 +64,21 @@ for rel in sorted(paths):
     total+=len(data)
     if total>limit:raise ValueError('artifact size limit')
     files.append({'path':rel,'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest()});payload.append(data)
-# Git output is spooled to a bounded temporary file, never an unbounded pipe.
-with tempfile.TemporaryFile() as patch:
-    proc=subprocess.Popen(['git','--literal-pathspecs','--no-pager','diff','--binary','--no-ext-diff','--no-textconv','HEAD','--']+sorted(paths),cwd='/workspace',stdout=patch,stderr=subprocess.DEVNULL)
-    import time
-    while proc.poll() is None:
-        if os.fstat(patch.fileno()).st_size>limit-total:proc.kill();proc.wait();raise ValueError('patch size limit')
-        time.sleep(.01)
-    if proc.returncode:raise ValueError('git diff failed')
-    patch.seek(0);diff=patch.read(limit-total+1)
-if len(diff)>limit-total:raise ValueError('patch size limit')
-head=subprocess.run(['git','rev-parse','--verify','HEAD'],cwd='/workspace',stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,check=True).stdout.decode().strip()
-if len(head) not in (40,64) or any(c not in '0123456789abcdef' for c in head):raise ValueError('invalid git head')
+if o.get('_managed_seed'):
+    head='workspace:'+o['_managed_seed'];diff=b''
+else:
+    # Git output is spooled to a bounded temporary file, never an unbounded pipe.
+    with tempfile.TemporaryFile() as patch:
+        proc=subprocess.Popen(['git','--literal-pathspecs','--no-pager','diff','--binary','--no-ext-diff','--no-textconv','HEAD','--']+sorted(paths),cwd='/workspace',stdout=patch,stderr=subprocess.DEVNULL)
+        import time
+        while proc.poll() is None:
+            if os.fstat(patch.fileno()).st_size>limit-total:proc.kill();proc.wait();raise ValueError('patch size limit')
+            time.sleep(.01)
+        if proc.returncode:raise ValueError('git diff failed')
+        patch.seek(0);diff=patch.read(limit-total+1)
+    if len(diff)>limit-total:raise ValueError('patch size limit')
+    head=subprocess.run(['git','rev-parse','--verify','HEAD'],cwd='/workspace',stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,check=True).stdout.decode().strip()
+    if len(head) not in (40,64) or any(c not in '0123456789abcdef' for c in head):raise ValueError('invalid git head')
 m={'jobs':o.get('_jobs',[]),'image_id':o.get('_image_id',''),'runtime':o.get('_runtime',''),'worker':worker,'head':head,'files':files,'patch_bytes':len(diff),'total_bytes':total+len(diff)}
 canonical=json.dumps(m,sort_keys=True,separators=(',',':')).encode()+diff
 m['id']=hashlib.sha256(canonical).hexdigest()
@@ -122,12 +127,21 @@ func (m *Manager) artifact(ctx context.Context, id, op string, options ArtifactO
 		jobs = append(jobs, job)
 	}
 	slices.SortFunc(jobs, func(a, b Job) int { return strings.Compare(a.ID, b.ID) })
+	managedSeed := ""
+	if worker.Config.Labels[managedworkspace.Label] != "" {
+		info, e := m.ManagedWorkspaceInfo(ctx, worker.ID)
+		if e != nil {
+			return e
+		}
+		managedSeed = info.SeedID
+	}
 	raw, err := json.Marshal(struct {
 		ArtifactOptions
-		ImageID string `json:"_image_id"`
-		Runtime string `json:"_runtime"`
-		Jobs    []Job  `json:"_jobs"`
-	}{options, worker.Image, worker.HostConfig.Runtime, jobs})
+		ImageID     string `json:"_image_id"`
+		Runtime     string `json:"_runtime"`
+		Jobs        []Job  `json:"_jobs"`
+		ManagedSeed string `json:"_managed_seed,omitempty"`
+	}{options, worker.Image, worker.HostConfig.Runtime, jobs, managedSeed})
 	if err != nil {
 		return err
 	}

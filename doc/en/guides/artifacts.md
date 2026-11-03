@@ -3,7 +3,8 @@
 [日本語](../../guides/artifacts.md) | **English**
 
 - Available: **v0.0.4**.
-- Run on the host against a running worker whose workspace is a Git repository with HEAD and accessible Git metadata.
+- Run on the host against a running worker. Ordinary workspaces require a Git repository with HEAD and accessible Git metadata.
+- Unreleased (main): [managed workspaces](managed-workspaces.md) need no Git. `head` is `workspace:IMPORT_MANIFEST_ID`; `changes.patch` is empty. Selected-content hashes, bounds and stale-plan rejection still apply.
 - Select explicit regular workspace files. Export their contents, their Git diff against HEAD, and a manifest containing worker/image/runtime IDs, HEAD, sizes and SHA-256 hashes. Add `--job JOB_ID` to include selected job IDs, running state and exit codes.
 
 | Limit | Value |

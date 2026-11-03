@@ -5,6 +5,7 @@ package engine
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/docker/docker/api/types/container"
@@ -36,7 +37,15 @@ func (b *Backend) protectUsageMounts(ctx context.Context, candidate *record) err
 }
 
 func (b *Backend) privateAuthorityRecord() *record {
-	return &record{Config: container.Config{Labels: map[string]string{"io.codex-dock.proxy-layout": "node-private-authority"}}, Host: container.HostConfig{Mounts: []mount.Mount{{Type: mount.TypeBind, Source: b.authorityRoot(), Target: "/run/cxd-private-authority"}}}}
+	r := &record{Config: container.Config{Labels: map[string]string{"io.codex-dock.proxy-layout": "node-private-authority"}}, Host: container.HostConfig{Mounts: []mount.Mount{{Type: mount.TypeBind, Source: b.authorityRoot(), Target: "/run/cxd-private-authority"}}}}
+	for _, p := range []string{b.workspaceRecords(), b.recoveryPointRecords(), b.workspaceData()} {
+		if filepath.IsAbs(p) {
+			if _, err := os.Lstat(p); err == nil {
+				r.Host.Mounts = append(r.Host.Mounts, mount.Mount{Type: mount.TypeBind, Source: p, Target: "/run/cxd-private-workspaces"})
+			}
+		}
+	}
+	return r
 }
 
 func (b *Backend) protectAuthorityShares(ctx context.Context) error {
@@ -49,7 +58,7 @@ func usageMountPaths(r *record) []string {
 	}
 	var paths []string
 	for _, m := range r.Host.Mounts {
-		if m.Type == mount.TypeBind && (m.Target == "/run/cxd-usage" || m.Target == "/run/cxd-broker.json" || m.Target == "/run/cxd-admin-secret" || m.Target == "/run/cxd-private-authority") {
+		if m.Type == mount.TypeBind && (m.Target == "/run/cxd-usage" || m.Target == "/run/cxd-broker.json" || m.Target == "/run/cxd-admin-secret" || m.Target == "/run/cxd-private-authority" || m.Target == "/run/cxd-private-workspaces") {
 			paths = append(paths, m.Source)
 		}
 	}

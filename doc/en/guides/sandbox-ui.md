@@ -99,6 +99,8 @@ Available: **unreleased (main)**. Select `Independent Git copy` under `Workspace
 
 For destination errors, check parent ownership, mode 0700, symlinks and existing paths. The source must be a standalone repository root with a real `.git` directory. Cancelling review does not create a copy.
 
+For current uncommitted/untracked files or a non-Git folder, choose a [bounded managed workspace](managed-workspaces.md). Its dedicated disk avoids sharing the original and supports stopped-VM save/new-VM restore. Use `M` for management, `K` to save a stopped VM, and `Z` to restore.
+
 ## Save reusable environments
 
 Available: **unreleased (main)**. Fill in creation settings, choose `Save environment` / `Ctrl-S`, enter a name and review before saving. Choose `Load environment` / `Ctrl-O` and review the saved settings before loading. Loading still requires a separate normal launch review.
@@ -106,7 +108,7 @@ Available: **unreleased (main)**. Fill in creation settings, choose `Save enviro
 | Saved | Excluded or reset when loading |
 |---|---|
 | Image, startup command and resource profile | No worker name, project path or copy destination |
-| Shared/copy workspace mode and read-only settings | Form-entered extra mounts are excluded and cleared on load |
+| Workspace mode, managed capacity/inode ceiling and read-only settings | Form-entered extra mounts are excluded and cleared on load |
 | Network mode, explicit domains and lifecycle | No AI credentials, authentication settings or AI enablement; AI is disabled after loading |
 
 - Host/project defaults still apply. Loading does not disable extra mounts or other defaults configured on the host.
@@ -170,7 +172,7 @@ Available: **unreleased (main)**. Select a running VM and press `W`.
 
 - Existing host files, symlinks, credential paths and selections over 256 files / 32 MiB are rejected. A change to selected content, diff or HEAD after review rejects export without publishing a partial file.
 - The tar contains selected files, their `changes.patch` and a manifest. The host file is mode 0600. No changes are automatically applied to the original project.
-- A non-Git workspace or oversized diff displays an error. Use `F` for individual file recovery. See [artifact specifications](artifacts.md).
+- Managed workspaces support [initial-import hash comparison and non-Git export](managed-workspaces.md#retrieve-changes). Other non-Git workspaces or oversized diffs display an error. Use `F` for individual file recovery. See [artifact specifications](artifacts.md).
 
 ## Preview a web application
 

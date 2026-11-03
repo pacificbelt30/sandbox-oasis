@@ -87,6 +87,25 @@ func (d *sandboxDesktop) limits(worker sandbox.Worker) {
 			text.WriteString(lifecycleSummary(s, time.Now()))
 		}
 		text.WriteString("\n")
+		if d.backend.ManagedInfo != nil {
+			info, err := d.backend.ManagedInfo(ctx, worker.ID)
+			if err != nil {
+				fmt.Fprintf(&text, "Managed workspace unavailable: %v\n", err)
+			} else if info != nil {
+				text.WriteString(managedSummary(*info))
+				if worker.Status == "running" && d.backend.ManagedUsage != nil {
+					observed, e := d.backend.ManagedUsage(ctx, worker.ID)
+					if e != nil {
+						fmt.Fprintf(&text, "Live usage unavailable: %v\n", e)
+					} else {
+						text.WriteString(observed + "\n")
+					}
+				} else {
+					text.WriteString("Live usage unavailable while stopped; fixed reservation remains.\n")
+				}
+				text.WriteString("\n")
+			}
+		}
 		if usageErr != nil {
 			fmt.Fprintf(&text, "Rootfs usage unavailable: %v\n", usageErr)
 		} else {

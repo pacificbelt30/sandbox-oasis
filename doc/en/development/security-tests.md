@@ -11,6 +11,7 @@
 | Model policy | Duplicate/case-variant JSON and trailing values | Only permitted models; preserve accepted request bytes |
 | Broker URL/path | Other origins, traversal, percent encodings, doubled slashes, forbidden methods | Fixed origin/path/method scope |
 | Destinations | IPv4/IPv6/metadata, mixed DNS, malformed authorities | No dial to rejected destinations/addresses |
+| Managed workspace manifest (unreleased, main) | Relative paths, duplicates, credential paths, hash/size mismatch | Reject before import; archive link/extra-file cases also have regression tests |
 | Management JSON | Duplicates, Unicode field aliases, trailing/unknown data, size/depth excess | Reject before authentication/Store mutation |
 | Token lifetime | Negative/oversized/TLS-excess TTL | Do not replace existing authority with invalid leases; omitted HTTP TTL uses configured default |
 | Persistence | Injected ENOSPC, broken audit head, OAuth save failure | No fresh budgets/credentials; do not silently reset budgets after recovery |
@@ -31,7 +32,7 @@ Regular race coverage:
 make test
 ```
 
-Five bounded fuzz targets:
+Eight bounded fuzz targets (managed workspace manifest coverage: unreleased, main):
 
 ```bash
 make security-fuzz
@@ -49,6 +50,7 @@ Use the [disposable node procedure](../../testing.md#新規導入更新復旧を
 |---|---|
 | TLS/network/revocation | `--acceptance-run '^TestKataWorkerMTLS$'` |
 | Go API, case isolation, proxy audit | `--acceptance-run '^TestKataGoAPI$'` |
+| Managed workspace limits and TUI save/new-VM restore | `--acceptance-run '^TestKataManagedWorkspace$'`; exhaust only a bounded disk in a disposable guest |
 | Encryption/keyring | `TestKataEncryptedProfile`, `TestKataKeyringProfile` |
 
 Signing CI contacts GitHub/Sigstore. Normal upstream CLI contract checks remain offline; real AI authentication/inference is separate. See [evidence and limits](../../testing.md).

@@ -17,9 +17,11 @@ import (
 	"time"
 
 	"github.com/pacificbelt30/codex-dock/internal/engine"
+	"github.com/pacificbelt30/codex-dock/internal/managedworkspace"
 	"github.com/pacificbelt30/codex-dock/internal/sandbox"
 	"github.com/pacificbelt30/codex-dock/internal/workerpolicy"
 	"github.com/pacificbelt30/codex-dock/internal/workspace"
+	"github.com/pacificbelt30/codex-dock/internal/workspacecopy"
 )
 
 type LaunchSpec struct {
@@ -30,6 +32,12 @@ type LaunchSpec struct {
 	ReadOnly, ReadOnlyRoot                 *bool // nil preserves configured defaults
 	Mounts                                 []string
 	Workspace, CloneDir, CloneRevision     string
+	WorkspaceID, Checkpoint                string
+	WorkspaceBytes                         int64
+	WorkspaceInodes                        uint64
+	WorkspaceOwner                         managedworkspace.Options
+	CopyPlan                               *workspacecopy.Plan
+	Recovery                               *managedworkspace.RecoveryPoint
 	Lifecycle                              workerpolicy.Lifecycle
 	LifecycleSet                           bool
 }
@@ -42,6 +50,8 @@ type CLILauncher struct {
 	GlobalArgs   []string
 	PassphraseFD int
 	Config       sandbox.ManagerConfig
+	UserMode     string
+	Workspaces   WorkspaceService
 }
 
 var workerName = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,99}$`)
@@ -73,8 +83,14 @@ func PrepareLaunch(spec LaunchSpec) (LaunchSpec, []string, error) {
 	if err := spec.Lifecycle.Validate(); err != nil {
 		return spec, nil, err
 	}
-	if spec.Workspace != "" && spec.Workspace != "shared" && spec.Workspace != "copy" {
-		return spec, nil, fmt.Errorf("choose shared workspace or independent copy")
+	if spec.Workspace != "" && spec.Workspace != "shared" && spec.Workspace != "copy" && spec.Workspace != "managed" && spec.Workspace != "existing" {
+		return spec, nil, fmt.Errorf("choose shared, copy, managed or existing workspace")
+	}
+	if spec.Checkpoint != "" && (!managedworkspace.ID.MatchString(spec.Checkpoint) || spec.Image != "") {
+		return spec, nil, fmt.Errorf("restoration requires a full checkpoint ID and no image override")
+	}
+	if spec.Workspace == "existing" && spec.Recovery == nil && !managedworkspace.ID.MatchString(spec.WorkspaceID) {
+		return spec, nil, fmt.Errorf("choose a managed workspace by its full ID")
 	}
 	if spec.Workspace == "copy" {
 		if err := validateCopyDestination(p, spec.CloneDir); err != nil {
@@ -109,6 +125,9 @@ func PrepareLaunch(spec LaunchSpec) (LaunchSpec, []string, error) {
 	}
 	if spec.Image != "" {
 		args = append(args, "--image", spec.Image)
+	}
+	if spec.Checkpoint != "" {
+		args = append(args, "--checkpoint", spec.Checkpoint)
 	}
 	if spec.Profile != "" {
 		args = append(args, "--profile-size", spec.Profile)
@@ -164,6 +183,16 @@ func (l *CLILauncher) Launch(ctx context.Context, spec LaunchSpec) (LaunchResult
 	if err != nil {
 		return result, err
 	}
+	if spec.Workspace == "managed" || spec.Workspace == "existing" {
+		info, e := l.materializeWorkspace(ctx, spec)
+		if info.ID != "" {
+			result.Workspace = info.ID
+		}
+		if e != nil {
+			return result, fmt.Errorf("managed workspace %s retained; inspect workspace list before retrying: %w", result.Workspace, e)
+		}
+		args = append(args, "--managed-workspace", info.ID, "--no-git-metadata", "--user", fmt.Sprintf("%d:%d", info.Options.UID, info.Options.GID))
+	}
 	if spec.Workspace == "copy" {
 		if err := workspace.CloneAt(ctx, spec.Project, spec.CloneDir, spec.CloneRevision); err != nil {
 			return result, err
@@ -190,7 +219,7 @@ func (l *CLILauncher) Launch(ctx context.Context, spec LaunchSpec) (LaunchResult
 	}
 	c := exec.CommandContext(ctx, l.Executable, append(globals, args...)...)
 	c.Dir = spec.Project
-	if result.Workspace != "" {
+	if spec.Workspace == "copy" && result.Workspace != "" {
 		c.Dir = result.Workspace
 	}
 	command := spec.Command

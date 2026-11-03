@@ -147,4 +147,5 @@
 ## Additional boundaries (v0.0.7)
 
 - Implicit external Git metadata sharing requires a reciprocal host-side worktree registration matching the workspace pointer. Pointers to unrelated repositories and mismatched registrations are rejected. Use `--no-git-metadata` or Go `RunOptions.NoGitMetadata` to omit this share.
+- **Unreleased (main)**: [managed workspaces](guides/managed-workspaces.md) use preallocated finite ext4 disks on dedicated XFS, attached directly to Kata. The host never mounts or interprets guest-written filesystems. VM leases and recorded inode ownership control reuse/deletion; VM removal retains workspace data until explicit deletion. Snapshots are raw-byte copies verified by hash. Recovery points are not external backups against host failure or local root.
 - Proxies require [node-owned image authorization](commands/proxy.md). Writable snapshots use enforced [rootfs capacity limits](guides/resource-limits.md).

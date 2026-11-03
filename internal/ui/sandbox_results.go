@@ -15,10 +15,10 @@ func (d *sandboxDesktop) changes(worker sandbox.Worker) {
 		d.message("Workspace results are unavailable.")
 		return
 	}
-	view := tview.NewTextView().SetDynamicColors(false).SetScrollable(true).SetText("Loading guest Git changes…")
+	view := tview.NewTextView().SetDynamicColors(false).SetScrollable(true).SetText("Loading workspace changes…")
 	view.SetBorder(true).SetTitle(" Workspace changes · " + tview.Escape(worker.Name) + " ")
 	form := tview.NewForm().AddButton("Refresh", func() { d.changes(worker) }).AddButton("Export selected files…", func() { d.exportArtifacts(worker) }).AddButton("Back", d.back)
-	body := tview.NewFlex().SetDirection(tview.FlexRow).AddItem(view, 0, 1, true).AddItem(form, 3, 0, false).AddItem(tview.NewTextView().SetText("Tab switches panes · ↑↓ / PgUp / PgDn scroll · Esc back\nDiff is against current guest HEAD. Untracked contents require explicit export."), 2, 0, false)
+	body := tview.NewFlex().SetDirection(tview.FlexRow).AddItem(view, 0, 1, true).AddItem(form, 3, 0, false).AddItem(tview.NewTextView().SetText("Tab switches panes · ↑↓ / PgUp / PgDn scroll · Esc back\nShared/Git copy: current HEAD. Managed: initial import hashes; no Git patch. Select files explicitly to export."), 2, 0, false)
 	body.SetInputCapture(d.pageFormNavigation(view, form, d.back))
 	d.pages.AddAndSwitchToPage("changes", body, true)
 	d.app.SetFocus(view)
@@ -34,7 +34,7 @@ func (d *sandboxDesktop) exportArtifacts(worker sandbox.Worker) {
 	paths, destination := "", ""
 	back := func() { d.changes(worker) }
 	form := tview.NewForm().AddTextArea("Workspace files (one/line)", "", 56, 5, 24576, func(v string) { paths = v }).AddInputField("New host .tar file", "", 56, nil, func(v string) { destination = v })
-	form.AddTextView("Scope", "Choose 1–256 regular files. The archive includes selected contents, their Git diff against current HEAD and a manifest. Secrets paths and symlinks are rejected. Maximum 32 MiB; host destination must be new. No changes are applied to the original project.", 56, 5, false, false)
+	form.AddTextView("Scope", "Choose 1–256 regular files. The archive includes selected contents, a manifest and, for Git workspaces, their diff against current HEAD. Managed exports contain an empty changes.patch. Secrets paths and symlinks are rejected. Maximum 32 MiB; host destination must be new. No changes are applied to the original project.", 56, 5, false, false)
 	form.AddButton("Review export", func() {
 		options := sandbox.ArtifactOptions{}
 		for _, p := range strings.Split(paths, "\n") {
@@ -48,7 +48,7 @@ func (d *sandboxDesktop) exportArtifacts(worker sandbox.Worker) {
 				return nil, err
 			}
 			var text strings.Builder
-			fmt.Fprintf(&text, "Save to new private file: %s\nWorker: %s\nGuest HEAD: %s\nSelected file + diff bytes: %d\nPlan: %s\n\n", destination, plan.Worker, plan.Head, plan.TotalBytes, plan.ID)
+			fmt.Fprintf(&text, "Save to new private file: %s\nWorker: %s\nGuest HEAD / initial import: %s\nSelected file + diff bytes: %d\nPlan: %s\n\n", destination, plan.Worker, plan.Head, plan.TotalBytes, plan.ID)
 			for _, f := range plan.Files {
 				fmt.Fprintf(&text, "%s · %d bytes\n", f.Path, f.Bytes)
 			}

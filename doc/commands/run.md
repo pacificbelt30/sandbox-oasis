@@ -536,3 +536,7 @@ oaiso run --agent shell --no-ai --no-internet
 シェルを終了するとワーカーは通常の終了処理に進みます。TUIからの作成・転送は[サンドボックスガイド](../guides/sandbox-ui.md)を参照してください。
 
 未リリース（main）：`--headless --task-file -`はstdinから最大32 KiBのUTF-8タスクを読み取ります。コマンドをホストのプロセス引数へ含めたくない場合に使用できます。
+
+## 管理workspaceを接続する
+
+未リリース（main）：`--managed-workspace ID`で専用ディスクを`/workspace`へ接続します。ホストの元プロジェクトを共有せず、通常のKata検証・通信規則を維持します。CLI専用で設定ファイルには保存しません。非rootの所有UID/GIDを合わせてください。[作成・レビュー・容量・復元の手順](../guides/managed-workspaces.md)を参照してください。

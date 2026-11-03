@@ -433,3 +433,7 @@ oaiso run --agent shell --no-ai --no-internet
 Exiting the shell follows normal worker cleanup. See the [sandbox guide](../guides/sandbox-ui.md) for TUI creation and transfers.
 
 Unreleased (main): `--headless --task-file -` reads a UTF-8 task of at most 32 KiB from stdin, allowing command text to stay out of host process arguments.
+
+## Attach a managed workspace
+
+Unreleased (main): `--managed-workspace ID` attaches a dedicated disk at `/workspace` without sharing the original project. Normal Kata verification and networking policy still apply. This flag is CLI-only and is not persisted in configuration. Match the non-root numeric owner. See [creation, review, capacity and recovery](../guides/managed-workspaces.md).

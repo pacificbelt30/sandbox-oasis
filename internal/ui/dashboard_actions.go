@@ -26,6 +26,7 @@ func dashboardActions(worker *sandbox.Worker, tasks bool) []dashboardAction {
 			items = append(items, runeAction("Connect to shell", "C · exit the shell to return here", 'c', true), runeAction("Browse workspace files", "F · view, upload or download files", 'f', true), runeAction("Workspace changes and export", "W · guest Git diff and selected artifacts", 'w', true), runeAction("Web previews", "U · authenticated localhost URLs", 'u', true), runeAction("Run a command", "X · execute in the selected sandbox", 'x', true))
 		case "exited", "stopped", "created":
 			items = append(items, runeAction("Start sandbox", "R · start the selected sandbox", 'r', true))
+			items = append(items, runeAction("Save recovery point…", "K · filtered rootfs and optional managed workspace", 'k', true))
 		}
 		items = append(items, runeAction("Instance details", "I · full name, image, policy and storage", 'i', true), dashboardAction{"View logs", "Enter · recent output", tcell.NewEventKey(tcell.KeyEnter, 0, 0), true})
 		items = append(items, runeAction("Lifetime and storage", "L · deadlines, host quota, scoped supervision", 'l', true))
@@ -34,6 +35,7 @@ func dashboardActions(worker *sandbox.Worker, tasks bool) []dashboardAction {
 		}
 		items = append(items, runeAction("Delete sandbox…", "D · asks for confirmation", 'd', true))
 	}
+	items = append(items, runeAction("Managed workspaces", "M · reservations, reuse and deletion", 'm', false), runeAction("Recovery points", "Z · inspect and restore as new VM", 'z', false))
 	items = append(items, runeAction("Filter instances", "/ · name, status, branch or other fields", '/', false), runeAction("Change sort order", "O · cycle ordering", 'o', false), runeAction("Recent activity", "V · lifecycle changes", 'v', false))
 	if tasks {
 		items = append(items, runeAction("Tasks and result review", "T · open the task board", 't', false))

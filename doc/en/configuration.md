@@ -372,3 +372,5 @@ Runtime overrides take precedence over config, below explicit flags.
 - Limits apply on both host and guest.
 
 - `proxy.credential_routes`: v0.0.4. Absolute [broker configuration file](guides/credential-broker.md) path; trusted host configuration only.
+
+Unreleased (main): named TUI environments may also save [managed workspace](guides/managed-workspaces.md) mode, capacity and inode ceiling. Workspace IDs, numeric owners, recovery points and import plans are excluded. `run --managed-workspace` is CLI-only and is not a persistent setting.

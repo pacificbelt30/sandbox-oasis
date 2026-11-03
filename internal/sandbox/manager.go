@@ -29,6 +29,7 @@ import (
 	"github.com/pacificbelt30/codex-dock/internal/engine"
 	"github.com/pacificbelt30/codex-dock/internal/kataguard"
 	"github.com/pacificbelt30/codex-dock/internal/launchtiming"
+	"github.com/pacificbelt30/codex-dock/internal/managedworkspace"
 	"github.com/pacificbelt30/codex-dock/internal/network"
 	"github.com/pacificbelt30/codex-dock/internal/workerpolicy"
 	"github.com/pacificbelt30/codex-dock/internal/workertransport"
@@ -129,6 +130,31 @@ func (m *Manager) Run(opts RunOptions) (containerID string, runErr error) {
 // Failure cleanup uses its own bounded context so cancellation cannot leave
 // the worker running merely because the caller stopped waiting.
 func (m *Manager) RunContext(parent context.Context, opts RunOptions) (containerID string, runErr error) {
+	if opts.ManagedWorkspace != "" {
+		if len(opts.Filesystem.DenyRead)+len(opts.Filesystem.DenyWrite) > 0 {
+			return "", fmt.Errorf("managed workspace cannot validate per-path filesystem masks without opening guest data on the host; use whole-workspace --read-only or a shared/copied host workspace")
+		}
+		if !managedworkspace.ID.MatchString(opts.ManagedWorkspace) || opts.Runtime == RuntimeRunc || opts.authenticationSession || opts.UseWorktree || opts.WorktreePath != "" || opts.CloneDir != "" {
+			return "", fmt.Errorf("managed workspace requires Kata and cannot be combined with a host worktree or clone")
+		}
+		for _, mount := range opts.Mounts {
+			if workerpolicy.PathsOverlap(mount.Target, "/workspace") {
+				return "", fmt.Errorf("additional mount conflicts with managed workspace")
+			}
+		}
+		info, err := m.cli.Info(parent)
+		if err != nil {
+			return "", err
+		}
+		supported := false
+		for _, f := range info.DriverStatus {
+			supported = supported || f == [2]string{"cxd.managed-workspaces", "1"}
+		}
+		if !supported {
+			return "", fmt.Errorf("managed workspace requires an updated node with enforced private workspace disks")
+		}
+		opts.NoGitMetadata = true
+	}
 	launchtiming.Next(parent, "preflight")
 	opts.AgentStateSize = strings.ToLower(strings.TrimSpace(opts.AgentStateSize))
 	requestedStateDisk := opts.AgentStateSize != "" && opts.AgentStateSize != "off" && !opts.ReadOnlyRootFS && opts.Runtime != RuntimeRunc && !opts.authenticationSession
@@ -398,6 +424,10 @@ func (m *Manager) RunContext(parent context.Context, opts RunOptions) (container
 		labelIsolation:                   isolation,
 		labelRuntime:                     registration,
 		labelPrefix + "resource-profile": profile.Name,
+	}
+	if opts.ManagedWorkspace != "" {
+		labels[managedworkspace.Label] = opts.ManagedWorkspace
+		labels[managedworkspace.ReadOnlyLabel] = strconv.FormatBool(opts.ReadOnly)
 	}
 	if opts.AgentStateSize != "" {
 		labels[workerpolicy.AgentStateLabel] = opts.AgentStateSize
@@ -1538,6 +1568,9 @@ func buildMounts(opts RunOptions, absWorkspace string) []mount.Mount {
 				Propagation: mount.PropagationRPrivate,
 			},
 		},
+	}
+	if opts.ManagedWorkspace != "" {
+		mounts = nil
 	}
 	for _, ms := range opts.Mounts {
 		mounts = append(mounts, mount.Mount{

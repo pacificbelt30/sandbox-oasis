@@ -312,6 +312,18 @@ func RunWithSandboxOptions(cfg sandbox.ManagerConfig, configPath, policyPath, po
 		case 'n', 'N':
 			openDesktop(desktop.create)
 			return nil
+		case 'm', 'M':
+			openDesktop(desktop.managedWorkspaces)
+			return nil
+		case 'z', 'Z':
+			openDesktop(desktop.recoveryPoints)
+			return nil
+		case 'k', 'K':
+			if idx >= 0 && idx < len(workers) {
+				worker := workers[idx]
+				openDesktop(func() { desktop.saveRecoveryPoint(worker) })
+			}
+			return nil
 		case 'i', 'I':
 			if idx >= 0 && idx < len(workers) {
 				page := dashboardDetailPage(workers[idx], func() { pages.RemovePage("details"); showMain() })

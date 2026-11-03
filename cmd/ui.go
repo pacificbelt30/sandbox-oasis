@@ -31,7 +31,7 @@ var uiCmd = &cobra.Command{
 		if !ok {
 			return fmt.Errorf("CLI launch configuration unavailable")
 		}
-		launcher := &sandboxux.CLILauncher{Executable: runtime.Executable, GlobalArgs: runtime.GlobalArgs, PassphraseFD: runtime.PassphraseFD, Config: managementConfig()}
+		launcher := &sandboxux.CLILauncher{Executable: runtime.Executable, GlobalArgs: runtime.GlobalArgs, PassphraseFD: runtime.PassphraseFD, Config: managementConfig(), UserMode: viper.GetString("run.user")}
 		return ui.RunWithSandboxOptions(managementConfig(), path, store.Path, viper.GetString("run.agent_policy"), tasks, launcher)
 	},
 }
