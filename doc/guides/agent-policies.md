@@ -29,6 +29,8 @@ oaiso run --agent codex --agent-policy approve-for-me
 
 ## ホスト既定値にする
 
+**未リリース（main）**：`init/list/path/validate/doctor`は余分な位置引数を拒否します。`init`するファイルは`--agent-policy-file`で指定します。対象名と誤認した文字列を無視して、`init --force`で既存ファイルを書き換えないための検査です。
+
 ```bash
 oaiso agent-policy init
 oaiso agent-policy default approve-for-me

@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/pacificbelt30/codex-dock/internal/sandbox"
+	"github.com/pacificbelt30/codex-dock/internal/sandboxux"
 	"github.com/spf13/cobra"
+	"io"
 	"os"
 )
 
@@ -14,6 +16,9 @@ func init() {
 		op := op
 		var local string
 		c := &cobra.Command{Use: op + " NAME RELATIVE_PATH", Args: cobra.ExactArgs(2), RunE: func(cmd *cobra.Command, args []string) error {
+			if err := sandboxux.GuestPath(args[1], op == "list"); err != nil {
+				return err
+			}
 			m, err := sandbox.NewManager(managementConfig())
 			if err != nil {
 				return err
@@ -31,19 +36,16 @@ func init() {
 				}
 				return m.WriteFile(cmd.Context(), args[0], args[1], in)
 			}
-			out := cmd.OutOrStdout()
-			if local != "-" {
-				f, err := os.OpenFile(local, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
-				if err != nil {
-					return err
+			write := func(out io.Writer) error {
+				if op == "get" {
+					return m.ReadFile(cmd.Context(), args[0], args[1], out)
 				}
-				defer func() { _ = f.Close() }()
-				out = f
+				return m.ListFiles(cmd.Context(), args[0], args[1], out)
 			}
-			if op == "get" {
-				return m.ReadFile(cmd.Context(), args[0], args[1], out)
+			if local != "-" {
+				return sandboxux.SaveNewHostFile(local, write)
 			}
-			return m.ListFiles(cmd.Context(), args[0], args[1], out)
+			return write(cmd.OutOrStdout())
 		}}
 		c.Flags().StringVar(&local, "local", "-", "Local path; - uses stdin/stdout. Downloads require a new file.")
 		files.AddCommand(c)
@@ -57,16 +59,11 @@ func init() {
 			return err
 		}
 		defer func() { _ = m.Close() }()
-		out := cmd.OutOrStdout()
+		write := func(out io.Writer) error { return m.ExportDiff(cmd.Context(), args[0], out) }
 		if output != "-" {
-			f, err := os.OpenFile(output, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
-			if err != nil {
-				return err
-			}
-			defer func() { _ = f.Close() }()
-			out = f
+			return sandboxux.SaveNewHostFile(output, write)
 		}
-		return m.ExportDiff(cmd.Context(), args[0], out)
+		return write(cmd.OutOrStdout())
 	}}
 	diff.Flags().StringVar(&output, "output", "-", "New patch file, or - for stdout")
 	commit := &cobra.Command{Use: "commit NAME", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
@@ -104,28 +101,9 @@ func init() {
 			return err
 		}
 		defer func() { _ = m.Close() }()
-		f, err := os.OpenFile(bundleOutput, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
-		if err != nil {
-			return err
-		}
-		complete := false
-		defer func() {
-			_ = f.Close()
-			if !complete {
-				_ = os.Remove(bundleOutput)
-			}
-		}()
-		if err = m.ExportArtifacts(cmd.Context(), args[0], bundleOptions, f); err != nil {
-			return err
-		}
-		if err = f.Sync(); err != nil {
-			return err
-		}
-		if err = f.Close(); err != nil {
-			return err
-		}
-		complete = true
-		return nil
+		return sandboxux.SaveNewHostFile(bundleOutput, func(out io.Writer) error {
+			return m.ExportArtifacts(cmd.Context(), args[0], bundleOptions, out)
+		})
 	}}
 	for _, c := range []*cobra.Command{plan, bundle} {
 		c.Flags().StringArrayVar(&bundleOptions.Paths, "include", nil, "Explicit regular workspace file (repeatable; credential paths refused)")

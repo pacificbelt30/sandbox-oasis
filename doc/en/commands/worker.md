@@ -29,10 +29,20 @@ codex-calm-beacon  ⏹ exited   2m      main    (interactive)   codex-dock:lates
 - `✅ running`: executing; does not establish task success.
 - `⏹ exited`: finished; use `ps -a`, then check logs and exit status.
 - `BRANCH` of `-`: no managed worktree branch metadata.
-- `UPTIME`: currently elapsed time since creation; it keeps increasing after exit and does not reset on restart.
+- `UPTIME`: elapsed time since the latest start; it continues increasing after exit.
 - No workers: only column headers are displayed.
 
+**Unreleased (main)** nodes report observed start and finish timestamps in listings. Restart changes the start timestamp, allowing snapshot comparisons and the TUI activity log to detect it. Older nodes without timestamp support retain the creation-time fallback. Invalid filters, sort keys, columns and output formats are rejected before connecting to the node or saving a snapshot.
+
 Filtering supports plain text and `name:`, `status:`, `branch:`, `task:`, `image:`, `id:`, or `policy:` predicates; prefix a predicate with `!` to exclude it. Output can be table, JSON, or CSV. Snapshots are owner-private JSON and comparison reports added, removed, started, stopped, restarted, and metadata-changed workers.
+
+**Unreleased (main)**: snapshot comparison also honors `--format csv`. Run against a previously saved snapshot:
+
+```bash
+oaiso ps --all --compare-snapshot ~/.local/state/oaiso/instances.json --format csv
+```
+
+Columns are `change,id,name,field,before,after`: one row per changed field, or one row with empty field values for additions/removals. An unchanged snapshot produces only the header. This schema differs from ordinary instance-list CSV.
 
 ## `oaiso connect`
 

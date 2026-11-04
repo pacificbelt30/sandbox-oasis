@@ -49,13 +49,16 @@ elif op in ('write','create'):
                 total+=len(data)
                 if total>67108864:raise ValueError('file exceeds 64 MiB')
                 target.write(data)
-            target.flush();os.fsync(target.fileno())
-        # Refuse replacing symlinks and non-regular destinations.
-        import stat
-        try:
-            mode=os.stat(name,dir_fd=fd,follow_symlinks=False).st_mode
-            if not stat.S_ISREG(mode):raise ValueError('regular destinations only')
-        except FileNotFoundError:pass
+            target.flush()
+            # Preserve ordinary access/execute bits when replacing a regular file.
+            # Never inherit set-ID bits; new files retain the private 0600 mode.
+            import stat
+            try:
+                mode=os.stat(name,dir_fd=fd,follow_symlinks=False).st_mode
+                if not stat.S_ISREG(mode):raise ValueError('regular destinations only')
+                if op=='write':os.fchmod(target.fileno(),stat.S_IMODE(mode)&0o777)
+            except FileNotFoundError:pass
+            os.fsync(target.fileno())
         if op=='create':
             os.link(temp,name,src_dir_fd=fd,dst_dir_fd=fd,follow_symlinks=False)
         else:

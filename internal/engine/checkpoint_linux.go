@@ -58,6 +58,17 @@ func isolatedCheckpointMount(ctx context.Context, mounts []mount.Mount, fn func(
 }
 
 func (b *Backend) checkpointInfo(ctx context.Context, id string) (diskcheckpoint.Info, error) {
+	if !diskcheckpoint.IDPattern.MatchString(id) {
+		return diskcheckpoint.Info{}, fmt.Errorf("invalid checkpoint ID: %w", errdefs.ErrInvalidArgument)
+	}
+	references, err := b.checkpointPointReferences()
+	if err != nil {
+		return diskcheckpoint.Info{}, err
+	}
+	return b.checkpointInfoWithReferences(ctx, id, references)
+}
+
+func (b *Backend) checkpointInfoWithReferences(ctx context.Context, id string, references map[string]string) (diskcheckpoint.Info, error) {
 	var info diskcheckpoint.Info
 	if !diskcheckpoint.IDPattern.MatchString(id) {
 		return info, fmt.Errorf("invalid checkpoint ID: %w", errdefs.ErrInvalidArgument)
@@ -79,13 +90,19 @@ func (b *Backend) checkpointInfo(ctx context.Context, id string) (diskcheckpoint
 	}
 	info.Pinned = metadata.Labels[diskcheckpoint.PinLabel] == "true"
 	info.Digest = img.Target().Digest.String()
-	if err = b.verifyPointCheckpointDigest(id, info.Digest); err != nil {
+	if err = verifyCheckpointPointReference(references, id, info.Digest); err != nil {
 		return diskcheckpoint.Info{}, err
 	}
+	_, retained := references[id]
+	info.Pinned = info.Pinned || retained
 	return info, nil
 }
 func (b *Backend) checkpointCatalog(ctx context.Context) (diskcheckpoint.Catalog, error) {
 	catalog := diskcheckpoint.Catalog{CapacityBytes: diskcheckpoint.CapacityBytes, Items: []diskcheckpoint.Info{}}
+	references, err := b.checkpointPointReferences()
+	if err != nil {
+		return catalog, err
+	}
 	all, err := b.client.ImageService().List(ctx, `labels."`+diskcheckpoint.OwnerLabel+`"`)
 	if err != nil {
 		return catalog, err
@@ -94,16 +111,11 @@ func (b *Backend) checkpointCatalog(ctx context.Context) (diskcheckpoint.Catalog
 		return catalog, fmt.Errorf("checkpoint catalog exceeds 1024 items")
 	}
 	for _, img := range all {
-		info, err := b.checkpointInfo(ctx, img.Labels[diskcheckpoint.OwnerLabel])
+		info, err := b.checkpointInfoWithReferences(ctx, img.Labels[diskcheckpoint.OwnerLabel], references)
 		if err != nil {
 			return catalog, err
 		}
 		catalog.UsedBytes += info.Bytes
-		retained, e := b.checkpointReferencedByPoint(info.ID)
-		if e != nil {
-			return catalog, e
-		}
-		info.Pinned = info.Pinned || retained
 		catalog.Items = append(catalog.Items, info)
 	}
 	slices.SortFunc(catalog.Items, func(a, b diskcheckpoint.Info) int { return strings.Compare(a.ID, b.ID) })

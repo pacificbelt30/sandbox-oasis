@@ -57,8 +57,8 @@ func RunWithSandboxOptions(cfg sandbox.ManagerConfig, configPath, policyPath, po
 	}
 
 	defer func() { _ = mgr.Close() }()
-	done := make(chan struct{})
-	defer close(done)
+	dashboardCtx, cancelDashboard := context.WithCancel(context.Background())
+	defer cancelDashboard()
 
 	views := newDashboardViews()
 	table, footer := views.table, views.footer
@@ -103,23 +103,9 @@ func RunWithSandboxOptions(cfg sandbox.ManagerConfig, configPath, policyPath, po
 	var workers []sandbox.Worker
 
 	var desktop *sandboxDesktop
-	refreshData := func() {
-		ws, err := mgr.List(true)
-		if err != nil {
-			reportError(err)
-			return
-		}
-		probe, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-		for i := range ws {
-			usage, usageErr := mgr.RootFSUsage(probe, ws[i].ID)
-			if usageErr != nil {
-				usage.Error = "Storage measurement unavailable; run oaiso runtime-check"
-			}
-			ws[i].RootFS = &usage
-		}
-		cancel()
-		events := tracker.Observe(ws, time.Now())
+	refreshData, _ := startDashboardRefresh(dashboardCtx, pollInterval, func(ctx context.Context) ([]sandbox.Worker, error) { return loadDashboard(ctx, mgr) }, func(ws []sandbox.Worker) {
 		app.QueueUpdateDraw(func() {
+			events := tracker.Observe(ws, time.Now())
 			for _, event := range events {
 				_, _ = fmt.Fprintln(activityView, tview.Escape(instanceux.FormatEvent(event)))
 			}
@@ -130,7 +116,7 @@ func RunWithSandboxOptions(cfg sandbox.ManagerConfig, configPath, policyPath, po
 				desktop.refreshPreviews()
 			}
 		})
-	}
+	}, reportError)
 
 	// showLogs fetches real container logs and displays them in the log view (F-UI-03).
 	showLogs := func(w sandbox.Worker) {
@@ -370,7 +356,7 @@ func RunWithSandboxOptions(cfg sandbox.ManagerConfig, configPath, policyPath, po
 		case 't', 'T':
 			if tasks != nil {
 				page := newTaskBoardPage(app, tasks, showMain)
-				page.start(done)
+				page.start(dashboardCtx.Done())
 				pages.AddAndSwitchToPage("tasks", page.pages, true)
 				app.SetFocus(page.table)
 			}
@@ -498,20 +484,7 @@ func RunWithSandboxOptions(cfg sandbox.ManagerConfig, configPath, policyPath, po
 		return event
 	})
 
-	// Polling ticker
-	go func() {
-		refreshData()
-		ticker := time.NewTicker(pollInterval)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-done:
-				return
-			case <-ticker.C:
-				refreshData()
-			}
-		}
-	}()
+	refreshData()
 
 	app.SetRoot(pages, true)
 	return runTerminal(app)

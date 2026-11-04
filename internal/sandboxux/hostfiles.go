@@ -55,12 +55,24 @@ func openHostSource(name string) (*os.File, error) {
 	}
 	return f, nil
 }
+
+// SaveNewHostFile publishes a new private file only after its producer succeeds.
+// It refuses existing paths and symlink parents, keeping failed transfers private.
+func SaveNewHostFile(name string, write func(io.Writer) error) error {
+	return createHostFile(name, write)
+}
 func createHostFile(name string, write func(io.Writer) error) error {
 	dir, base, err := hostParent(name)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = dir.Close() }()
+	var existing unix.Stat_t
+	if err = unix.Fstatat(int(dir.Fd()), base, &existing, unix.AT_SYMLINK_NOFOLLOW); err == nil {
+		return fmt.Errorf("download requires a new host file: %w", os.ErrExist)
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("checking download destination: %w", err)
+	}
 	var random [16]byte
 	if _, err = rand.Read(random[:]); err != nil {
 		return err

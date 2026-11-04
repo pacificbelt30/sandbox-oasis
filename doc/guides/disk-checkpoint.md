@@ -55,6 +55,8 @@ oaiso checkpoint create source-job --exclude /opt/app/private.env
 oaiso checkpoint list
 ```
 
+**未リリース（main）**：復元点から参照されるcheckpointは、一覧と詳細の両方でpin対象として表示します。参照・digestの検査は要求ごとに読み直します。一覧では参照台帳の読み込みを1回にまとめ、件数が増えた場合の待ちを減らします。[測定条件と結果](../performance.md#一覧更新とcheckpoint台帳)を参照してください。
+
 次のコマンドはBashで実行。問い合わせ後に`checkpoint_id`へ保存済みIDを入力します。
 
 ```bash

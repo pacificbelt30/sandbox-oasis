@@ -1,5 +1,50 @@
 # テストと動作確認
 
+## 第二回の互換性・回帰確認（2026-11-03）
+
+対象：**未リリース（main）**、試験版`quality2-a/b`。第一回の未コミット変更26ファイルを保存した状態から開始し、通常の操作と失敗後の挙動を比較しました。
+
+| 再現した問題 | 修正と回帰検査 |
+|---|---|
+| `files put`で0755・0750・0644が0600になる | 既存の読み書き・実行ビットを保持。set-IDは引き継がず、新規0600・原子的置換・元hardlinkの保持も検査 |
+| 既存の保存先でもguest転送を始める | 転送前に拒否。通常ファイル・directory・dangling symlink・FIFOを検査し、転送中に作られた保存先の上書きも拒否 |
+| CLIのartifact bundleが完成前に見える | 非公開の一時ファイルから成功後に公開。失敗・途中・既存データの保持を検査 |
+| snapshot比較でCSV指定が無視される | CSVとして読める固定6列へ修正。日本語・カンマ・引用符・改行・空差分・出力失敗も検査。大文字`TABLE`のsummary指定も修正 |
+| 容量取得の失敗時に部分的な値を表示し得る | エラーと一緒に返った数値・read-only情報を破棄し、測定不能として行を保持 |
+| Proxy操作やpolicy初期化で対象名を無視する | 余分な位置引数を処理前に拒否。正しい引数なしの呼出し、停止・削除の`--name`、既存policyの保持を検査 |
+
+- 変更前に再現した失敗と変更後の結果を別ログへ保存しています。第一回の表・JSON・通常CSV・alias・snapshot出力を6条件で比較し、動的時刻を除いた内容を保持することを確認しました。
+- 全件race、vet、lint、8系統fuzz、Python 69＋25件、通常help 164経路、設定・profile・policy・補完37操作、Python／TypeScript SDK契約、生成schemaの一致が成功しました。
+- `make kata-e2e`と`verify-setup.py`の既定対象へ、開始時刻の`QualityLifecycle`と今回の`QualityRoundTwo`を追加しました。
+- 実Kataは変更に関係する9親スイート、子試験を含む13件のPASSで、失敗・skipは0でした。第一回の全体22スイートとは分けて記録します。新規`QualityRoundTwo`は35.30秒で成功し、実API／CLIの実行権限、元データ、成果物、CSV停止差分、再起動、不正な全体操作の拒否を確認しました。SDKのPython・TypeScript・操作性の3子試験も成功しました。
+- 新規導入、稼働中更新の拒否、対応版更新、起動失敗からの自動復旧、明示rollback、監査chain、VM・コンテナ・ネットワークの残留なしも成功しました。
+- [速度と追加コスト](performance.md#第二回転送前検査の比較)も計測しました。通常CLI8条件の出力は変更前とバイト単位で一致しています。
+- 証跡：`.kata-verification/product-quality-round2-20261103/`、`.kata-verification/setup-e2e/82c65331c509/`。固定資産cacheありのofflineノード、架空の資格情報とローカルupstreamを使い、実アカウント・外部AI推論・物理端末の目視は対象外です。
+
+## 全機能の品質確認（2026-11-03）
+
+対象：**未リリース（main）**。基点`659feea9`、試験版`quality-a/b`、Go 1.27.3、固定Kata 4.3.0／Dragonball。機能群ごとに、操作・失敗時の挙動・性能を分けて確認しています。
+
+| 機能群 | 検査対象 |
+|---|---|
+| 導入・更新・復旧 | 使い捨てnodeの新規setup、権限不足の診断、稼働中更新の拒否、更新・自動復旧・rollback |
+| CLI・設定 | 通常help 164経路、一時HOMEで既定Agent・権限設定・継承・資源profile・通信policy・補完生成の37操作（bashは構文検査も実施）、不正入力7例、node不通時の診断 |
+| VMと資源 | 起動・停止・再起動・削除・孤児回収、CPU／memory／PID／FD／block I/O、rootfs・tmpfsの上限 |
+| TUIと端末 | 操作メニュー、狭い画面、Tab・Esc・日本語貼り付け・リサイズ、ANSI装飾、接続後の一覧復帰、固定版Codex／Claudeの対話UI |
+| ファイル・保存 | ホスト共有・Git・独立コピー・管理workspace、取得・転送・差分・成果物、disk checkpoint・復元点・破損や古いplanの拒否 |
+| 認証と通信 | 認証専用VM、暗号化・keyring profile、mTLS、broker、egress拒否、既存stream失効、隔離、利用量の保持と診断出力 |
+| イメージ・環境 | standalone BuildKitのDockerfile RUN・OCI import、Pythonが欠けたイメージの事前拒否、template・package・環境lockの単体検査 |
+| タスク・SDK | タスク実行・テスト・レビュー・採用・再試行、公開Go APIの障害系、Python／TypeScriptの契約と実VM操作 |
+| 速度 | CLIの応答、checkpoint台帳とTUI容量取得の変更前後、認証・通信policy、実VMの起動・Exec。条件は[性能ガイド](performance.md#一覧更新とcheckpoint台帳)を参照 |
+
+- build、race付き全件（テストのある47パッケージ）、vet、lint、8系統のsecurity fuzz、Python 69＋25件、CLI名・API schema・上流のオフライン静的契約、Python／TypeScript SDKのオフライン契約は成功しました。
+- CLIのhelpは中央値14.81ms、最大27.77ms。ただし全体テストと並行した単発測定であり、性能比較値ではありません。node不通時の診断は失敗終了を確認し、VM稼働の成功には数えません。
+- 修正：一覧に実際の開始・終了時刻を反映、TUI更新の直列化と待ちの制限、checkpoint参照台帳の重複読込削減、不正な`ps`入力をnode接続前に拒否、CLIの失敗した取得で途中ファイルを公開しないこと。旧nodeの作成時刻へのfallbackと既存の操作キーは維持しました。
+- 実Kataの22親スイート（子試験を含む70件のPASS、失敗・skipとも0）が成功しました。Go API障害系17ケース、Python／TypeScriptと操作性を含むSDKの3子試験、通常のCLI／TUI、保存復元、起動・Exec計測を含みます。
+- 新規setup、稼働中更新の拒否、対応版更新、サービス起動失敗からの自動復旧、明示rollbackが成功しました。監査chainの検証と、VM・コンテナ・ネットワーク・専用firewallの残留なしも確認しています。証跡：`.kata-verification/product-quality-20261103/`、`.kata-verification/setup-e2e/fbdcc4fd4ab4/`。
+- 固定資産cacheありのofflineノードと架空の資格情報・ローカルupstreamを使います。実アカウント・外部AI推論・新規オンライン導入・実WSL・物理端末の目視・任意の全設定組合せは対象外です。
+- `DiskCheckpoint`は既存の専用fixture（Claudeを除いてアーカイブを小さくしたイメージ）を使います。通常イメージのrootfsとworkspaceを組で保存・復元する経路は`ManagedWorkspace`で確認しています。
+
 ## 容量付き管理workspaceと復元点（2026-11-03）
 
 対象：**未リリース（main）**。[操作・制限](guides/managed-workspaces.md)。通常のホスト共有・独立Gitコピーも維持しています。

@@ -26,23 +26,32 @@ var psCmd = &cobra.Command{
 	Use:     "ps",
 	Aliases: []string{"instances"},
 	Short:   "List and inspect Oaiso worker instances",
+	Args:    cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, _ []string) error {
+		query, err := instanceux.ParseQuery(psFilter)
+		if err != nil {
+			return err
+		}
+		columns, err := instanceux.ParseColumns(psColumns)
+		if err != nil {
+			return err
+		}
+		format := strings.ToLower(psFormat)
+		if format != "table" && format != "json" && format != "csv" {
+			return fmt.Errorf("unknown --format %q; use table, json, or csv", psFormat)
+		}
+		sortKey, err := instanceux.ParseSortKey(psSort)
+		if err != nil {
+			return err
+		}
 		manager, err := sandbox.NewManager(managementConfig())
 		if err != nil {
 			return err
 		}
 		defer func() { _ = manager.Close() }()
-		workers, err := manager.List(psAll)
+		workers, err := manager.ListContext(cmd.Context(), psAll)
 		if err != nil {
 			return fmt.Errorf("listing workers: %w", err)
-		}
-		query, err := instanceux.ParseQuery(psFilter)
-		if err != nil {
-			return err
-		}
-		sortKey, err := instanceux.ParseSortKey(psSort)
-		if err != nil {
-			return err
 		}
 		workers = instanceux.Sort(instanceux.Filter(workers, query), sortKey)
 		snapshot := instanceux.NewSnapshot(workers, time.Now())
@@ -52,17 +61,19 @@ var psCmd = &cobra.Command{
 				return loadErr
 			}
 			diff := instanceux.CompareSnapshots(previous, snapshot)
-			if err := instanceux.WriteDiff(cmd.OutOrStdout(), diff, strings.EqualFold(psFormat, "json")); err != nil {
-				return err
+			var writeErr error
+			if format == "csv" {
+				writeErr = instanceux.WriteDiffCSV(cmd.OutOrStdout(), diff)
+			} else {
+				writeErr = instanceux.WriteDiff(cmd.OutOrStdout(), diff, format == "json")
+			}
+			if writeErr != nil {
+				return writeErr
 			}
 			if psSaveSnapshot != "" {
 				return instanceux.SaveSnapshot(psSaveSnapshot, snapshot)
 			}
 			return nil
-		}
-		columns, err := instanceux.ParseColumns(psColumns)
-		if err != nil {
-			return err
 		}
 		if psSaveSnapshot != "" {
 			if err := instanceux.SaveSnapshot(psSaveSnapshot, snapshot); err != nil {
@@ -86,7 +97,7 @@ var psCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		if psSummary && psFormat == "table" {
+		if psSummary && format == "table" {
 			for _, line := range snapshot.Summary.Lines() {
 				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), line)
 			}

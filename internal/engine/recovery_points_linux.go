@@ -109,33 +109,47 @@ func (b *Backend) workspaceReferencedByPointExcept(id, except string) error {
 	return nil
 }
 func (b *Backend) checkpointReferencedByPoint(id string) (bool, error) {
+	references, err := b.checkpointPointReferences()
+	_, retained := references[id]
+	return retained, err
+}
+
+// A request-local snapshot avoids reopening the entire private point catalog
+// for every image. Every new request reloads authority; nothing is cached by
+// timestamp or carried across retention/deletion operations.
+func (b *Backend) checkpointPointReferences() (map[string]string, error) {
 	b.workspaceMu.Lock()
 	defer b.workspaceMu.Unlock()
 	points, err := b.recoveryPoints()
 	if err != nil {
-		return false, err
+		return nil, err
 	}
+	references := make(map[string]string, len(points))
 	for _, p := range points {
-		if p.Checkpoint.ID == id {
-			return true, nil
+		if p.Checkpoint.ID == "" {
+			continue
 		}
+		if digest, present := references[p.Checkpoint.ID]; present && digest != p.Checkpoint.Digest {
+			return nil, fmt.Errorf("conflicting recovery point rootfs digests; references retained")
+		}
+		references[p.Checkpoint.ID] = p.Checkpoint.Digest
 	}
-	return false, nil
+	return references, nil
 }
 
 // A tag alone is not the identity of a saved rootfs. The persisted point binds
 // its checkpoint to the exact digest, independently of image-provided labels.
 func (b *Backend) verifyPointCheckpointDigest(id, digest string) error {
-	b.workspaceMu.Lock()
-	defer b.workspaceMu.Unlock()
-	points, err := b.recoveryPoints()
+	references, err := b.checkpointPointReferences()
 	if err != nil {
 		return err
 	}
-	for _, p := range points {
-		if p.Checkpoint.ID == id && p.Checkpoint.Digest != digest {
-			return fmt.Errorf("recovery point rootfs digest changed; saved reference retained")
-		}
+	return verifyCheckpointPointReference(references, id, digest)
+}
+
+func verifyCheckpointPointReference(references map[string]string, id, digest string) error {
+	if expected, retained := references[id]; retained && expected != digest {
+		return fmt.Errorf("recovery point rootfs digest changed; saved reference retained")
 	}
 	return nil
 }

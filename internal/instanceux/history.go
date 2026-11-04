@@ -2,6 +2,7 @@ package instanceux
 
 import (
 	"bytes"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -246,6 +247,28 @@ func timestampString(value *time.Time) string {
 		return ""
 	}
 	return value.UTC().Format(time.RFC3339Nano)
+}
+
+// WriteDiffCSV keeps comparison output machine-readable, including empty diffs.
+// Added/removed records have empty field values; updates emit one row per field.
+func WriteDiffCSV(out io.Writer, diff SnapshotDiff) error {
+	writer := csv.NewWriter(out)
+	if err := writer.Write([]string{"change", "id", "name", "field", "before", "after"}); err != nil {
+		return err
+	}
+	for _, change := range diff.Changes {
+		values := change.Values
+		if len(values) == 0 {
+			values = []ValueChange{{}}
+		}
+		for _, value := range values {
+			if err := writer.Write([]string{string(change.Kind), change.ID, change.Name, value.Field, value.Before, value.After}); err != nil {
+				return err
+			}
+		}
+	}
+	writer.Flush()
+	return writer.Error()
 }
 
 func WriteDiff(out io.Writer, diff SnapshotDiff, jsonOutput bool) error {

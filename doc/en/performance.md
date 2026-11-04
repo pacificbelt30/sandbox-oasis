@@ -7,6 +7,33 @@
 
 ## How the optimizations work
 
+### Dashboard refresh and checkpoint catalogs
+
+- Scope: **unreleased (main)**, measured on 2026-11-03.
+- The TUI refreshes one request at a time, merging bursts into one pending refresh. Listing and quota reads share a three-second deadline; quota reads use at most four concurrent workers. Rows with unavailable measurements remain visible.
+- Checkpoint listings read recovery-point references once per request. Ownership, metadata and digest checks remain enforced for every checkpoint, and the next request rereads the ledger. No cache spans requests.
+
+| Condition | Value |
+|---|---|
+| Baseline | Saved pre-change binaries based on `659feea9` with identical benchmarks added |
+| Environment | Linux amd64, Go 1.27.3, GOMAXPROCS=4, warm page cache, no competing builds/tests |
+| Samples | Median of three runs per condition, three operations per run; before/after, after/before, before/after |
+| Checkpoint workload | Real private reference files and a local content store; OCI metadata listing excludes VMs, containerd socket communication and checkpoint creation |
+| TUI workload | Fixture with a fixed 1ms quota-API delay; excludes real-node behavior and rendering |
+
+| Operation | Before | After | Time reduction |
+|---|---:|---:|---:|
+| Checkpoint catalog: 8 items | 5.72ms | 0.78ms | 86.3% |
+| Checkpoint catalog: 32 items | 76.00ms | 3.05ms | 96.0% |
+| Checkpoint catalog: 128 items | 1150.83ms | 10.46ms | 99.1% |
+| TUI quota collection: 4 workers | 4.43ms | 1.20ms | 73.0% |
+| TUI quota collection: 20 workers | 22.19ms | 5.59ms | 74.8% |
+
+- The 128-item catalog ranged from 1146.11–1156.07ms before to 10.44–10.52ms after. Allocations fell from 431.28MiB to 2.68MiB per operation; these are not RSS measurements.
+- Twenty-worker quota collection ranged from 22.13–22.21ms before to 5.54–5.61ms after. It uses at most four worker goroutines; allocations increased from 10040 to 11330 bytes per operation.
+- These results do not establish whole-product, VM startup or AI latency improvements. Evidence: `.kata-verification/product-quality-20261103/`.
+- The [quality verification matrix](../testing.md#全機能の品質確認2026-11-03) (Japanese) tracks CLI, TUI, storage, networking, authentication and SDK acceptance separately from these microbenchmarks.
+
 ### Combine duplicate Exec verification
 
 - Available: **v0.0.4**.
@@ -34,6 +61,46 @@
 - These optimizations are enabled by the implementation and require no activation flag.
 - Follow the [CLI, node and proxy update procedure](../operations.md#cliプロキシを更新する) (Japanese).
 - Products using the Go API must also use the same source version as the node.
+
+## Round two: destination preflight comparison
+
+- Scope: **unreleased (main)**, 2026-11-03. The baseline is the source saved after round one, not a comparison between published releases.
+- Same Linux amd64, Go 1.27.3 and GOMAXPROCS=4. Medians of three 300ms benchmark runs per condition, ordered before/after, after/before, before/after. Other builds/tests and the Kata node were stopped.
+- Only the existing-destination case uses a fixed 1ms guest-call fixture. The new-file case writes, fsyncs, publishes and removes 32KiB in a local temporary directory. Neither measures network or real-VM transfer speed.
+
+| Case | Before | After | Change |
+|---|---:|---:|---|
+| Reject existing destination, 1ms fixture | 1.201ms | 0.0106ms | 99.1% less; skips the guest call and staging |
+| Publish a new 32KiB file | 0.0416ms | 0.0429ms | 3.1% more, about 1.3µs for preflight |
+
+- New-file ranges were 0.0412–0.0420ms before and 0.0425–0.0432ms after. Allocations changed from 693 to 704 bytes per operation; existing-destination allocations fell from 712 to 333 bytes.
+- Both versions retain exclusive publication and held parent directories. Files created after preflight are still protected from overwriting.
+- Eight ordinary CLI cases were also measured three times per version in alternating order, with byte-identical output. Per-case medians ranged from 12.99–13.91ms before to 12.68–13.76ms after. These small-sample baselines do not establish a general CLI speedup.
+- Evidence: `.kata-verification/product-quality-round2-20261103/transfer-benchmark-results.json` and `cli-performance.json`. See the [regression scope](../testing.md#第二回の互換性回帰確認2026-11-03) (Japanese).
+
+## Real-VM check on 2026-11-03
+
+- Scope: **unreleased (main)**, test BuildVersion `quality-a`. This is a current-version baseline, not a before/after speedup comparison.
+- Core i5-8500 / 4 vCPUs, Linux amd64, Go 1.27.3, client GOMAXPROCS=4. Pinned Kata 4.3.0 / Dragonball, containerd 2.4.2 and BuildKit 0.34.0.
+- Compact profile: 512MiB guest, 768MiB host reservation, one CPU. Dedicated node, prepared images, warm page cache, no general egress or Git sharing, synthetic credentials. No other builds/tests ran during measurement.
+- Includes normal asset, host/guest and bootstrap verification. Excludes proxy creation, image fetching/import, removal and AI inference. Exec runs `/bin/true` through exit confirmation.
+
+| Operation | Samples | Median | Range |
+|---|---:|---:|---:|
+| Sequential launch | 3 | 8.484s | 8.173–8.762s |
+| Two-worker launch, both complete | 3 batches | 15.021s | 14.757–15.063s |
+| Sequential Exec | 7 | 1.145s | 1.103–1.253s |
+| Two-worker Exec, both complete | 5 batches | 1.914s | 1.830–2.031s |
+
+- Final observed `memory.peak` values were 158.27 / 157.32MiB for the two VMs, with zero OOM kills. Peaks were not collected for every launch sample.
+- See the [acceptance scope](../testing.md#全機能の品質確認2026-11-03) (Japanese). Evidence: `.kata-verification/product-quality-20261103/native-performance-results.json`.
+
+### Authorization and policy microbenchmarks
+
+- Same Go and CPU, GOMAXPROCS=4; medians of three 300ms runs per condition after VM measurement, with no competing builds/tests. Network, DNS and upstream APIs are excluded.
+- Successful authorization took 929.3ns with one issuance record and 1110ns with 4096 records per request, both using 656 bytes and eight allocations. Unissued-token rejection took 128.7–143.1ns across conditions with 1–4096 records.
+- Destination policy took 144.7ns with 10 rules and 152.2ns with 1000; address policy took 22.77ns per operation. All used zero allocations. These are current-version baselines, not speedup comparisons.
+- Evidence: `.kata-verification/product-quality-20261103/proxy-policy-performance.json`.
 
 ## Measurements on 2026-10-25
 
@@ -98,6 +165,8 @@
 | `BenchmarkLoadPinnedManifest` | Reading real assets; checksum, ownership, path and configuration checks | VM startup and guest execution |
 | `BenchmarkKataExec` | Per-exec asset, host and guest checks; running `/bin/true` and checking completion | VM creation, client Open, warmup and AI inference |
 | `BenchmarkKataLaunch` | A fresh Launch and its sequential phases; first Exec is reported separately | Client Open, proxy creation, image builds/imports, removal and AI inference |
+| `BenchmarkCheckpointCatalog` | Catalog reading private recovery-point files and OCI metadata | VMs, containerd socket calls and checkpoint creation |
+| `BenchmarkDashboardQuotaCollection` | Four or twenty quota reads with a synthetic 1ms delay | Real-node measurements and TUI rendering |
 
 - The proxy benchmark measures accepted and unissued tokens with 1, 32, 256 and 4,096 issuance records.
 - Allocation figures reported by the Exec benchmark cover the client process.
@@ -174,6 +243,17 @@ No Kata node or real upstream API connection is required.
 ```bash
 go test ./internal/authproxy -run '^$' \
   -bench '^BenchmarkWorkerRequest$' -benchmem -count=5 -benchtime=500ms
+```
+
+### Catalogs and quota collection
+
+Run on Linux. These benchmarks need no Kata node or real credentials and create temporary fixtures. Use identical commands for both versions and stop other builds/tests during measurement.
+
+```bash
+GOMAXPROCS=4 go test ./internal/engine -run '^$' \
+  -bench '^BenchmarkCheckpointCatalog$' -benchmem -count=3 -benchtime=3x
+GOMAXPROCS=4 go test ./internal/ui -run '^$' \
+  -bench '^BenchmarkDashboardQuotaCollection$' -benchmem -count=3 -benchtime=3x
 ```
 
 ### Pinned asset verification

@@ -86,6 +86,7 @@ var proxyCmd = &cobra.Command{
 // proxy serve ---------------------------------------------------------------
 
 var proxyServeCmd = &cobra.Command{
+	Args:   cobra.NoArgs,
 	Use:    "serve",
 	Short:  "Run auth proxy server (in-process)",
 	Hidden: true,
@@ -196,6 +197,7 @@ var proxyServeCmd = &cobra.Command{
 // proxy build ---------------------------------------------------------------
 
 var proxyBuildCmd = &cobra.Command{
+	Args:  cobra.NoArgs,
 	Use:   "build",
 	Short: "Build the auth proxy OCI image with BuildKit",
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -214,6 +216,7 @@ var proxyBuildCmd = &cobra.Command{
 // proxy run -----------------------------------------------------------------
 
 var proxyRunCmd = &cobra.Command{
+	Args:  cobra.NoArgs,
 	Use:   "run",
 	Short: "Run the auth proxy on containerd",
 	Long: `Run separate auth and general-egress proxies as detached containerd tasks.
@@ -571,6 +574,7 @@ func ensureProxyContainer(ctx context.Context, spec proxyRunArgs) (result error)
 // proxy stop ----------------------------------------------------------------
 
 var proxyStopCmd = &cobra.Command{
+	Args:  cobra.NoArgs,
 	Use:   "stop",
 	Short: "Stop the proxy containers (auth + egress)",
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -591,6 +595,7 @@ var proxyStopCmd = &cobra.Command{
 // proxy rm ------------------------------------------------------------------
 
 var proxyRmCmd = &cobra.Command{
+	Args:  cobra.NoArgs,
 	Use:   "rm",
 	Short: "Remove the proxy containers (auth + egress)",
 	RunE: func(cmd *cobra.Command, args []string) error {

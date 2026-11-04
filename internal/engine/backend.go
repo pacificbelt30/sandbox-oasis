@@ -1139,8 +1139,7 @@ func (b *Backend) serveHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			if matched {
-				t, _ := time.Parse(time.RFC3339Nano, v.Created)
-				rows = append(rows, container.Summary{ID: v.ID, Names: []string{v.Name}, Image: v.Config.Image, Labels: v.Config.Labels, State: v.State.Status, Status: v.State.Status, Created: t.Unix()})
+				rows = append(rows, workerSummary(v))
 			}
 		}
 		reply(w, rows)

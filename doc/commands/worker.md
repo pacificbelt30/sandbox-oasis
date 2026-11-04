@@ -38,8 +38,10 @@ codex-calm-beacon  ⏹ exited   2m      main    (interactive)   codex-dock:lates
 - `✅ running`：実行中。タスク成功の意味ではない。
 - `⏹ exited`：終了済み。`ps -a` で表示し、ログと終了コードを確認。
 - `BRANCH` の `-`：worktree用のブランチ情報なし。
-- `UPTIME`：現在の実装は作成からの経過時間。終了済みでも増え、再起動でリセットしない。
+- `UPTIME`：最後の開始からの経過時間。終了後も増えます。
 - ワーカーがない場合：列見出しだけを表示。
+
+**未リリース（main）**では、対応nodeの実際の開始・終了時刻を一覧に反映します。再起動すると開始時刻が変わり、snapshot比較やTUIの活動欄でも再起動を検出します。時刻通知に未対応の旧nodeは従来の作成時刻を使います。不正なfilter・sort・列名・出力形式は、nodeへの接続やsnapshot保存の前に拒否します。
 
 ```bash
 oaiso ps -a --filter 'status:running !policy:restricted' --sort newest --wide
@@ -47,6 +49,14 @@ oaiso ps -a --format json --pretty
 oaiso ps -a --save-snapshot ~/.local/state/oaiso/instances.json
 oaiso ps -a --compare-snapshot ~/.local/state/oaiso/instances.json
 ```
+
+**未リリース（main）**：snapshot比較も`--format csv`に対応します。保存済みsnapshotに対して実行します。
+
+```bash
+oaiso ps -a --compare-snapshot ~/.local/state/oaiso/instances.json --format csv
+```
+
+列は`change,id,name,field,before,after`です。属性の変更ごとに1行を出し、追加・削除は属性欄が空の1行です。変更がなければヘッダーだけを出します。通常の一覧CSVの列とは異なります。
 
 ## `oaiso connect` — 対話shellで接続
 

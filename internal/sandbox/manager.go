@@ -1077,6 +1077,9 @@ func (m *Manager) ListContext(ctx context.Context, all bool) ([]Worker, error) {
 
 	workers := make([]Worker, 0, len(containers))
 	for _, c := range containers {
+		if c.ID == "" || len(c.Names) == 0 || strings.TrimPrefix(c.Names[0], "/") == "" {
+			return nil, fmt.Errorf("node returned an instance without an ID or name")
+		}
 		w := Worker{
 			ID:          c.ID,
 			Name:        strings.TrimPrefix(c.Names[0], "/"),
@@ -1086,9 +1089,16 @@ func (m *Manager) ListContext(ctx context.Context, all bool) ([]Worker, error) {
 			Task:        c.Labels[labelTask],
 			AgentPolicy: c.Labels[labelPrefix+"agent-policy"],
 		}
-		if c.Created > 0 {
+		if raw, present := c.Labels[engine.WorkerStartedAtLabel]; present {
+			if t, e := time.Parse(time.RFC3339Nano, raw); e == nil && !t.IsZero() {
+				w.StartedAt = &t
+			}
+		} else if c.Created > 0 {
 			t := time.Unix(c.Created, 0)
 			w.StartedAt = &t
+		}
+		if t, e := time.Parse(time.RFC3339Nano, c.Labels[engine.WorkerFinishedAtLabel]); e == nil && !t.IsZero() {
+			w.FinishedAt = &t
 		}
 		workers = append(workers, w)
 	}

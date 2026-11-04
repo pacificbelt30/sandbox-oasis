@@ -124,6 +124,10 @@ oaiso run --clone-dir /absolute/new-copy -d
 - Directory listings allow at most 10000 entries.
 - VM validation and guest permissions remain enforced.
 
+**Unreleased (main)**: `files put` preserves ordinary read/write/execute bits when replacing an existing regular file, without inheriting set-ID bits. New files use 0600. Atomic replacement leaves other hardlinks to the previous inode with their original contents.
+
+**Unreleased (main)**: `files get/list --local` and `artifact diff/bundle --output` publish a new 0600 file only after a successful transfer. Failed or cancelled transfers leave no partial destination. Existing destinations are rejected before starting the transfer; publication checks again to avoid overwriting a file created concurrently. Parent directories must also be free of symlinks; choose their physical paths. Standard output remains streamed.
+
 - PTY streams combine stdout/stderr.
 - Streaming executions/sessions end on cancellation or disconnection.
 - Background jobs continue after client disconnection, with state and shim-owned logs recovered after node restart.

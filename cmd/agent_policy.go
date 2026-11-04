@@ -43,6 +43,7 @@ var agentPolicyCmd = &cobra.Command{
 }
 
 var agentPolicyListCmd = &cobra.Command{
+	Args:  cobra.NoArgs,
 	Use:   "list",
 	Short: "List built-in and host-defined agent policies",
 	RunE: func(cmd *cobra.Command, _ []string) error {
@@ -116,6 +117,7 @@ var agentPolicyShowCmd = &cobra.Command{
 }
 
 var agentPolicyValidateCmd = &cobra.Command{
+	Args:  cobra.NoArgs,
 	Use:   "validate",
 	Short: "Validate the host policy file and every inheritance chain",
 	RunE: func(cmd *cobra.Command, _ []string) error {
@@ -136,6 +138,7 @@ var agentPolicyValidateCmd = &cobra.Command{
 }
 
 var agentPolicyPathCmd = &cobra.Command{
+	Args:  cobra.NoArgs,
 	Use:   "path",
 	Short: "Print the host agent-policy file path",
 	RunE: func(cmd *cobra.Command, _ []string) error {
@@ -149,6 +152,7 @@ var agentPolicyPathCmd = &cobra.Command{
 }
 
 var agentPolicyInitCmd = &cobra.Command{
+	Args:  cobra.NoArgs,
 	Use:   "init",
 	Short: "Create an owner-private policy file with a documented example",
 	RunE: func(cmd *cobra.Command, _ []string) error {
@@ -385,6 +389,7 @@ var agentPolicyFieldsCmd = &cobra.Command{
 }
 
 var agentPolicyDoctorCmd = &cobra.Command{
+	Args:  cobra.NoArgs,
 	Use:   "doctor",
 	Short: "Validate and inspect policy inheritance maintainability",
 	RunE: func(cmd *cobra.Command, _ []string) error {

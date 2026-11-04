@@ -7,6 +7,32 @@
 
 ## 高速化の仕組み
 
+### 一覧更新とcheckpoint台帳
+
+- 対象：**未リリース（main）**。2026-11-03に測定。
+- TUIの一覧更新は1要求ずつ実行し、更新中の連打を次の1要求へまとめます。nodeへの一覧・容量取得は合計3秒を上限とし、容量取得は最大4並列です。容量が取れない行も残して確認不能と表示します。
+- checkpoint一覧は、復元点の参照台帳を要求内で1回読みます。各checkpointの所有権・metadata・digestは従来どおり検査し、次の要求では台帳も読み直します。要求をまたぐcacheはありません。
+
+| 条件 | 内容 |
+|---|---|
+| 比較元 | `659feea9`を基点に、同じbenchmarkを追加した変更前の保存バイナリ |
+| 環境 | Linux amd64、Go 1.27.3、GOMAXPROCS=4、warm page cache。他のbuild・試験は停止 |
+| 標本 | 各条件3回、1回3操作。変更前→後、後→前、前→後の順で測定した中央値 |
+| checkpoint | 実際のprivate参照ファイルとlocal content store。OCI metadataを読む一覧処理で、VM・containerd socket通信・保存本体は含まない |
+| TUI | 容量API1回の待ちを1msに固定したfixture。実node・画面描画の速度ではない |
+
+| 処理 | 変更前 | 変更後 | 時間短縮 |
+|---|---:|---:|---:|
+| checkpoint一覧：8件 | 5.72ms | 0.78ms | 86.3% |
+| checkpoint一覧：32件 | 76.00ms | 3.05ms | 96.0% |
+| checkpoint一覧：128件 | 1150.83ms | 10.46ms | 99.1% |
+| TUIの容量収集：4台 | 4.43ms | 1.20ms | 73.0% |
+| TUIの容量収集：20台 | 22.19ms | 5.59ms | 74.8% |
+
+- 128件の一覧は変更前1146.11〜1156.07ms、変更後10.44〜10.52ms。割当量は431.28MiBから2.68MiB／操作へ減りました。RSSの測定値ではありません。
+- TUIの20台収集は変更前22.13〜22.21ms、変更後5.54〜5.61ms。最大4個の作業goroutineを使い、割当量は10040から11330bytes／操作へ増えます。
+- 製品全体・VM起動・AI応答の改善率を示す値ではありません。証跡：`.kata-verification/product-quality-20261103/`。
+
 ### Execの重複検証をまとめる
 
 - 利用可能：**v0.0.4**。
@@ -34,6 +60,46 @@
 - これらの高速化は実装側で有効になります。
 - 専用の有効化フラグはありません。
 - 導入は[CLI・管理サービス・プロキシの更新手順](operations.md#cliプロキシを更新する)に従い、Go APIを使う製品もnodeと同じソース版へ更新します。
+
+## 第二回：転送前検査の比較
+
+- 対象：**未リリース（main）**、2026-11-03。比較元は第一回完了時の保存ソースで、公開版同士の比較ではありません。
+- 同じLinux amd64／Go 1.27.3／GOMAXPROCS=4。各条件300msのbenchmarkを3回、変更前→後、後→前、前→後で測定した中央値です。他のbuild・試験と実Kataノードは停止しました。
+- 既存保存先の条件だけ、guest呼出しの待ちを1msに固定したfixtureを使います。新規保存はローカル一時ディレクトリで32KiBの書込・fsync・公開・削除を行います。ネットワークや実VM転送の速度ではありません。
+
+| 条件 | 変更前 | 変更後 | 変化 |
+|---|---:|---:|---|
+| 既存保存先の拒否（1ms待ちfixture） | 1.201ms | 0.0106ms | 99.1%短縮。guest呼出しと一時保存を省く |
+| 新規32KiBファイルの保存 | 0.0416ms | 0.0429ms | 3.1%増、約1.3µsの追加検査 |
+
+- 新規保存の範囲は、変更前0.0412〜0.0420ms、変更後0.0425〜0.0432ms。割当量は693→704bytes／操作です。既存保存先は712→333bytes／操作でした。
+- どちらも公開時の排他的な検査と親directoryの保持を維持します。事前検査の後に作られた保存先も上書きしません。
+- 通常CLI8条件も各版3回を交互に測り、出力がバイト単位で一致することを確認。条件ごとの中央値は変更前12.99〜13.91ms、変更後12.68〜13.76msでした。小標本の基準値で、一般的なCLI高速化率は主張しません。
+- 証跡：`.kata-verification/product-quality-round2-20261103/transfer-benchmark-results.json`と`cli-performance.json`。[回帰確認の範囲](testing.md#第二回の互換性回帰確認2026-11-03)。
+
+## 2026-11-03の実VM点検
+
+- 対象：**未リリース（main）**、試験版`quality-a`。現在版だけの基準値で、変更前後の高速化率ではありません。
+- Core i5-8500／4 vCPU、Linux amd64、Go 1.27.3、clientのGOMAXPROCS=4。固定Kata 4.3.0／Dragonball、containerd 2.4.2、BuildKit 0.34.0。
+- compact：guest 512MiB、host予約768MiB、CPU 1。専用node、準備済みイメージ、warm page cache、一般egress・Git共有なし、架空の資格情報。測定中に他のbuild・試験は実行しませんでした。
+- 通常の資産・host／guest検証とbootstrapを含みます。Proxy作成、イメージ取得・import、削除、AI推論は計測外です。Execは`/bin/true`の終了確認までです。
+
+| 対象 | 標本 | 中央値 | 範囲 |
+|---|---:|---:|---:|
+| 単独起動 | 3回 | 8.484秒 | 8.173〜8.762秒 |
+| 2台同時起動：両方完了まで | 3組 | 15.021秒 | 14.757〜15.063秒 |
+| 単独Exec | 7回 | 1.145秒 | 1.103〜1.253秒 |
+| 2台同時Exec：両方完了まで | 5組 | 1.914秒 | 1.830〜2.031秒 |
+
+- 最後に観測した2VMの`memory.peak`は158.27／157.32MiB、OOM killは両方0。全起動標本のpeakを採取した値ではありません。
+- [全機能の受入範囲](testing.md#全機能の品質確認2026-11-03)。証跡：`.kata-verification/product-quality-20261103/native-performance-results.json`。
+
+### 認証・通信規則の単体計測
+
+- 同じGo・CPUでGOMAXPROCS=4、各条件300ms×3回の中央値です。VM計測が終わってから、他のbuild・試験を止めて測りました。ネットワーク・DNS・上流APIは含みません。
+- 認証成功は発行記録1件で929.3ns、4096件で1110ns／要求（どちらも656bytes・8割当て）。未発行トークンの拒否は、1〜4096件の条件で128.7〜143.1ns／要求でした。
+- 宛先規則10件で144.7ns、1000件で152.2ns、IP規則は22.77ns／操作。いずれも割当て0です。現在版の基準値で、高速化の比較ではありません。
+- 証跡：`.kata-verification/product-quality-20261103/proxy-policy-performance.json`。
 
 ## 2026-10-25の実測
 
@@ -98,6 +164,8 @@
 | `BenchmarkLoadPinnedManifest` | 実資産の読込・checksum・所有権・パス・設定の照合 | VM起動、guest内の処理 |
 | `BenchmarkKataExec` | Execごとの資産・ホスト・guestの検証、`/bin/true` の実行と終了確認 | VM作成、clientのOpen、warmup、AI推論 |
 | `BenchmarkKataLaunch` | 新規ワーカーのLaunch全体と工程別時間。最初のExecは別の値として表示 | clientのOpen、Proxy作成、イメージ作成・import、削除、AI推論 |
+| `BenchmarkCheckpointCatalog` | private復元点ファイル・OCI metadataを読む一覧処理 | VM、containerd socket、checkpoint作成 |
+| `BenchmarkDashboardQuotaCollection` | 1ms待ちの容量取得fixtureを4台・20台分収集 | 実nodeの測定、TUI描画 |
 
 - Proxyのbenchmarkは1・32・256・4,096件の発行記録で、認証成功と未発行トークンの拒否を測ります。
 - Execのbenchmarkに表示されるallocation値はクライアント側の値です。
@@ -175,6 +243,17 @@ Kataや実APIへの接続は不要です。
 ```bash
 go test ./internal/authproxy -run '^$' \
   -bench '^BenchmarkWorkerRequest$' -benchmem -count=5 -benchtime=500ms
+```
+
+### 一覧と容量収集
+
+Linux上で実行します。Kata・実資格情報は不要で、一時ディレクトリにfixtureを作ります。各版で同じコマンドを使い、測定中は他のbuild・試験を止めてください。
+
+```bash
+GOMAXPROCS=4 go test ./internal/engine -run '^$' \
+  -bench '^BenchmarkCheckpointCatalog$' -benchmem -count=3 -benchtime=3x
+GOMAXPROCS=4 go test ./internal/ui -run '^$' \
+  -bench '^BenchmarkDashboardQuotaCollection$' -benchmem -count=3 -benchtime=3x
 ```
 
 ### 固定資産の検証
