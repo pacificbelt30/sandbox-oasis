@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/pacificbelt30/codex-dock/internal/sandbox"
+	"github.com/rivo/tview"
 )
 
 type Model struct {
@@ -183,8 +184,7 @@ func Detail(worker sandbox.Worker, now time.Time) []string {
 }
 
 func Escape(value string) string {
-	value = strings.ReplaceAll(value, "[", "[[]")
-	return strings.ReplaceAll(value, "\x00", "")
+	return tview.Escape(strings.ReplaceAll(value, "\x00", ""))
 }
 
 func statusGlyph(status string) string {

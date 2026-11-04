@@ -46,9 +46,12 @@ oaiso ui
 | Create and connect | `N` creates; select a VM and press `C` for a shell |
 | Files, web and details | `F` files, `U` previews, `I` full details |
 | Changes, artifacts and limits | `W` changes/export, `L` lifetime/storage/supervision |
+| One-off command | `X` opens the form; `Run` executes. Before execution, Esc cancels from the input or either button |
 | Move within forms | Tab / Shift-Tab; Space toggles checkboxes |
 
 Menus show actions appropriate to the VM state. Use `I` to inspect fields hidden on a narrow screen.
+
+The list's detail pane preserves its scroll position when the same VM refreshes and returns to the top when another VM is selected. Names and tasks display strings such as `[red]` literally. Command and agent-policy edit dialogs shrink to fit the terminal width.
 
 ## Create a VM
 

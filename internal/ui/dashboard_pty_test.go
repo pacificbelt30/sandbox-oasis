@@ -29,6 +29,19 @@ func TestDashboardActionsPTYHelper(t *testing.T) {
 		w, _ := model.Selected()
 		closeMenu := func() { pages.RemovePage("actions"); showMain() }
 		menu := dashboardActionMenu(&w, false, func() string { return model.SelectedID }, func(key *tcell.EventKey) {
+			if key.Rune() == 'x' {
+				closeMenu()
+				form := commandForm(w, func(command string) {
+					if err := os.WriteFile(filepath.Join(root, "executed"), []byte(command), 0600); err != nil {
+						t.Error(err)
+					}
+					pages.RemovePage("command")
+					showMain()
+				}, func() { pages.RemovePage("command"); showMain() })
+				pages.AddAndSwitchToPage("command", centered(form, 76, 9), true)
+				app.SetFocus(form)
+				return
+			}
 			if err := os.WriteFile(filepath.Join(root, "selected"), []byte(string(key.Rune())), 0600); err != nil {
 				t.Error(err)
 			}

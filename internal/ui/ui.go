@@ -237,7 +237,7 @@ func RunWithSandboxOptions(cfg sandbox.ManagerConfig, configPath, policyPath, po
 		index := row - 1
 		if index >= 0 && index < len(workers) {
 			model.SelectIndex(index)
-			renderDetail(views.detail, workers[index], time.Now())
+			renderSelectedDetail(views, workers[index], time.Now())
 		}
 	})
 

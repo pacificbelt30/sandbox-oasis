@@ -39,9 +39,10 @@ func dashboardHelp(_ bool) string {
 }
 
 type dashboardLayout struct {
-	body   *tview.Flex
-	narrow bool
-	width  int
+	body     *tview.Flex
+	narrow   bool
+	width    int
+	detailID string
 }
 
 // The instance list gets the full width on smaller terminals. Detailed fields
@@ -104,8 +105,10 @@ func renderDashboard(views dashboardViews, model *instanceux.Model, now time.Tim
 		}
 	}
 	if worker, ok := model.Selected(); ok {
-		renderDetail(views.detail, worker, now)
+		renderSelectedDetail(views, worker, now)
 	} else {
+		views.layout.detailID = ""
+		views.detail.ScrollToBeginning()
 		views.detail.SetText("[gray]No matching instance. Use / to edit the filter or Esc to clear it.[-]")
 		if len(model.All) == 0 {
 			views.detail.SetText("Create your first sandbox with N or Actions F2.\n\nAfter creation, select it and use C to connect, F for files, or U for a Web preview.")
@@ -126,7 +129,14 @@ func renderDashboard(views dashboardViews, model *instanceux.Model, now time.Tim
 
 func renderDetail(view *tview.TextView, worker sandbox.Worker, now time.Time) {
 	view.SetText(strings.Join(instanceux.Detail(worker, now), "\n"))
-	view.ScrollToBeginning()
+}
+
+func renderSelectedDetail(views dashboardViews, worker sandbox.Worker, now time.Time) {
+	if views.layout.detailID != worker.ID {
+		views.detail.ScrollToBeginning()
+		views.layout.detailID = worker.ID
+	}
+	renderDetail(views.detail, worker, now)
 }
 
 func setupTableHeader(table *tview.Table, compact bool) {
@@ -200,18 +210,26 @@ func commandForm(worker sandbox.Worker, run func(string), cancel func()) *tview.
 		}
 	})
 	form.AddButton("Cancel", cancel)
-	form.SetTitle(" Exec in " + worker.Name + " ").SetBorder(true)
+	form.SetCancelFunc(cancel)
+	form.SetTitle(" Exec in " + tview.Escape(worker.Name) + " · Esc cancels ").SetBorder(true)
 	return form
 }
 
 func centered(primitive tview.Primitive, width, height int) tview.Primitive {
-	return tview.NewFlex().SetDirection(tview.FlexRow).
+	row := tview.NewFlex().SetDirection(tview.FlexColumn).
 		AddItem(nil, 0, 1, false).
-		AddItem(tview.NewFlex().SetDirection(tview.FlexColumn).
-			AddItem(nil, 0, 1, false).
-			AddItem(primitive, width, 0, true).
-			AddItem(nil, 0, 1, false), height, 0, true).
+		AddItem(primitive, width, 0, true).
 		AddItem(nil, 0, 1, false)
+	column := tview.NewFlex().SetDirection(tview.FlexRow).
+		AddItem(nil, 0, 1, false).
+		AddItem(row, height, 0, true).
+		AddItem(nil, 0, 1, false)
+	column.SetDrawFunc(func(_ tcell.Screen, x, y, availableWidth, availableHeight int) (int, int, int, int) {
+		row.ResizeItem(primitive, min(width, availableWidth), 0)
+		column.ResizeItem(row, min(height, availableHeight), 0)
+		return x, y, availableWidth, availableHeight
+	})
+	return column
 }
 
 func orDash(value string) string {
