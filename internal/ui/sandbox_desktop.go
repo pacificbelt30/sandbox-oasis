@@ -498,6 +498,7 @@ func launchReview(s sandboxux.LaunchSpec, storage string) string {
 func (d *sandboxDesktop) files(worker sandbox.Worker) {
 	d.worker = worker
 	d.directory = "."
+	d.entries = nil
 	d.fileTable = tview.NewTable().SetSelectable(true, false).SetFixed(1, 0)
 	d.fileStatus = tview.NewTextView().SetDynamicColors(false)
 	d.fileTable.SetBorder(true).SetTitle(" Workspace files · " + tview.Escape(worker.Name) + " ")
@@ -518,8 +519,7 @@ func (d *sandboxDesktop) files(worker sandbox.Worker) {
 			d.back()
 			return nil
 		case e.Key() == tcell.KeyBackspace || e.Key() == tcell.KeyBackspace2:
-			d.directory = path.Dir(d.directory)
-			d.loadFiles()
+			d.loadDirectory(path.Dir(d.directory), path.Base(d.directory))
 			return nil
 		case e.Rune() == 'g' || e.Rune() == 'G':
 			d.loadFiles()
@@ -534,8 +534,7 @@ func (d *sandboxDesktop) files(worker sandbox.Worker) {
 			return nil
 		case e.Key() == tcell.KeyEnter:
 			if entry.Kind == "directory" {
-				d.directory = path.Join(d.directory, entry.Name)
-				d.loadFiles()
+				d.loadDirectory(path.Join(d.directory, entry.Name), "")
 			} else if entry.Kind == "file" {
 				d.viewFile(path.Join(d.directory, entry.Name))
 			} else if entry.Name != "" {
@@ -548,26 +547,52 @@ func (d *sandboxDesktop) files(worker sandbox.Worker) {
 	d.loadFiles()
 }
 func (d *sandboxDesktop) loadFiles() {
-	id, dir := d.worker.ID, d.directory
+	selected := ""
+	row, _ := d.fileTable.GetSelection()
+	if row > 0 && row <= len(d.entries) {
+		selected = d.entries[row-1].Name
+	}
+	d.loadDirectory(d.directory, selected)
+}
+
+func (d *sandboxDesktop) loadDirectory(dir, selected string) {
+	if d.busy {
+		return
+	}
+	id := d.worker.ID
+	previousStatus := d.fileStatus.GetText(false)
 	d.fileStatus.SetText("Loading /workspace/" + dir)
 	d.work(func(ctx context.Context) (func(), error) {
 		entries, err := d.backend.Files.List(ctx, id, dir)
 		return func() {
+			if err != nil {
+				if previousStatus == "" {
+					previousStatus = "/workspace/" + d.directory + " · listing unavailable · G retries"
+				}
+				d.fileStatus.SetText(previousStatus)
+				d.message(fmt.Sprintf("Cannot open /workspace/%s: %v", dir, err))
+				return
+			}
+			d.directory = dir
 			d.entries = entries
 			d.fileTable.Clear()
 			for c, h := range []string{"Name", "Type", "Bytes"} {
 				d.fileTable.SetCell(0, c, tview.NewTableCell(h).SetSelectable(false).SetTextColor(tcell.ColorYellow))
 			}
+			selectedRow := 1
 			for i, e := range entries {
 				for c, text := range []string{e.Name, e.Kind, strconv.FormatInt(e.Size, 10)} {
 					d.fileTable.SetCell(i+1, c, tview.NewTableCell(tview.Escape(text)))
 				}
+				if e.Name == selected {
+					selectedRow = i + 1
+				}
 			}
 			if len(entries) > 0 {
-				d.fileTable.Select(1, 0)
+				d.fileTable.Select(selectedRow, 0)
 			}
 			d.fileStatus.SetText(fmt.Sprintf("/workspace/%s · %d entries · symlinks cannot be opened", dir, len(entries)))
-		}, err
+		}, nil
 	})
 }
 func (d *sandboxDesktop) viewFile(name string) {

@@ -151,13 +151,14 @@ Select a running VM and press `F`. Operations stay within guest `/workspace`.
 | Key | Action |
 |---|---|
 | `Enter` | Open a real directory or display a text file |
-| `Backspace` | Parent directory |
-| `G` | Refresh |
+| `Backspace` | Parent directory, selecting the folder just left |
+| `G` | Refresh, retaining the selected name when it still exists |
 | `D` | Download the selected file to a new host file |
 | `U` | Upload a host file beneath the current workspace directory |
 | `Esc` | Close the viewer/form or return to the list |
 
 - Text preview shows at most 256 KiB. Binary/non-UTF-8 files require download. Control characters are escaped for display.
+- A failed directory read keeps the previous path, listing and selection. Close the error to continue; press `G` to retry an initial listing failure.
 - Transfers allow up to 64 MiB per file. Neither side overwrites existing files or creates missing directories.
 - Symlinks cannot be opened. Host transfer paths also refuse symlinks in every parent directory and the final component.
 - Upload freezes the contents before confirmation, showing size and SHA-256. `Esc` cancels it.
