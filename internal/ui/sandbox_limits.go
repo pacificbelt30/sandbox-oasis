@@ -58,7 +58,7 @@ func (d *sandboxDesktop) limits(worker sandbox.Worker) {
 		d.message("Lifetime and quota diagnostics are unavailable.")
 		return
 	}
-	view := tview.NewTextView().SetDynamicColors(false).SetScrollable(true).SetText("Loading node lifecycle and quota…")
+	view := tview.NewTextView().SetDynamicColors(false).SetScrollable(true).SetText("No lifecycle or quota result loaded. Use Refresh to read them.")
 	view.SetBorder(true).SetTitle(" Lifetime / storage · " + tview.Escape(worker.Name) + " ")
 	watching, _ := d.supervisor.State(worker.ID)
 	watchLabel := "Supervise this VM…"
@@ -77,7 +77,7 @@ func (d *sandboxDesktop) limits(worker sandbox.Worker) {
 	body.SetInputCapture(d.pageFormNavigation(view, form, d.back))
 	d.pages.AddAndSwitchToPage("limits", body, true)
 	d.app.SetFocus(view)
-	d.work(func(ctx context.Context) (func(), error) {
+	d.read("Reading lifetime and storage", func(ctx context.Context) (func(), error) {
 		s, lifeErr := d.backend.Lifecycle(ctx, worker.ID)
 		usage, usageErr := d.backend.Usage(ctx, worker.ID)
 		var text strings.Builder
@@ -121,7 +121,7 @@ func (d *sandboxDesktop) limits(worker sandbox.Worker) {
 	})
 }
 func (d *sandboxDesktop) reviewDueAction(worker sandbox.Worker) {
-	d.work(func(ctx context.Context) (func(), error) {
+	d.read("Checking due lifecycle actions", func(ctx context.Context) (func(), error) {
 		actions, err := d.backend.Reap(ctx, time.Now(), true, []string{worker.ID})
 		if err != nil {
 			return nil, err

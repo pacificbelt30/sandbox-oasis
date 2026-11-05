@@ -53,6 +53,12 @@ Menus show actions appropriate to the VM state. Use `I` to inspect fields hidden
 
 The list's detail pane preserves its scroll position when the same VM refreshes and returns to the top when another VM is selected. Names and tasks display strings such as `[red]` literally. Command and agent-policy edit dialogs shrink to fit the terminal width.
 
+## Cancel a pending read
+
+Available: **unreleased (main)**. Cancel or Esc interrupts list reads, text previews, changes/storage diagnostics and artifact review preparation. Reads have a 30 second deadline; Retry requests a fresh result after failure. Late results from cancelled reads are discarded.
+
+Wait for VM creation/deletion, save, upload and download operations to finish. These operations modify data; hiding a late success would leave the outcome unclear.
+
 ## Create a VM
 
 1. Select `New sandbox` from `Actions F2`, or press `N` on the instance list.
@@ -170,8 +176,8 @@ Select a running VM and press `F`. Operations stay within guest `/workspace`.
 Available: **unreleased (main)**. Select a running VM and press `W`.
 
 1. Inspect guest Git status and **uncommitted diff against its current HEAD**, up to 256 KiB. This is not a history comparison of commits created by the guest and does not display untracked file contents. Guest Git configuration is never executed on the host for inspection.
-2. Tab to `Export selected files…`. Enter workspace-relative file paths, one per line, and choose a new host tar file.
-3. Choose Review export to inspect selected files, size, guest HEAD and destination; approve from the scrollable review page.
+2. Tab to `Export selected files…`. Enter relative paths one per line, or use `Choose files…`. Enter opens folders; Space selects regular files. Selection survives directory changes. `Use selected files` updates the form and focuses the new host tar destination. Esc discards picker edits and retains the original input.
+3. Choose Review export to inspect selected files, size, SHA-256, guest HEAD and destination; approve from the scrollable review page. Selecting files alone never exports them.
 4. `Saved reviewed artifacts` confirms completion. The VM and independent copy remain. Inspecting/adopting the saved content and removing the VM are separate actions.
 
 - Existing host files, symlinks, credential paths and selections over 256 files / 32 MiB are rejected. A change to selected content, diff or HEAD after review rejects export without publishing a partial file.

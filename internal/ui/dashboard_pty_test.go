@@ -38,6 +38,7 @@ func TestDashboardActionsPTYHelper(t *testing.T) {
 					pages.RemovePage("command")
 					showMain()
 				}, func() { pages.RemovePage("command"); showMain() })
+				setCommandCompletions(form, append(instanceux.ShellBuiltins(), "fixture-completion"))
 				pages.AddAndSwitchToPage("command", centered(form, 76, 9), true)
 				app.SetFocus(form)
 				return

@@ -46,7 +46,7 @@ func completeImageTags(_ *cobra.Command, _ []string, _ string) ([]cobra.Completi
 
 func completeWorkers(accept func(sandbox.Worker) bool) cobra.CompletionFunc {
 	return func(cmd *cobra.Command, args []string, _ string) ([]cobra.Completion, cobra.ShellCompDirective) {
-		mgr, err := sandbox.NewManager(sandbox.ManagerConfig{})
+		mgr, err := sandbox.NewManager(managementConfig())
 		if err != nil {
 			return nil, cobra.ShellCompDirectiveNoFileComp
 		}
@@ -151,6 +151,8 @@ func init() {
 	stopCmd.ValidArgsFunction = completeWorkers(func(w sandbox.Worker) bool { return w.Status == "running" })
 	rmCmd.ValidArgsFunction = completeWorkers(func(sandbox.Worker) bool { return true })
 	logsCmd.ValidArgsFunction = completeWorkers(func(sandbox.Worker) bool { return true })
+	connectCmd.ValidArgsFunction = completeWorkerArgument(func(w sandbox.Worker) bool { return connectStart || w.Status == "running" })
+	execCmd.ValidArgsFunction = completeExecArgument
 }
 
 func completeResourceProfiles(cmd *cobra.Command, _ []string, _ string) ([]cobra.Completion, cobra.ShellCompDirective) {

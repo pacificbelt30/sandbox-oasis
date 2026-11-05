@@ -191,7 +191,9 @@ func RunWithSandboxOptions(cfg sandbox.ManagerConfig, configPath, policyPath, po
 	}
 
 	runCommand := func(worker sandbox.Worker) {
+		completionCtx, cancelCompletion := context.WithCancel(dashboardCtx)
 		form := commandForm(worker, func(command string) {
+			cancelCompletion()
 			pages.RemovePage("command")
 			logView.Clear()
 			pages.SwitchToPage("logs")
@@ -206,9 +208,32 @@ func RunWithSandboxOptions(cfg sandbox.ManagerConfig, configPath, policyPath, po
 				}
 				_, _ = fmt.Fprintf(writer, "\n[yellow]Exit code: %d[-]\n", code)
 			}()
-		}, func() { pages.RemovePage("command"); showMain() })
+		}, func() { cancelCompletion(); pages.RemovePage("command"); showMain() })
 		pages.AddAndSwitchToPage("command", centered(form, 76, 9), true)
 		app.SetFocus(form)
+		go func() {
+			ctx, cancel := context.WithTimeout(completionCtx, 10*time.Second)
+			defer cancel()
+			names, err := instanceux.CommandNames(ctx, mgr, worker.ID)
+			if err != nil && ctx.Err() == nil {
+				// A short-lived exec can race a backend disconnect. Discovery is
+				// read-only, so one fresh attempt is safe within the same deadline.
+				names, err = instanceux.CommandNames(ctx, mgr, worker.ID)
+			}
+			if completionCtx.Err() != nil {
+				return
+			}
+			app.QueueUpdateDraw(func() {
+				if completionCtx.Err() == nil {
+					if err == nil {
+						setCommandCompletions(form, names)
+					} else {
+						form.SetTitle(" Exec in " + tview.Escape(worker.Name) + " · basic completion · Esc cancels ")
+						footer.SetText("VM completion unavailable: " + tview.Escape(err.Error()))
+					}
+				}
+			})
+		}()
 	}
 
 	filterBefore := ""

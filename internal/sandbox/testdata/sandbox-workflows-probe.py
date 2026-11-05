@@ -108,6 +108,14 @@ try:
     expect(b"Supervised by this TUI: false")
     send(bytes([27]))
     expect(b"sort=name")
+    send(b"x")
+    expect(b"Command")
+    send(b"git-receive-p")
+    expect(b"git-receive-pack")  # Discovered inside the VM, not a builtin hint.
+    send(b"\t")
+    expect(b"git-receive-pack")
+    send(bytes([27]))
+    expect(b"sort=name")
     change = subprocess.run([binary, "exec", name, "--", "python3", "-I", "-c",
         "import os; assert open('/workspace/tracked.txt').read() == 'committed base\\n'; "
         "assert not os.path.exists('/workspace/untracked.txt'); "
@@ -115,11 +123,20 @@ try:
         "open('/workspace/new.txt','w').write('new guest file\\n')"], env=env, capture_output=True, timeout=30)
     assert change.returncode == 0, change.stderr[-2000:]
     send(b"w")
+    expect(b"Esc cancels this read")
+    send(bytes([27]))
+    expect(b"Use Refresh")
+    send(b"\t\r")
     expect(b"guest change")
     send(b"\t\t\r")  # Refresh -> Export
     expect(b"Export selected workspace files")
-    paste("tracked.txt\nnew.txt")
-    send(b"\t")
+    send(b"\t\t\t\r")  # paths -> destination -> Review -> Choose files
+    expect(b"Choose artifact files")
+    expect(b"new.txt")
+    send(b" \x1b[B ")  # new.txt and tracked.txt; .git is excluded.
+    send(b"\t\r")  # apply the draft selection without exporting
+    expect(b"Export selected workspace files")
+    assert not Path(archive).exists(), "picker exported before review approval"
     paste(archive)
     send(b"\t\r")
     expect(b"Review selected artifacts")
@@ -138,7 +155,7 @@ try:
         pump()
     assert process.poll() == 0, output[-3500:]
     assert termios.tcgetattr(slave) == previous
-    print("PASS: public TUI environment load/review; copy launch/cancel; limits/quota/scoped supervision; guest diff; selected reviewed export; VM retained after UI exit; terminal restore")
+    print("PASS: public TUI environment load/review; copy launch/cancel; limits/quota/scoped supervision; VM command completion without execution; cancelled guest read and refresh; artifact picker and reviewed export; VM retained after UI exit; terminal restore")
 finally:
     if process.poll() is None:
         process.kill()

@@ -48,6 +48,7 @@ func init() {
 			return write(cmd.OutOrStdout())
 		}}
 		c.Flags().StringVar(&local, "local", "-", "Local path; - uses stdin/stdout. Downloads require a new file.")
+		c.ValidArgsFunction = completeGuestPath(op, false)
 		files.AddCommand(c)
 	}
 	rootCmd.AddCommand(files)
@@ -109,6 +110,8 @@ func init() {
 		c.Flags().StringArrayVar(&bundleOptions.Paths, "include", nil, "Explicit regular workspace file (repeatable; credential paths refused)")
 		c.Flags().StringArrayVar(&bundleOptions.JobIDs, "job", nil, "Include status and exit code of a selected job (repeatable; no logs or argv)")
 		c.Flags().Int64Var(&bundleOptions.MaxBytes, "max-bytes", 32<<20, "Maximum combined file and patch bytes (up to 32 MiB)")
+		c.ValidArgsFunction = completeWorkerArgument(func(w sandbox.Worker) bool { return w.Status == "running" })
+		registerCompletion(c, "include", completeGuestPath("get", true))
 	}
 	bundle.Flags().StringVar(&bundleOptions.ExpectedPlan, "plan-id", "", "Reviewed plan ID; changed contents are refused")
 	bundle.Flags().StringVar(&bundleOutput, "output", "", "New local tar file (0600)")

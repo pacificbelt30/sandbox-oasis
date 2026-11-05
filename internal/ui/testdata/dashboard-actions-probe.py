@@ -83,6 +83,15 @@ try:
     expect(b"New sandbox")
     send(b"x")
     expect(b"Command")
+    send(b"fixture-comple")
+    expect(b"fixture-completion")
+    send(b"\t\x1b")
+    expect(b"STATUS")
+    assert not (root / "executed").exists(), "completion executed a command"
+    send(b" ")
+    expect(b"New sandbox")
+    send(b"x")
+    expect(b"Command")
     command = "printf '日本語 [red]literal'"
     send(b"\x1b[200~" + command.encode() + b"\x1b[201~\t\r")
     expect(b"STATUS")

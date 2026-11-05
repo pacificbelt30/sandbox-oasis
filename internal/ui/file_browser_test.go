@@ -24,11 +24,13 @@ type browserFiles struct {
 	listings map[string][]sandboxux.FileEntry
 	reads    []string
 	readLog  string
+	lists    int
 }
 
 func (f *browserFiles) ListFileEntries(_ context.Context, _, dir string, out io.Writer) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	f.lists++
 	entries, ok := f.listings[dir]
 	if !ok {
 		return fmt.Errorf("directory no longer exists")
@@ -208,6 +210,16 @@ func TestFileBrowserPTYHelper(t *testing.T) {
 	guest := &browserFiles{listings: map[string][]sandboxux.FileEntry{".": {{Name: "gone", Kind: "directory"}, {Name: "z", Kind: "directory"}, {Name: "root.txt", Kind: "file"}}, "z": {{Name: "child.txt", Kind: "file"}}}, readLog: filepath.Join(root, "reads.json")}
 	d := newSandboxDesktop(app, t.Context(), desktopBackend{Files: sandboxux.Files{Guest: guest}}, app.Stop, func() {})
 	defer d.close()
+	app.SetAfterDrawFunc(func(tcell.Screen) {
+		guest.mu.Lock()
+		calls := guest.lists
+		guest.mu.Unlock()
+		page, _ := d.pages.GetFrontPage()
+		data, err := json.Marshal(map[string]any{"lists": calls, "busy": d.busy, "page": page})
+		if err == nil {
+			_ = os.WriteFile(filepath.Join(root, "state.json"), data, 0600)
+		}
+	})
 	app.SetRoot(d.pages, true)
 	d.files(sandbox.Worker{ID: "worker", Name: "browser-fixture", Status: "running"})
 	if err := runTerminal(app); err != nil {

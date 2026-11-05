@@ -47,30 +47,54 @@ def send(value):
     os.write(master, value)
 
 
+def wait_page(page, count=0):
+    deadline = time.monotonic() + 8
+    while time.monotonic() < deadline:
+        try:
+            state = json.loads((root / "state.json").read_text())
+            if state["lists"] >= count and not state["busy"] and state["page"] == page:
+                return
+        except (FileNotFoundError, json.JSONDecodeError):
+            pass
+        pump()
+    raise AssertionError("directory read did not finish")
+
+
 try:
+    wait_page("files", 1)
     expect(b"root.txt")
     send(b"\r")
+    wait_page("message", 2)
     expect(b"gone: directory no longer")
-    assert b"Cannot open /workspace/" in screen.text()
+    assert b"cannot open /workspace/" in screen.text()
     send(b"\r")
+    wait_page("files", 2)
     expect(b"root.txt")
     send(b"\x1b[B\x1b[B\r")
+    wait_page("text", 2)
     expect(b"literal file contents")
     assert json.loads((root / "reads.json").read_text()) == ["root.txt"]
     send(b"\x1b")
+    wait_page("files", 2)
     expect(b"root.txt")
     send(b"g")
+    wait_page("files", 3)
     expect(b"root.txt")
     send(b"\r")
+    wait_page("text", 3)
     expect(b"literal file contents")
     assert json.loads((root / "reads.json").read_text()) == ["root.txt", "root.txt"]
     send(b"\x1b")
+    wait_page("files", 3)
     expect(b"root.txt")
     send(b"\x1b[A\r")
+    wait_page("files", 4)
     expect(b"child.txt")
     send(b"\x7f")
+    wait_page("files", 5)
     expect(b"root.txt")
     send(b"\r")
+    wait_page("files", 6)
     expect(b"child.txt")  # Backspace kept z selected rather than switching to gone.
     send(b"\x1b")
     deadline = time.monotonic() + 5

@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -121,6 +122,9 @@ func (s Store) Get(id string) (Task, error) {
 func (s Store) change(fn func(*boardFile) error) error {
 	for tries := 0; tries < 8; tries++ {
 		_, raw, e := s.read()
+		if errors.Is(e, privatefile.ErrChanged) {
+			continue
+		}
 		if e != nil {
 			return e
 		}

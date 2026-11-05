@@ -24,7 +24,7 @@ func (d *sandboxDesktop) managedWorkspaces() {
 		d.message("Managed workspace operations are unavailable on this connection.")
 		return
 	}
-	d.work(func(ctx context.Context) (func(), error) {
+	d.read("Listing managed workspaces", func(ctx context.Context) (func(), error) {
 		catalog, err := d.backend.Workspaces.List(ctx)
 		return func() {
 			list := tview.NewList().ShowSecondaryText(true)
@@ -78,7 +78,7 @@ func (d *sandboxDesktop) createPrepared(spec sandboxux.LaunchSpec) {
 		d.message("Sandbox creation is unavailable for this dashboard connection.")
 		return
 	}
-	d.work(func(ctx context.Context) (func(), error) {
+	d.read("Loading profiles and storage", func(ctx context.Context) (func(), error) {
 		profiles, err := d.backend.Profiles(ctx)
 		if err != nil {
 			return nil, err
@@ -95,7 +95,7 @@ func (d *sandboxDesktop) recoveryPoints() {
 		d.message("Recovery-point operations are unavailable.")
 		return
 	}
-	d.work(func(ctx context.Context) (func(), error) {
+	d.read("Listing recovery points", func(ctx context.Context) (func(), error) {
 		points, err := d.backend.Workspaces.Points(ctx)
 		return func() {
 			list := tview.NewList().ShowSecondaryText(true)
@@ -156,7 +156,7 @@ func (d *sandboxDesktop) saveRecoveryPoint(worker sandbox.Worker) {
 		d.message("Stop this VM with S before saving a recovery point.")
 		return
 	}
-	d.work(func(ctx context.Context) (func(), error) {
+	d.read("Reading workspace details", func(ctx context.Context) (func(), error) {
 		info, err := d.backend.ManagedInfo(ctx, worker.ID)
 		return func() { d.saveRecoveryForm(worker, info) }, err
 	})

@@ -15,14 +15,14 @@ func (d *sandboxDesktop) changes(worker sandbox.Worker) {
 		d.message("Workspace results are unavailable.")
 		return
 	}
-	view := tview.NewTextView().SetDynamicColors(false).SetScrollable(true).SetText("Loading workspace changes…")
+	view := tview.NewTextView().SetDynamicColors(false).SetScrollable(true).SetText("No workspace changes loaded. Use Refresh to read them.")
 	view.SetBorder(true).SetTitle(" Workspace changes · " + tview.Escape(worker.Name) + " ")
 	form := tview.NewForm().AddButton("Refresh", func() { d.changes(worker) }).AddButton("Export selected files…", func() { d.exportArtifacts(worker) }).AddButton("Back", d.back)
 	body := tview.NewFlex().SetDirection(tview.FlexRow).AddItem(view, 0, 1, true).AddItem(form, 3, 0, false).AddItem(tview.NewTextView().SetText("Tab switches panes · ↑↓ / PgUp / PgDn scroll · Esc back\nShared/Git copy: current HEAD. Managed: initial import hashes; no Git patch. Select files explicitly to export."), 2, 0, false)
 	body.SetInputCapture(d.pageFormNavigation(view, form, d.back))
 	d.pages.AddAndSwitchToPage("changes", body, true)
 	d.app.SetFocus(view)
-	d.work(func(ctx context.Context) (func(), error) {
+	d.read("Reading workspace changes", func(ctx context.Context) (func(), error) {
 		text, err := d.backend.Changes(ctx, worker.ID)
 		// Export still works for non-Git workspaces only when the artifact backend
 		// supports their plan; a failed diff is not presented as a clean tree.
@@ -32,17 +32,23 @@ func (d *sandboxDesktop) changes(worker sandbox.Worker) {
 
 func (d *sandboxDesktop) exportArtifacts(worker sandbox.Worker) {
 	paths, destination := "", ""
+	var pickerPaths []string
+	pickerText := ""
 	back := func() { d.changes(worker) }
 	form := tview.NewForm().AddTextArea("Workspace files (one/line)", "", 56, 5, 24576, func(v string) { paths = v }).AddInputField("New host .tar file", "", 56, nil, func(v string) { destination = v })
 	form.AddTextView("Scope", "Choose 1–256 regular files. The archive includes selected contents, a manifest and, for Git workspaces, their diff against current HEAD. Managed exports contain an empty changes.patch. Secrets paths and symlinks are rejected. Maximum 32 MiB; host destination must be new. No changes are applied to the original project.", 56, 5, false, false)
 	form.AddButton("Review export", func() {
 		options := sandbox.ArtifactOptions{}
-		for _, p := range strings.Split(paths, "\n") {
-			if p = strings.TrimSpace(p); p != "" {
-				options.Paths = append(options.Paths, p)
+		if pickerPaths != nil && paths == pickerText {
+			options.Paths = append([]string(nil), pickerPaths...)
+		} else {
+			for _, p := range strings.Split(paths, "\n") {
+				if p = strings.TrimSpace(p); p != "" {
+					options.Paths = append(options.Paths, p)
+				}
 			}
 		}
-		d.work(func(ctx context.Context) (func(), error) {
+		d.read("Reviewing selected artifacts", func(ctx context.Context) (func(), error) {
 			plan, err := d.backend.Artifacts.PlanArtifacts(ctx, worker.ID, options)
 			if err != nil {
 				return nil, err
@@ -50,7 +56,7 @@ func (d *sandboxDesktop) exportArtifacts(worker sandbox.Worker) {
 			var text strings.Builder
 			fmt.Fprintf(&text, "Save to new private file: %s\nWorker: %s\nGuest HEAD / initial import: %s\nSelected file + diff bytes: %d\nPlan: %s\n\n", destination, plan.Worker, plan.Head, plan.TotalBytes, plan.ID)
 			for _, f := range plan.Files {
-				fmt.Fprintf(&text, "%s · %d bytes\n", f.Path, f.Bytes)
+				fmt.Fprintf(&text, "%s · %d bytes · SHA-256 %s\n", f.Path, f.Bytes, f.SHA256)
 			}
 			return func() {
 				d.reviewPage("export-review", " Review selected artifacts ", text.String()+"\nA change to selected contents, diff or HEAD invalidates this plan. VM deletion is a separate action.", func() {
@@ -65,6 +71,24 @@ func (d *sandboxDesktop) exportArtifacts(worker sandbox.Worker) {
 				}, func() { d.pages.SwitchToPage("export"); d.app.SetFocus(form) })
 			}, nil
 		})
+	}).AddButton("Choose files…", func() {
+		accept := func(selected []string) {
+			pickerPaths = make([]string, len(selected))
+			copy(pickerPaths, selected)
+			pickerText = strings.Join(selected, "\n")
+			if field, ok := form.GetFormItem(0).(*tview.TextArea); ok {
+				field.SetText(strings.Join(selected, "\n"), true)
+			}
+			d.pages.SwitchToPage("export")
+			form.SetFocus(1)
+			d.app.SetFocus(form)
+		}
+		back := func() { d.pages.SwitchToPage("export"); d.app.SetFocus(form) }
+		if pickerPaths != nil && paths == pickerText {
+			d.chooseArtifactPaths(worker, pickerPaths, accept, back)
+		} else {
+			d.chooseArtifacts(worker, paths, accept, back)
+		}
 	}).AddButton("Cancel", back)
 	form.SetBorder(true).SetTitle(" Export selected workspace files · Esc cancels ")
 	d.cancelForm(form, back)

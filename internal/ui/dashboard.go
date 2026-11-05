@@ -203,7 +203,8 @@ func confirmationModal(question string, confirm func(), cancel func()) *tview.Mo
 
 func commandForm(worker sandbox.Worker, run func(string), cancel func()) *tview.Form {
 	command := ""
-	form := tview.NewForm().AddInputField("Command", "", 64, nil, func(value string) { command = value })
+	input := tview.NewInputField().SetLabel("Command").SetFieldWidth(64).SetChangedFunc(func(value string) { command = value })
+	form := tview.NewForm().AddFormItem(input)
 	form.AddButton("Run", func() {
 		if strings.TrimSpace(command) != "" {
 			run(command)
@@ -211,6 +212,17 @@ func commandForm(worker sandbox.Worker, run func(string), cancel func()) *tview.
 	})
 	form.AddButton("Cancel", cancel)
 	form.SetCancelFunc(cancel)
+	form.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyEscape {
+			cancel()
+			return nil
+		}
+		if event.Key() == tcell.KeyTab && input.HasFocus() {
+			input.Autocomplete()
+		}
+		return event
+	})
+	setCommandCompletions(form, instanceux.ShellBuiltins())
 	form.SetTitle(" Exec in " + tview.Escape(worker.Name) + " · Esc cancels ").SetBorder(true)
 	return form
 }

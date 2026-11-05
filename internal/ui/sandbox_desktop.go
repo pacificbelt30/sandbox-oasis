@@ -54,6 +54,7 @@ type sandboxDesktop struct {
 	backend        desktopBackend
 	back, changed  func()
 	busy           bool
+	workGeneration uint64
 	previews       []desktopPreview
 	uploads        map[*sandboxux.Upload]bool
 	worker         sandbox.Worker
@@ -146,38 +147,6 @@ func (d *sandboxDesktop) message(text string) {
 	d.pages.AddAndSwitchToPage("message", modal, true)
 	d.app.SetFocus(modal)
 }
-func (d *sandboxDesktop) work(fn func(context.Context) (func(), error)) {
-	if d.busy {
-		return
-	}
-	d.busy = true
-	previous, primitive := d.pages.GetFrontPage()
-	working := tview.NewTextView().SetText("Working…").SetDynamicColors(false)
-	working.SetBorder(true).SetTitle(" Sandbox operation ")
-	d.pages.AddAndSwitchToPage("working", working, true)
-	d.app.SetFocus(working)
-	go func() {
-		ctx, cancel := context.WithTimeout(d.ctx, 10*time.Minute)
-		defer cancel()
-		next, err := fn(ctx)
-		if d.ctx.Err() != nil {
-			return
-		}
-		d.app.QueueUpdateDraw(func() {
-			d.busy = false
-			d.pages.RemovePage("working")
-			d.pages.SwitchToPage(previous)
-			if primitive != nil {
-				d.app.SetFocus(primitive)
-			}
-			if err != nil {
-				d.message(err.Error())
-			} else if next != nil {
-				next()
-			}
-		})
-	}()
-}
 func (d *sandboxDesktop) confirmation(text string, yes, no func()) {
 	previous, primitive := d.pages.GetFrontPage()
 	restore := func() {
@@ -232,7 +201,7 @@ func (d *sandboxDesktop) create() {
 		return e
 	})
 	d.pages.AddAndSwitchToPage("loading", loading, true)
-	d.work(func(ctx context.Context) (func(), error) {
+	d.read("Loading profiles and storage", func(ctx context.Context) (func(), error) {
 		profiles, err := d.backend.Profiles(ctx)
 		if err != nil {
 			return nil, err
@@ -560,19 +529,12 @@ func (d *sandboxDesktop) loadDirectory(dir, selected string) {
 		return
 	}
 	id := d.worker.ID
-	previousStatus := d.fileStatus.GetText(false)
-	d.fileStatus.SetText("Loading /workspace/" + dir)
-	d.work(func(ctx context.Context) (func(), error) {
+	d.read("Loading /workspace/"+dir, func(ctx context.Context) (func(), error) {
 		entries, err := d.backend.Files.List(ctx, id, dir)
+		if err != nil {
+			return nil, fmt.Errorf("cannot open /workspace/%s: %w", dir, err)
+		}
 		return func() {
-			if err != nil {
-				if previousStatus == "" {
-					previousStatus = "/workspace/" + d.directory + " · listing unavailable · G retries"
-				}
-				d.fileStatus.SetText(previousStatus)
-				d.message(fmt.Sprintf("Cannot open /workspace/%s: %v", dir, err))
-				return
-			}
 			d.directory = dir
 			d.entries = entries
 			d.fileTable.Clear()
@@ -597,7 +559,7 @@ func (d *sandboxDesktop) loadDirectory(dir, selected string) {
 }
 func (d *sandboxDesktop) viewFile(name string) {
 	id := d.worker.ID
-	d.work(func(ctx context.Context) (func(), error) {
+	d.read("Reading /workspace/"+name, func(ctx context.Context) (func(), error) {
 		text, err := d.backend.Files.Text(ctx, id, name)
 		return func() {
 			if text.Binary {

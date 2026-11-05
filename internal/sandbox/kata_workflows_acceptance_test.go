@@ -14,6 +14,8 @@ import (
 	"time"
 
 	"github.com/containerd/errdefs"
+	"github.com/pacificbelt30/codex-dock/internal/instanceux"
+	"github.com/pacificbelt30/codex-dock/internal/launchtiming"
 	"github.com/pacificbelt30/codex-dock/internal/sandbox"
 	"github.com/pacificbelt30/codex-dock/internal/sandboxux"
 	"github.com/pacificbelt30/codex-dock/internal/workerpolicy"
@@ -96,9 +98,38 @@ func TestKataSandboxWorkflows(t *testing.T) {
 	command := exec.CommandContext(ctx, "python3", "-c", terminalScreenProbe+"\n"+sandboxWorkflowsProbe, binary, project, name, copyDir, configDir, archive)
 	output, err := command.CombinedOutput()
 	if err != nil {
+		diagnostic, stop := context.WithTimeout(ctx, 30*time.Second)
+		defer stop()
+		diagnostic, timing := launchtiming.Begin(diagnostic)
+		names, discoveryErr := instanceux.CommandNames(diagnostic, m, name)
+		total, phases := timing.Finish()
+		t.Logf("command discovery after PTY failure: %d names; git-receive-pack=%t; error=%v; total=%v; phases=%v", len(names), strings.Contains(strings.Join(names, "\n"), "git-receive-pack"), discoveryErr, total, phases)
 		t.Fatalf("public workflow TUI: %v\n%s", err, output)
 	}
 	t.Log(strings.TrimSpace(string(output)))
+	for _, tc := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"connect", name[:len(name)-2]}, name},
+		{[]string{"files", "get", name, "tr"}, "tracked.txt"},
+		{[]string{"artifact", "plan", name, "--include", "tr"}, "tracked.txt"},
+		{[]string{"exec", name, "py"}, "python3"},
+	} {
+		started := time.Now()
+		completion := exec.CommandContext(ctx, binary, append([]string{"__complete"}, tc.args...)...)
+		completed, err := completion.CombinedOutput()
+		t.Logf("completion %v: %v", tc.args, time.Since(started))
+		if err != nil || !strings.Contains(string(completed), tc.want) {
+			diagnostic, stop := context.WithTimeout(ctx, 20*time.Second)
+			defer stop()
+			diagnostic, timing := launchtiming.Begin(diagnostic)
+			entries, listErr := (sandboxux.Files{Guest: m}).List(diagnostic, name, ".")
+			total, phases := timing.Finish()
+			t.Logf("guest listing after completion failure: %v; error=%v; total=%v; phases=%v", entries, listErr, total, phases)
+			t.Fatalf("completion %v: %v %s", tc.args, err, completed)
+		}
+	}
 	worker, err := m.InspectContext(ctx, name)
 	if err != nil || worker.Status != "running" {
 		t.Fatal(worker, err)

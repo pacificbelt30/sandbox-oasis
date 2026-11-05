@@ -4,6 +4,7 @@ package privatefile
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -13,21 +14,41 @@ import (
 
 const Limit = 1 << 20
 
+var ErrChanged = errors.New("configuration changed; reload before saving")
+var errReplaced = errors.New("configuration replaced during open")
+
 func safe(info os.FileInfo) bool {
 	s, ok := info.Sys().(*syscall.Stat_t)
 	return ok && s.Uid == uint32(os.Geteuid()) && s.Nlink == 1 && info.Mode().IsRegular() && info.Mode().Perm()&0077 == 0
 }
 
 func Read(path string) ([]byte, error) {
-	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW, 0)
-	if os.IsNotExist(err) {
-		return nil, os.ErrNotExist
+	for range 8 {
+		f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW, 0)
+		if os.IsNotExist(err) {
+			return nil, os.ErrNotExist
+		}
+		if err != nil {
+			return nil, fmt.Errorf("private configuration unavailable")
+		}
+		data, err := readOpened(f)
+		_ = f.Close()
+		if !errors.Is(err, errReplaced) {
+			return data, err
+		}
 	}
-	if err != nil {
-		return nil, fmt.Errorf("private configuration unavailable")
-	}
-	defer func() { _ = f.Close() }()
+	return nil, ErrChanged
+}
+
+func readOpened(f *os.File) ([]byte, error) {
 	info, err := f.Stat()
+	if err == nil {
+		if stat, ok := info.Sys().(*syscall.Stat_t); ok && stat.Nlink == 0 {
+			// Atomic replacement can unlink a valid inode after open, before
+			// fstat. Reopen the current path; never accept that unlinked inode.
+			return nil, errReplaced
+		}
+	}
 	if err != nil || !safe(info) || info.Size() > Limit {
 		return nil, fmt.Errorf("configuration must be an owner-private regular file (0600, at most 1 MiB)")
 	}
@@ -75,7 +96,7 @@ func Update(path, expected string, transform func([]byte) ([]byte, error)) error
 		return err
 	}
 	if Revision(data) != expected {
-		return fmt.Errorf("configuration changed; reload before saving")
+		return ErrChanged
 	}
 	output, err := transform(data)
 	if err != nil {
