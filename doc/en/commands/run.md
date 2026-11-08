@@ -332,7 +332,7 @@ mounts = ["/home/user/datasets:/data:ro", "./cache:/cache"]
 
 ## Codex SQLite startup error
 
-**Unreleased (`main`)** adds a [private database disk](../guides/agent-state.md) for newly created regular Kata workers on matching nodes. The limitation below applies to v0.0.6, old workers, and workers with this feature disabled.
+**v0.0.7** adds a [private database disk](../guides/agent-state.md) for newly created regular Kata workers on matching nodes. The limitation below applies to v0.0.6, old workers, and workers with this feature disabled.
 
 With the pinned Codex 0.163.0 tested on 2026-10-26, an ordinary Kata rootfs HOME fails to start the interactive UI with `disk I/O error (code: 5386)` for `state_5.sqlite`. The `virtio_fs_cache="none"` setting needed for coherent shared workspaces conflicts with SQLite WAL's writable shared mmap. See the [verification record](../../testing.md#ux改善の検証2026-10-26).
 

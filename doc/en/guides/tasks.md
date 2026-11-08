@@ -9,6 +9,7 @@ Queue instructions, execute them in a dedicated worktree with Kata, then select 
 ## Requirements and storage
 
 - Complete [first startup](first-run.md) and use your normal operator account. The Git project must have a commit.
+- Use an ordinary `.git` directory or a reciprocally registered linked worktree. Handwritten pointers and symlinks to another repository are rejected. Saved tasks recheck paths and registration before operations and stop if these change. Check `git worktree list` and the registration in the original repository.
 - Private task records, prompts and reviews live in `~/.config/codex-dock/tasks/`. Override with `task --store DIR`, outside the shared project.
 - Each attempt creates a detached worktree at the commit recorded when the task was created. Uncommitted project edits are excluded. Retries start from that same commit.
 - Git metadata uses the existing linked-worktree sharing model. This is not an independent repository or Git metadata isolation.

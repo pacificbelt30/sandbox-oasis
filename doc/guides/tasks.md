@@ -9,6 +9,7 @@
 ## 前提と保存先
 
 - [初回起動](first-run.md)を完了した通常ユーザーで実行します。Gitリポジトリには少なくとも1つcommitが必要です。
+- 通常の`.git`ディレクトリ、またはGitが相互登録したlinked worktreeを使います。別リポジトリを指す手書きの`.git`やsymlinkは受け入れません。保存済みタスクも操作前にパスと登録を再確認し、変更時は中断します。元のリポジトリで`git worktree list`と登録先を確認してください。
 - 台帳・依頼・レビューはホストの`~/.config/codex-dock/tasks/`へ所有者限定で保存します。`task --store DIR`で共有プロジェクト外の専用ディレクトリを指定できます。
 - 各試行は作成時のcommitから新しいdetached worktreeを作成します。プロジェクトの未コミット変更は取り込みません。再試行も同じ開始commitを使います。
 - worktreeのGitメタデータは既存の[worktree共有](../workspace.md)と同じです。別リポジトリのコピーやGitメタデータの隔離にはなりません。

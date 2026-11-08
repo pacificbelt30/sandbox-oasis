@@ -13,6 +13,8 @@
 
 ## Installed version
 
+Before updating, back up data and remove all VMs and proxies, including stopped ones. Stopping alone is insufficient. Save rootfs checkpoints and private database backups separately and restore them into new VMs. Read the [update and recovery requirements](../setup.md#更新する) (Japanese) first.
+
 - These instructions install the signed prebuilt distribution (v0.0.7).
 - For the complete flow, follow [installation through first startup](guides/first-run.md).
 - The `releases/latest` commands below install the published release.

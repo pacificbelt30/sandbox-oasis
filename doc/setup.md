@@ -157,20 +157,26 @@ oaiso init --agent claude
 
 **対象：この自動配置で管理している環境。**
 
-1. 作業中の成果を保存。
-2. 旧版CLIでワーカーとProxyを停止・削除。
+1. アプリの保存を完了し、共有workspace・必要なHOME内データ・ホスト設定を保管。VMを停止して、必要な[rootfs checkpoint](guides/disk-checkpoint.md)と[専用DB](guides/agent-state.md#バックアップと別vmへの復元)を別々に保存します。バックアップは共有workspaceの外へ置き、対象外のデータも確認してください。
+2. 旧版CLIでワーカーとProxyを停止・削除。停止しただけでは更新できません。VM削除前にバックアップを確認し、不要なジョブ・予約枠も回収します。
 3. [配布インストーラー](installation.md#3-計画を確認してインストール)を再実行して最新版の計画を確認。
 4. 同じインストーラーに `--apply` を付け、新しいCLI・node・補助プログラムを同時に配置。
 5. 再ログイン後、通常利用者でワーカーイメージを再ビルドし、認証済みのエージェントで `init`。
-6. `runtime-check` と、新規ワーカーでの動作を確認。
+6. `runtime-check`と、新規ワーカーでの動作を確認。保存したrootfs／専用DBは、互換性を確認して新しいVMへ復元します。元のVM IDは引き継ぎません。
 
-**手順5〜6の例（既定ワーカーイメージ）**
+**手順5〜6の例（既定ワーカーイメージ・Codex）**
 
 ```bash
 oaiso build --template plain --tag codex-dock:latest
 oaiso init --agent codex
-# Claude Codeを使う場合は、上のinitの代わりに実行
-# oaiso init --agent claude
+oaiso runtime-check
+```
+
+**Claude Codeを使う場合**
+
+```bash
+oaiso build --template plain --tag codex-dock:latest
+oaiso init --agent claude
 oaiso runtime-check
 ```
 
@@ -202,7 +208,7 @@ oaiso runtime-check
 
 ### 前の成功した配置へ戻す
 
-1. ワーカーとProxyを削除。
+1. 必要なデータを保管してから、ワーカーとProxyを停止・削除。停止済みVMも残せません。
 2. rollback計画を確認。
 3. `--apply` で適用。
 

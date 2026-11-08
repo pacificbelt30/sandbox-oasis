@@ -81,6 +81,17 @@ func InspectRepository(ctx context.Context, dir string) (Repository, error) {
 		return r, e
 	}
 	r.Common = string(bytes.TrimSpace(out))
+	r.GitDir, e = filepath.EvalSymlinks(r.GitDir)
+	if e != nil {
+		return r, e
+	}
+	r.Common, e = filepath.EvalSymlinks(r.Common)
+	if e != nil {
+		return r, e
+	}
+	if e = r.authorize(); e != nil {
+		return r, e
+	}
 	out, e = gitCommand(ctx, dir, r.GitDir, nil, nil, "rev-parse", "--verify", "HEAD^{commit}")
 	if e != nil {
 		return r, e
@@ -126,6 +137,9 @@ func filterOptions(ctx context.Context, root, gitdir, common string) ([]string, 
 	return args, nil
 }
 func (r Repository) run(ctx context.Context, env []string, in io.Reader, args ...string) ([]byte, error) {
+	if e := r.authorize(); e != nil {
+		return nil, e
+	}
 	filters, e := filterOptions(ctx, r.Root, r.GitDir, r.Common)
 	if e != nil {
 		return nil, e
