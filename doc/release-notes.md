@@ -1,75 +1,66 @@
-# Oaiso v0.0.7
+# Oaiso v0.0.8
+
+公開準備中（未公開）。現在の公開版はv0.0.7です。
 
 ## 主な変更
 
-隔離・認証の境界を強化し、既存環境からの保管・移行と、Codex DBの復元を追加しました。
+Kata VMを開発・テスト用のサンドボックスとして使う操作を増やし、ファイルの取り出し、長時間ジョブ、復元点と状態の確認をTUIから行えるようにしました。
 
 | 分野 | 変更 |
 |---|---|
-| Kata | 固定版を4.3.0へ更新。Dragonballの既知の脆弱性に対応し、固定資産のhashを更新 |
-| ワーカーの容量 | 書き込み可能rootfsへ4 GiB・65,536 inodeのXFS project quota。OSと別の専用XFSが必須。起動時の空き・予約容量も検査 |
-| 認証Proxy | 製品用image tagの予約、root管理のdigest認可、管理シークレットの所有者限定ファイル経由の受渡し |
-| ホストとの共有 | 外部Git metadataはホスト側のworktree登録と相互確認。ファイル操作の出力を制限し、Pythonを隔離モードで実行 |
-| 保管・移行 | `checkpoint export/import`で検証済みOCIを持ち出し。既存ファイル・image tagを上書きしない。v0.0.6の書き出し手順を追加 |
-| Codex DB | 専用ext4へSQLiteを保持。停止・再起動に対応。`agent-state export/restore`で未起動の新規VMへ復元。`run --create-only`を追加 |
-| 診断・TUI | `runtime-check`へquotaと空き容量、TUIへrootfsのbyte／inode使用量を追加。エージェントポリシーの編集画面と段階別の起動エラー案内を追加 |
+| サンドボックス | AI認証なしのshell VM、共有・独立Gitコピー・容量付き管理workspace、レビュー付きの作成、保存した環境の再利用 |
+| ファイルとプレビュー | workspaceの一覧・テキスト表示・新規ファイルのアップロード／ダウンロード、認証付きWebプレビュー、読取取消と再試行 |
+| 作業の保存 | 停止VMのrootfsと管理workspaceを組にした復元点、新規VMへの復元、参照中のcheckpoint・workspaceの削除拒否 |
+| ジョブと成果物 | `J`で開始レビュー・ログ追尾・再接続・対象ジョブの停止。`W`で現在HEAD／起動時点の比較、ファイル別表示と選択、レビュー済み内容だけを新規tarへ出力 |
+| タスク | 独立した作業場所でのタスク実行・テスト・レビューと、選んだ変更の新規結果ブランチへの取り込み |
+| 操作と診断 | CLIとTUIの補完、検索・狭い画面・Esc・取消後の復帰を改善。`L`でCPU・メモリ・quota・停止要求と取得不能を区別 |
+| 安定性 | 失敗した転送の未完成ファイルを残さない。失敗した画面更新では現在の一覧・選択を保持。終了コード取得失敗や未起動を成功として表示しない |
 
-- Codex CLI 0.163.0／Claude Code 2.1.306、containerd 2.4.2、BuildKit 0.34.0、runc 1.4.3の固定版は維持しています。
-- 既存の接続・Escなどの特殊キー・ANSI／Unicodeの入出力を維持します。
-- 認証プロファイルの暗号化形式とLocal API v1に破壊的変更はありません。実APIキー・OAuthは引き続き認証Proxyで保持します。
-- バックアップは暗号化しません。rootfs、workspace、HOME内のデータ、専用DBの対象範囲を確認し、共有workspaceの外へ所有者限定で保管してください。
+- タスクのGit参照は通常の`.git`ディレクトリか相互登録されたworktreeに限定します。別リポジトリへの手書きポインタ、保存後のメタデータ置換、登録の逆参照変更を拒否します。該当する既存タスクは元の登録を確認してから作り直してください。
 
-## v0.0.6から更新する
+- CLIの通常のエージェント選択と承認設定は維持します。認証なしのCLI起動は`--agent shell --no-ai`で指定します。
+- lowercase `j`は一覧移動を維持し、ジョブ管理はuppercase `J`です。TUIを閉じても実行中ジョブは継続します。
+- 起動時点の比較は、新しいVMでユーザーコード開始前に取得したGit commitがある場合に使えます。旧VM・非Git・管理workspaceには後から現在HEADを起動時点として補いません。
+- CPU・メモリの観測値はVMM等を含むホストcgroupの値です。終了137だけでOOMとは判定しません。
+- 固定Kata 4.3.0、containerd 2.4.2、BuildKit 0.34.0、runc 1.4.3、Codex CLI 0.163.0、Claude Code 2.1.306はv0.0.7から維持します。
 
-**既存ext4へそのまま適用できません。** [専用ストレージへの移行](https://pacificbelt30.github.io/sandbox-oasis/guides/storage-migration/)で保存対象と取り出し方を確認してください。
+## v0.0.7から更新する
 
-1. アプリの保存を完了し、旧CLIでworkerを停止。rootfs checkpoint・workspace・必要な利用者データとホスト設定を保管します。v0.0.6には専用DBディスクがありません。
-2. 管理者が別の保存先へ専用XFSを準備し、project quotaのaccountingとenforcementを有効化。2ワーカーは32 GiB以上が目安です。setupは既存ディスクをformat・変換しません。
-3. 対応するCLI・node・guard・loggerを配置し、通常ユーザーで`oaiso runtime-check`を確認します。
-4. 新しい環境で認証・Proxyを準備。既定imageは再ビルドし、独自Proxyはソースとdigestを確認してから認可します。
-5. checkpointを取り込み、復元したworkspaceを指定して新しいworkerを作成。成果物・DB・書き込み・認証と通信規則を確認してから旧環境を回収します。
+1. アプリの保存を完了し、workspace・必要なHOME内データ・ホスト設定を保管します。停止したVMのrootfs checkpointと専用DBは別々に保存し、バックアップを確認してから先に全VMを削除し、その後Proxyを停止・削除します。AI認証付きVMの削除では、失効確認のためProxyを稼働させておきます。停止済みコンテナが残る更新も拒否します。
+2. 同じ版のCLI・node・guard・loggerを一組で更新し、通常ユーザーで`oaiso runtime-check`を確認します。専用XFSとproject quotaは引き続き必要です。
+3. 認証Proxyのimageも同じ版へ再ビルドし、独自imageはソースとdigestを確認して認可します。
+4. 互換性のある保存済みrootfsと専用DBを新規VMへ復元し、workspaceとともに内容を確認します。元のVM IDは引き継ぎません。新機能は対応するCLI・nodeがそろってから使います。
 
-新版同士の専用DB復元には[状態保存ガイド](https://pacificbelt30.github.io/sandbox-oasis/guides/agent-state/)を使います。既存VMへDBを上書きせず、容量とUID/GIDが一致する未起動・未復元のVMだけを受け入れます。
-
-## インストールと配布物
-
-[前提条件と署名検証](https://pacificbelt30.github.io/sandbox-oasis/installation/)を準備した通常ユーザーが、適用前の計画を表示します。
-
-```bash
-curl -fsSL https://github.com/pacificbelt30/sandbox-oasis/releases/download/v0.0.7/install.sh | bash
-```
-
-- 対象：Ubuntu 26.04 x86_64、systemd、KVM、cgroup v2、専用XFS。Go・Make・ソース取得は不要です。
-- パイプ実行はHTTPS配布元を信頼する操作です。[実行前にinstallerの署名を検証する手順](https://pacificbelt30.github.io/sandbox-oasis/guides/signed-releases/)も使えます。
-- 5ファイル：`oaiso-linux-amd64.tar.gz`・`install.sh`・`SHA256SUMS`・`sbom.cdx.json`・`provenance.json`。Kata等の固定配布物・作業image・認証情報はarchiveに含みません。
-- 署名・作成元はビルド経路を確認するもので、脆弱性の不存在を保証しません。
+- 旧版へ戻す前にも必要なデータを保管して、全VM・Proxyを停止・削除します。`setup --rollback --apply`は明示した復旧操作です。到達済みの公開版の下限は下げません。
+- 新しい管理workspace・復元点・タスクのデータを保管し、必要な成果物を先に取り出してください。v0.0.7で新機能の操作が使えるとは保証しません。
+- v0.0.6以前のext4環境には専用XFSへの移行が必要です。setupは既存ディスクをformat・変換しません。
 
 ## 検証範囲
 
-- Go build・全件raceテスト・vet・lint、既存のセキュリティfuzz、Pythonの配置／配布検査、CLI名検査、文書strictビルド。
-- 実Kataでv0.0.6のext4からXFSへの移行、rootfs／SQLite WALの別VM復元、公開Go API、端末キー・ANSI・Unicode、認証・相互TLS・共有・隔離境界を確認。更新・自動復旧・rollbackと資源回収も成功。[検証記録](https://pacificbelt30.github.io/sandbox-oasis/testing/)。
-- 外部AIの実認証・推論、実WSL、実ホスト再起動は対象外です。
+開発候補`preflight-42dd882`でGo全件race・build・vet・lint・8系統fuzz、strict文書、実Kataの18スイート（失敗・skip 0）を確認しました。公開v0.0.7からの保存・削除・更新・新規VM復元、故障時の自動復旧、v0.0.7へのrollbackと元バックアップの再復元、資源回収も成功しています。v0.0.8の配布候補・新規導入・巻戻し防止を含む更新／復旧は最終確認中です。
+
+外部AIの実アカウント認証・推論、実WSL、物理ホストの再起動、すべての端末・ブラウザーでの目視は対象外です。
+
+## 配布物
+
+公開時にarchive・install.sh・SHA256SUMS・sbom.cdx.json・provenance.jsonの5ファイルを配布します。archiveは静的Linux amd64のCLI・補助プログラム・manifest・ライセンス／noticeを含み、Kata等のruntime資産・作業image・認証情報は含みません。
+
+ローカル候補にはGitHubの署名は付きません。公開物はタグのクリーンなソースからworkflowが生成し、署名・作成元・checksumを検証します。
 
 ---
 
 ## English
 
-Oaiso v0.0.7 strengthens isolation and credential boundaries and adds portable checkpoints, private Codex database backups and storage diagnostics.
+Release preparation, not published. The current public release is v0.0.7.
 
-| Area | Change |
-|---|---|
-| Kata | Pin 4.3.0 and verified hashes to address the reported Dragonball vulnerability |
-| Capacity | Enforce 4 GiB / 65,536 inode writable rootfs project quotas; require dedicated XFS separate from the OS and check admission capacity |
-| Proxy trust | Reserve product image names, verify root-owned digest approval before credentials, and pass admin secrets through owner-only files |
-| Host sharing | Authorize Git metadata through reciprocal host worktree records; bound file-operation output and use isolated Python |
-| Backups | Add verified OCI `checkpoint export/import`; never overwrite existing files or image tags. Document export from v0.0.6 |
-| Codex state | Keep SQLite on private ext4; add offline `agent-state export/restore` into a matching never-started, never-restored worker and `run --create-only` |
-| UX | Add quota/free-space runtime diagnostics, rootfs bytes/inodes in TUI details, a staged policy editor and actionable startup errors |
+Oaiso v0.0.8 expands Kata VM development and test workflows through the TUI: credential-free shell sandboxes, reviewed creation, independent Git copies, bounded managed workspaces, reusable environments, files and authenticated web previews, and stopped-VM recovery points.
 
-**Existing ext4 installations require migration before applying this release.** Follow the [storage migration guide](https://pacificbelt30.github.io/sandbox-oasis/en/guides/storage-migration/): stop/save with the old CLI, retain rootfs/workspace/user data and host configuration, prepare separate quota-enabled XFS (32 GiB recommended for two workers), install matching components, then import and verify new workers before retiring the source. Setup never formats or converts existing data. v0.0.6 has no private database disk; supported new versions use the [database restore procedure](https://pacificbelt30.github.io/sandbox-oasis/en/guides/agent-state/).
+Uppercase `J` reviews and launches background jobs, follows bounded logs, reconnects and stops only the selected job. Lowercase `j` keeps list navigation. Closing the TUI leaves jobs running. `W` compares current HEAD or the immutable pre-start Git reference, reviews individual files and exports selected content with stale-plan and no-clobber checks. Legacy/non-Git VMs never invent a launch reference. `L` reports host cgroup CPU/memory, quota and stop evidence, distinguishing unavailable observations and never treating exit 137 alone as proof of OOM.
 
-Codex 0.163.0, Claude Code 2.1.306, containerd 2.4.2, BuildKit 0.34.0 and runc 1.4.3 pins remain unchanged. Existing terminal keys/ANSI/Unicode, profile encryption and Local API v1 behavior are preserved. Backups are unencrypted, exclude workspace/credentials from rootfs, and need private storage outside shared projects.
+Task records support independent execution, test/review and selected-change adoption into a new result branch. CLI/TUI completion, read cancellation, retry, selection retention after failures and narrow-screen interactions improve everyday operation. Normal CLI agent and approval defaults remain; credential-free CLI runs explicitly use `--agent shell --no-ai`.
 
-Ubuntu 26.04 x86_64/systemd/KVM/cgroup v2/dedicated XFS are required. Go/Make/source are unnecessary for installation. Verify [signatures before execution](https://pacificbelt30.github.io/sandbox-oasis/en/guides/signed-releases/). The five release files are archive, installer, checksums, SBOM and provenance; they exclude runtime downloads, worker images and credentials.
+Task Git metadata requires an ordinary `.git` directory or a reciprocally registered worktree. Unregistered pointers to another repository, metadata replacement after creation and changed backlinks are rejected. Check the source registration and create a new task when an existing record no longer matches.
 
-Validation covers Go/race/vet/lint/fuzz, Python deployment/distribution tests, CLI names and strict documentation. Real Kata verified v0.0.6 ext4-to-XFS migration, rootfs/private SQLite WAL restoration, public Go APIs, terminal behavior, authentication/mTLS/sharing/isolation, upgrade, automatic recovery, rollback and owned-resource cleanup. Live external AI authentication/inference, real WSL and physical host reboot are excluded.
+For v0.0.7 upgrades, back up workspace, required HOME data and host configuration; save stopped-VM rootfs checkpoints and private database backups separately. Verify backups, remove all VMs including stopped ones, then stop/remove proxies. AI-authenticated workers require a live proxy for token revocation during deletion. Install matching CLI/node/guard/logger and verify runtime readiness. Rebuild and authorize a matching authentication proxy image. Dedicated quota-enabled XFS remains required. Restore compatible rootfs and private database backups into new VMs and check files; original VM IDs are not retained. Before rollback, preserve data and remove all containers, including stopped ones, and retain new workspace/recovery/task data; v0.0.7 does not provide those new controls. Rollback preserves the release high-water mark. v0.0.6 ext4 installations still require storage migration; setup never formats or converts existing data.
+
+Runtime and agent pins are unchanged from v0.0.7. Validation details are recorded above and in the testing guide; live external AI authentication/inference, real WSL, physical host reboot and exhaustive visual checks are excluded. Local candidates are unsigned. Published artifacts are built from the clean tag, with archive, installer, checksums, SBOM and provenance; runtime downloads, worker images and credentials are separate.

@@ -11,7 +11,7 @@
 | Model policy | Duplicate/case-variant JSON and trailing values | Only permitted models; preserve accepted request bytes |
 | Broker URL/path | Other origins, traversal, percent encodings, doubled slashes, forbidden methods | Fixed origin/path/method scope |
 | Destinations | IPv4/IPv6/metadata, mixed DNS, malformed authorities | No dial to rejected destinations/addresses |
-| Managed workspace manifest (unreleased, main) | Relative paths, duplicates, credential paths, hash/size mismatch | Reject before import; archive link/extra-file cases also have regression tests |
+| Managed workspace manifest (unreleased main; v0.0.8 planned) | Relative paths, duplicates, credential paths, hash/size mismatch | Reject before import; archive link/extra-file cases also have regression tests |
 | Management JSON | Duplicates, Unicode field aliases, trailing/unknown data, size/depth excess | Reject before authentication/Store mutation |
 | Token lifetime | Negative/oversized/TLS-excess TTL | Do not replace existing authority with invalid leases; omitted HTTP TTL uses configured default |
 | Persistence | Injected ENOSPC, broken audit head, OAuth save failure | No fresh budgets/credentials; do not silently reset budgets after recovery |
@@ -32,7 +32,7 @@ Regular race coverage:
 make test
 ```
 
-Eight bounded fuzz targets (managed workspace manifest coverage: unreleased, main):
+Eight bounded fuzz targets (managed workspace manifest coverage: unreleased main; v0.0.8 planned):
 
 ```bash
 make security-fuzz

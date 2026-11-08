@@ -12,7 +12,7 @@
 
 [日本語ドキュメント](doc/index.md) · [English documentation](doc/en/index.md)
 
-- AI認証なしで使う：[サンドボックスTUI](doc/guides/sandbox-ui.md)（未リリース・main）。
+- AI認証なしで使う：[サンドボックスTUI](doc/guides/sandbox-ui.md)（未リリース・main（v0.0.8予定））。
 - Codex／Claude Codeを使う：[インストールから初回起動まで](doc/guides/first-run.md)。
 
 ## Installation — インストール
@@ -44,7 +44,7 @@ oaiso runtime-check
 
 | 目的 | 次の手順 |
 |---|---|
-| AI認証なしのサンドボックス | [開発版の準備・イメージ作成・TUI操作](doc/guides/sandbox-ui.md)。未リリース（main）のCLI・node・補助ツールを同じ版で準備 |
+| AI認証なしのサンドボックス | [開発版の準備・イメージ作成・TUI操作](doc/guides/sandbox-ui.md)。未リリース（main・v0.0.8予定）のCLI・node・補助ツールを同じ版で準備 |
 | Codex／Claude Code | [キーリング解錠・login・初回起動](doc/guides/first-run.md#3-キーリングを解錠する) |
 
 - 詳細・配置先・更新：[Installation](doc/installation.md)。[必要なツールの公式手順](doc/installation.md#ツールの公式手順)も掲載。
@@ -55,7 +55,7 @@ oaiso runtime-check
 
 | 目的 | 機能・参照先 |
 |---|---|
-| 認証なしで検証する | [TUIでVM作成・ジョブ管理・差分確認・成果物回収](doc/guides/sandbox-ui.md)。既定はAI認証なし・一般通信なし（未リリース・main） |
+| 認証なしで検証する | [TUIでVM作成・ジョブ管理・差分確認・成果物回収](doc/guides/sandbox-ui.md)。既定はAI認証なし・一般通信なし（未リリース・main（v0.0.8予定）） |
 | エージェントを動かす | Codex CLI・[Claude Code](doc/claude-code.md)。ClaudeはAPIキー／サブスクに対応 |
 | 作業を隔離する | ワーカーごとに独立したカーネル。CPU・メモリ・プロセス数を制限 |
 | 認証情報を分ける | 実資格情報は認証Proxyで保持。ワーカーには短命トークンを渡す |
@@ -75,7 +75,7 @@ oaiso runtime-check
 
 ### AI認証なしのサンドボックス
 
-利用可能：**未リリース（main）**。同じ版のCLI・node・補助ツールと互換イメージを[先に準備](doc/guides/sandbox-ui.md#前提と起動)し、通常ユーザーで作業プロジェクトから実行します。
+利用可能：**未リリース（main・v0.0.8予定）**。同じ版のCLI・node・補助ツールと互換イメージを[先に準備](doc/guides/sandbox-ui.md#前提と起動)し、通常ユーザーで作業プロジェクトから実行します。
 
 ```bash
 oaiso ui

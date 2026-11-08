@@ -15,8 +15,8 @@
 | [`oaiso claude`](claude-code.md) | 公式Claude Codeの起動 | ネイティブ引数・APIキー／サブスク |
 | [`oaiso codex`](commands/run.md#codex-cli-を直接起動する) | Codex CLIの引数をそのまま渡して起動 | カレントディレクトリを共有・直接exec |
 | [`oaiso run`](commands/run.md) | サンドボックスコンテナの起動 | オプション・承認モード・並列実行・パッケージ管理 |
-| [`oaiso workspace`](guides/managed-workspaces.md) / [`oaiso recovery-point`](guides/managed-workspaces.md) | 管理workspaceと停止VMの復元点（未リリース・main） | plan / create / list / inspect / clone / rm |
-| [`oaiso task`](guides/tasks.md) | タスク台帳と結果レビュー（未リリース・main） | create / run / stop / retry / test / review / plan / accept / board |
+| [`oaiso workspace`](guides/managed-workspaces.md) / [`oaiso recovery-point`](guides/managed-workspaces.md) | 管理workspaceと停止VMの復元点（未リリース・main（v0.0.8予定）） | plan / create / list / inspect / clone / rm |
+| [`oaiso task`](guides/tasks.md) | タスク台帳と結果レビュー（未リリース・main（v0.0.8予定）） | create / run / stop / retry / test / review / plan / accept / board |
 | [`oaiso completion`](commands/completion.md) | Tab 補完スクリプトの生成 | Bash・Zsh・Fish・PowerShell |
 | [`oaiso profile`](commands/run.md#資源プロファイル) | 資源プロファイルの表示・定義JSON生成 | `--node`・`--json`・`define --pids-limit` |
 | [`oaiso default`](configuration.md#プロジェクト設定) | `oaiso run` の既定エージェントを表示・変更 | グローバル設定または `--local` |

@@ -182,7 +182,7 @@ forward_allow_ports = [80, 443]
 
 ### TUIで保存するサンドボックス環境
 
-利用可能：**未リリース（main）**。名前付き環境は`~/.config/codex-dock/sandbox-environments/config.json`へ別に保存します。`XDG_CONFIG_HOME`指定時はその配下です。設定を読み込んだだけでは起動せず、グローバル設定・プロジェクト設定も書き換えません。[保存項目・権限・レビュー手順](guides/sandbox-ui.md#よく使う環境を保存する)を参照してください。管理workspaceの方式・容量・inode上限も保存できますが、workspace ID・所有者・復元点は保存しません。`run --managed-workspace`はCLI専用です。
+利用可能：**未リリース（main・v0.0.8予定）**。名前付き環境は`~/.config/codex-dock/sandbox-environments/config.json`へ別に保存します。`XDG_CONFIG_HOME`指定時はその配下です。設定を読み込んだだけでは起動せず、グローバル設定・プロジェクト設定も書き換えません。[保存項目・権限・レビュー手順](guides/sandbox-ui.md#よく使う環境を保存する)を参照してください。管理workspaceの方式・容量・inode上限も保存できますが、workspace ID・所有者・復元点は保存しません。`run --managed-workspace`はCLI専用です。
 
 ### `auto_build`
 

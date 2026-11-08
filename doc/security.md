@@ -146,7 +146,7 @@
 ## workspace・Git・削除
 
 - **v0.0.7**：外部Git metadataは、workspaceのポインタとホスト側worktree登録が相互に対応する場合だけ暗黙共有します。別リポジトリへのポインタや登録不一致は拒否します。共有を省く場合は`--no-git-metadata`、Go APIでは`RunOptions.NoGitMetadata`を指定してください。
-- **未リリース（main）**：[管理workspace](guides/managed-workspaces.md)は専用XFS上に容量を先取りした有限のext4ディスクを作り、VMへ直接接続します。ホストはゲストが使ったファイルシステムをマウント・解析しません。VM leaseとinodeの所有情報を照合し、削除してもデータは明示削除まで保持します。snapshotはraw bytesのhashを照合して新規ディスクへコピーします。復元点はホスト故障やローカルrootへの耐性を保証する外部バックアップではありません。
+- **未リリース（main・v0.0.8予定）**：[管理workspace](guides/managed-workspaces.md)は専用XFS上に容量を先取りした有限のext4ディスクを作り、VMへ直接接続します。ホストはゲストが使ったファイルシステムをマウント・解析しません。VM leaseとinodeの所有情報を照合し、削除してもデータは明示削除まで保持します。snapshotはraw bytesのhashを照合して新規ディスクへコピーします。復元点はホスト故障やローカルrootへの耐性を保証する外部バックアップではありません。
 - 認証Proxyの[node所有イメージ認可](commands/proxy.md)と、[rootfs容量制限](guides/resource-limits.md)も適用します。
 
 | 対象 | 保護・制限 |

@@ -41,7 +41,7 @@ codex-calm-beacon  ⏹ exited   2m      main    (interactive)   codex-dock:lates
 - `UPTIME`：最後の開始からの経過時間。終了後も増えます。
 - ワーカーがない場合：列見出しだけを表示。
 
-**未リリース（main）**では、対応nodeの実際の開始・終了時刻を一覧に反映します。再起動すると開始時刻が変わり、snapshot比較やTUIの活動欄でも再起動を検出します。時刻通知に未対応の旧nodeは従来の作成時刻を使います。不正なfilter・sort・列名・出力形式は、nodeへの接続やsnapshot保存の前に拒否します。
+**未リリース（main・v0.0.8予定）**では、対応nodeの実際の開始・終了時刻を一覧に反映します。再起動すると開始時刻が変わり、snapshot比較やTUIの活動欄でも再起動を検出します。時刻通知に未対応の旧nodeは従来の作成時刻を使います。不正なfilter・sort・列名・出力形式は、nodeへの接続やsnapshot保存の前に拒否します。
 
 ```bash
 oaiso ps -a --filter 'status:running !policy:restricted' --sort newest --wide
@@ -50,7 +50,7 @@ oaiso ps -a --save-snapshot ~/.local/state/oaiso/instances.json
 oaiso ps -a --compare-snapshot ~/.local/state/oaiso/instances.json
 ```
 
-**未リリース（main）**：snapshot比較も`--format csv`に対応します。保存済みsnapshotに対して実行します。
+**未リリース（main・v0.0.8予定）**：snapshot比較も`--format csv`に対応します。保存済みsnapshotに対して実行します。
 
 ```bash
 oaiso ps -a --compare-snapshot ~/.local/state/oaiso/instances.json --format csv

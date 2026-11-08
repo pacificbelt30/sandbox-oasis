@@ -2,11 +2,11 @@
 
 [日本語](../../guides/sandbox-ui.md) | **English**
 
-Available: **unreleased (main)**. Create Kata VMs, inspect and transfer workspace files, and preview web applications without AI credentials.
+Available: **unreleased (main; v0.0.8 planned)**. Create Kata VMs, inspect and transfer workspace files, and preview web applications without AI credentials.
 
 ## Prerequisites and startup
 
-- Creation, file operations and preview management on this page are **unreleased (main)**. Installing the public release does not add them. Follow [source installation](../../setup.md#ソースからビルドする場合) (Japanese) and install the CLI, node, guard and logger from the same bundle.
+- Creation, file operations and preview management on this page are **unreleased (main; v0.0.8 planned)**. Installing the public release does not add them. Follow [source installation](../../setup.md#ソースからビルドする場合) (Japanese) and install the CLI, node, guard and logger from the same bundle.
 - An administrator must prepare the Linux/KVM node and grant node socket access. Use your normal operator-group account for routine commands.
 - Writable rootfs requires [dedicated quota-capable storage](storage-migration.md). Review migration instructions before changing a host with existing data.
 - Run from the host project directory:
@@ -55,7 +55,7 @@ The list's detail pane preserves its scroll position when the same VM refreshes 
 
 ## Cancel a pending read
 
-Available: **unreleased (main)**. Cancel or Esc interrupts list reads, text previews, changes/storage diagnostics and artifact review preparation. Reads have a 30 second deadline; Retry requests a fresh result after failure. Late results from cancelled reads are discarded.
+Available: **unreleased (main; v0.0.8 planned)**. Cancel or Esc interrupts list reads, text previews, changes/storage diagnostics and artifact review preparation. Reads have a 30 second deadline; Retry requests a fresh result after failure. Late results from cancelled reads are discarded.
 
 Wait for VM creation/deletion, save, upload and download operations to finish. These operations modify data; hiding a late success would leave the outcome unclear.
 
@@ -86,7 +86,7 @@ Wait for VM creation/deletion, save, upload and download operations to finish. T
 
 ## Try changes without modifying the original project
 
-Available: **unreleased (main)**. Select `Independent Git copy` under `Workspace source` and enter a new absolute `New copy directory` in the creation form.
+Available: **unreleased (main; v0.0.8 planned)**. Select `Independent Git copy` under `Workspace source` and enter a new absolute `New copy directory` in the creation form.
 
 1. As your normal user, prepare a private parent directory outside the shared source project. This example creates a new directory; skip it when using an existing owner-private directory.
 
@@ -112,7 +112,7 @@ For current uncommitted/untracked files or a non-Git folder, choose a [bounded m
 
 ## Save reusable environments
 
-Available: **unreleased (main)**. Fill in creation settings, choose `Save environment` / `Ctrl-S`, enter a name and review before saving. Choose `Load environment` / `Ctrl-O` and review the saved settings before loading. Loading still requires a separate normal launch review.
+Available: **unreleased (main; v0.0.8 planned)**. Fill in creation settings, choose `Save environment` / `Ctrl-S`, enter a name and review before saving. Choose `Load environment` / `Ctrl-O` and review the saved settings before loading. Loading still requires a separate normal launch review.
 
 | Saved | Excluded or reset when loading |
 |---|---|
@@ -129,7 +129,7 @@ Available: **unreleased (main)**. Fill in creation settings, choose `Save enviro
 
 ## Inspect and manage lifetime and storage
 
-Available: **unreleased (main)**. New VMs can optionally set these fields. Leave all three duration fields blank to preserve host/project defaults. When overriding, fill in all three, using `0s` to disable a limit.
+Available: **unreleased (main; v0.0.8 planned)**. New VMs can optionally set these fields. Leave all three duration fields blank to preserve host/project defaults. When overriding, fill in all three, using `0s` to disable a limit.
 
 | Creation field | Behavior and example |
 |---|---|
@@ -152,7 +152,7 @@ Available: **unreleased (main)**. New VMs can optionally set these fields. Leave
 
 ### CPU, memory and stop evidence
 
-Available: **unreleased (main)**. `L` also displays host cgroup CPU time, memory usage/limit, and OOM kill event counts. Two samples obtained with `Refresh` provide average CPU utilization for that interval (100% means one host core). These observations include VMM and other host-side costs, rather than guest-only RSS.
+Available: **unreleased (main; v0.0.8 planned)**. `L` also displays host cgroup CPU time, memory usage/limit, and OOM kill event counts. Two samples obtained with `Refresh` provide average CPU utilization for that interval (100% means one host core). These observations include VMM and other host-side costs, rather than guest-only RSS.
 
 - Memory, rootfs bytes and inodes at 90% or more of their limits produce warnings. Shared host folders remain outside rootfs quota.
 - After stop, the view shows the last retained host observation and timestamp, exit code, and recorded maximum-lifetime, management-idle, or stop request. Restart clears the earlier stop request.
@@ -161,7 +161,7 @@ Available: **unreleased (main)**. `L` also displays host cgroup CPU time, memory
 
 ## Manage background jobs
 
-Available: **unreleased (main)**. Select a VM and press uppercase `J`, or choose `Background jobs` from `F2`. Lowercase `j` retains list navigation.
+Available: **unreleased (main; v0.0.8 planned)**. Select a VM and press uppercase `J`, or choose `Background jobs` from `F2`. Lowercase `j` retains list navigation.
 
 1. Choose `New job…`, enter a command, select `Run`, and approve the command review. The working directory is guest `/workspace`. Start a stopped VM with `R` first.
 2. Press `Enter` on a job to follow output. `Space` pauses/resumes automatic scrolling; `Tab` moves to buttons. Use `Refresh` to reload the list.
@@ -197,7 +197,7 @@ Select a running VM and press `F`. Operations stay within guest `/workspace`.
 
 ## Inspect changes and recover selected artifacts
 
-Available: **unreleased (main)**. Select a running VM and press `W`.
+Available: **unreleased (main; v0.0.8 planned)**. Select a running VM and press `W`.
 
 1. By default, inspect guest Git status and **uncommitted diff against its current HEAD**, up to 256 KiB. This view does not compare guest-created commit history or display untracked contents. Choose [launch comparison and per-file review](#compare-with-launch-and-review-individual-files) for those workflows. Guest Git configuration is never executed on the host for inspection.
 2. Tab to `Export selected files…`. Enter relative paths one per line, or use `Choose files…`. Enter opens folders; Space selects regular files. Selection survives directory changes. `Use selected files` updates the form and focuses the new host tar destination. Esc discards picker edits and retains the original input.
@@ -210,7 +210,7 @@ Available: **unreleased (main)**. Select a running VM and press `W`.
 
 ### Compare with launch and review individual files
 
-Available: **unreleased (main)**. For Git workspaces, choose `W` → `Since launch` to compare against the commit captured once before the bootstrap gate releases user code. This includes changes already committed inside the guest. `Current HEAD` restores the previous comparison.
+Available: **unreleased (main; v0.0.8 planned)**. For Git workspaces, choose `W` → `Since launch` to compare against the commit captured once before the bootstrap gate releases user code. This includes changes already committed inside the guest. `Current HEAD` restores the previous comparison.
 
 - `Browse changes…` lists modified, added, deleted and untracked paths. `Enter` displays a file diff, or current text for an untracked file. Known credential paths are excluded.
 - Select paths with `Space`, then choose `Export selected…` for the existing hash review. Launch comparisons use the same commit for the exported patch. Deleted/type-changed paths can be reviewed; export requires currently existing regular files.
@@ -244,7 +244,7 @@ For launch errors, check `oaiso runtime-check` and the displayed reason. For fil
 
 ## Check a single command from the CLI
 
-Unreleased (main): use the same prepared host and image without opening the TUI. Run as your normal user from the project directory. This example shares the workspace read-only.
+Unreleased (main; v0.0.8 planned): use the same prepared host and image without opening the TUI. Run as your normal user from the project directory. This example shares the workspace read-only.
 
 ```bash
 oaiso run --runtime kata --agent shell --no-ai --no-internet \

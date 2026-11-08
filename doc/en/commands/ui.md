@@ -14,7 +14,7 @@ Launches a terminal UI for real-time monitoring and management of all workers.
 
 ## Layout
 
-**Example narrow-screen layout for unreleased main. Values are illustrative, not a captured screen.**
+**Example narrow-screen layout for unreleased main; v0.0.8 planned. Values are illustrative, not a captured screen.**
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -37,10 +37,10 @@ The `C`, `X`, `/`, `O`, and `V` instance actions are available in v0.0.6 and lat
 
 | Key | Action on the worker list |
 |---|---|
-| `I` | Scrollable full instance details (unreleased, main) |
-| `F2` / `Space` | Open actions; select with arrows, then Enter or the displayed shortcut (unreleased, main) |
-| `Tab` | Focus the Actions button; Tab again returns to the list (unreleased, main) |
-| `Esc` | Clear the list filter, or restore the previous query while editing (unreleased, main) |
+| `I` | Scrollable full instance details (unreleased main; v0.0.8 planned) |
+| `F2` / `Space` | Open actions; select with arrows, then Enter or the displayed shortcut (unreleased main; v0.0.8 planned) |
+| `Tab` | Focus the Actions button; Tab again returns to the list (unreleased main; v0.0.8 planned) |
+| `Esc` | Clear the list filter, or restore the previous query while editing (unreleased main; v0.0.8 planned) |
 | `↑` / `↓` | Select worker |
 | `Enter` | Fetch the selected worker's last 200 log lines |
 | `C` | Open a separate login shell; `exit` returns to this TUI |
@@ -48,16 +48,16 @@ The `C`, `X`, `/`, `O`, and `V` instance actions are available in v0.0.6 and lat
 | `/` | Filter text or `status:` / `branch:` / `task:` / `image:` / `policy:`; prefix `!` to exclude |
 | `O` | Cycle name, status, age, branch, and policy ordering |
 | `V` | Show lifecycle and metadata changes observed while the TUI is open |
-| `N` | [Create a sandbox](../guides/sandbox-ui.md) (unreleased, main) |
-| Uppercase `J` | [Background jobs](../guides/sandbox-ui.md#manage-background-jobs): start, follow output and stop a selected job (unreleased, main) |
-| `W` | [Compare current HEAD or launch and recover artifacts](../guides/sandbox-ui.md#compare-with-launch-and-review-individual-files) (unreleased, main) |
-| `L` | [CPU, memory and stop evidence](../guides/sandbox-ui.md#cpu-memory-and-stop-evidence), lifetime, quota and selected-VM supervision (unreleased, main) |
-| `F` | Browse workspace files and transfer new files (unreleased, main) |
-| `U` | Manage authenticated web previews (unreleased, main) |
-| `M` | [Managed workspace](../guides/managed-workspaces.md) reservations, reuse and removal (unreleased, main) |
-| `Z` | List [recovery points](../guides/managed-workspaces.md#save-and-restore-a-stopped-vm) and restore into a new VM (unreleased, main) |
-| `K` | Review and save a recovery point for the selected stopped VM (unreleased, main) |
-| `T` | Open [tasks and result review](../guides/tasks.md) (unreleased, main) |
+| `N` | [Create a sandbox](../guides/sandbox-ui.md) (unreleased main; v0.0.8 planned) |
+| Uppercase `J` | [Background jobs](../guides/sandbox-ui.md#manage-background-jobs): start, follow output and stop a selected job (unreleased main; v0.0.8 planned) |
+| `W` | [Compare current HEAD or launch and recover artifacts](../guides/sandbox-ui.md#compare-with-launch-and-review-individual-files) (unreleased main; v0.0.8 planned) |
+| `L` | [CPU, memory and stop evidence](../guides/sandbox-ui.md#cpu-memory-and-stop-evidence), lifetime, quota and selected-VM supervision (unreleased main; v0.0.8 planned) |
+| `F` | Browse workspace files and transfer new files (unreleased main; v0.0.8 planned) |
+| `U` | Manage authenticated web previews (unreleased main; v0.0.8 planned) |
+| `M` | [Managed workspace](../guides/managed-workspaces.md) reservations, reuse and removal (unreleased main; v0.0.8 planned) |
+| `Z` | List [recovery points](../guides/managed-workspaces.md#save-and-restore-a-stopped-vm) and restore into a new VM (unreleased main; v0.0.8 planned) |
+| `K` | Review and save a recovery point for the selected stopped VM (unreleased main; v0.0.8 planned) |
+| `T` | Open [tasks and result review](../guides/tasks.md) (unreleased main; v0.0.8 planned) |
 | `S` | Stop selected worker with a 10-second grace period |
 | `D` | Force-remove selected worker |
 | `A` | Stop all running workers in the list |
@@ -121,7 +121,7 @@ Available: **v0.0.7**. Details show host-observed writable rootfs bytes/inodes a
 
 ## Choose actions without memorizing keys
 
-Unreleased (main): click `Actions F2`, or press `F2` / `Space`, then use arrows and Enter or a displayed shortcut. Stopped instances offer Start instead of connection, files and previews. Delete retains its confirmation.
+Unreleased (main; v0.0.8 planned): click `Actions F2`, or press `F2` / `Space`, then use arrows and Enter or a displayed shortcut. Stopped instances offer Start instead of connection, files and previews. Delete retains its confirmation.
 
 - Below 110 columns, the detail pane collapses and the list prioritizes name, status and uptime. Widening restores details. Press `I` for full details at any width.
 - Esc closes the menu; Esc on the instance list clears its filter.

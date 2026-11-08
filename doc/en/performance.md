@@ -9,7 +9,7 @@
 
 ### Dashboard refresh and checkpoint catalogs
 
-- Scope: **unreleased (main)**, measured on 2026-11-03.
+- Scope: **unreleased (main; v0.0.8 planned)**, measured on 2026-11-03.
 - The TUI refreshes one request at a time, merging bursts into one pending refresh. Listing and quota reads share a three-second deadline; quota reads use at most four concurrent workers. Rows with unavailable measurements remain visible.
 - Checkpoint listings read recovery-point references once per request. Ownership, metadata and digest checks remain enforced for every checkpoint, and the next request rereads the ledger. No cache spans requests.
 
@@ -64,7 +64,7 @@
 
 ## Round two: destination preflight comparison
 
-- Scope: **unreleased (main)**, 2026-11-03. The baseline is the source saved after round one, not a comparison between published releases.
+- Scope: **unreleased (main; v0.0.8 planned)**, 2026-11-03. The baseline is the source saved after round one, not a comparison between published releases.
 - Same Linux amd64, Go 1.27.3 and GOMAXPROCS=4. Medians of three 300ms benchmark runs per condition, ordered before/after, after/before, before/after. Other builds/tests and the Kata node were stopped.
 - Only the existing-destination case uses a fixed 1ms guest-call fixture. The new-file case writes, fsyncs, publishes and removes 32KiB in a local temporary directory. Neither measures network or real-VM transfer speed.
 
@@ -80,7 +80,7 @@
 
 ## Real-VM check on 2026-11-03
 
-- Scope: **unreleased (main)**, test BuildVersion `quality-a`. This is a current-version baseline, not a before/after speedup comparison.
+- Scope: **unreleased (main; v0.0.8 planned)**, test BuildVersion `quality-a`. This is a current-version baseline, not a before/after speedup comparison.
 - Core i5-8500 / 4 vCPUs, Linux amd64, Go 1.27.3, client GOMAXPROCS=4. Pinned Kata 4.3.0 / Dragonball, containerd 2.4.2 and BuildKit 0.34.0.
 - Compact profile: 512MiB guest, 768MiB host reservation, one CPU. Dedicated node, prepared images, warm page cache, no general egress or Git sharing, synthetic credentials. No other builds/tests ran during measurement.
 - Includes normal asset, host/guest and bootstrap verification. Excludes proxy creation, image fetching/import, removal and AI inference. Exec runs `/bin/true` through exit confirmation.

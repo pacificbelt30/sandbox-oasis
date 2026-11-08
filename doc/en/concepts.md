@@ -10,7 +10,7 @@
 
 | Purpose | Preparation and startup |
 |---|---|
-| Development and tests without AI credentials | [Sandbox TUI](guides/sandbox-ui.md), unreleased (main). No auth proxy; general egress is disabled by default |
+| Development and tests without AI credentials | [Sandbox TUI](guides/sandbox-ui.md), unreleased (main; v0.0.8 planned). No auth proxy; general egress is disabled by default |
 | Codex or Claude Code | [Prepare credentials, images and proxies](getting-started.md). Real credentials stay in the auth proxy |
 
 - Installing tools in an image is separate from sharing host AI credentials.
@@ -59,7 +59,7 @@
 | `stop` | Stop the VM, retain the worker and revoke its placeholder |
 | `start` | Rerun the same worker's program; no suspended memory state is resumed |
 | `rm` | Reclaim owned networks and worktrees; preserve required results first |
-| Quit the TUI | VMs created by the TUI remain; previews owned by that TUI close (unreleased, main) |
+| Quit the TUI | VMs created by the TUI remain; previews owned by that TUI close (unreleased main; v0.0.8 planned) |
 
 - Shared host files remain after worker removal, except for managed worktrees that are reclaimed.
 - Worker `start` is separate from the agent's conversation-resume options.

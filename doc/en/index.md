@@ -37,10 +37,10 @@
 
 | Task | Guide |
 |---|---|
-| Create VMs, transfer files and preview apps without AI credentials | [Sandbox TUI](guides/sandbox-ui.md) (unreleased, main) |
-| Run sandbox commands in the background | [Background jobs](guides/sandbox-ui.md#manage-background-jobs) (unreleased, main) |
-| Review and recover changes since launch | [Comparison and per-file review](guides/sandbox-ui.md#compare-with-launch-and-review-individual-files) (unreleased, main) |
-| Inspect CPU, memory, quota and stop evidence | [Resource observations](guides/sandbox-ui.md#cpu-memory-and-stop-evidence) (unreleased, main) |
+| Create VMs, transfer files and preview apps without AI credentials | [Sandbox TUI](guides/sandbox-ui.md) (unreleased main; v0.0.8 planned) |
+| Run sandbox commands in the background | [Background jobs](guides/sandbox-ui.md#manage-background-jobs) (unreleased main; v0.0.8 planned) |
+| Review and recover changes since launch | [Comparison and per-file review](guides/sandbox-ui.md#compare-with-launch-and-review-individual-files) (unreleased main; v0.0.8 planned) |
+| Inspect CPU, memory, quota and stop evidence | [Resource observations](guides/sandbox-ui.md#cpu-memory-and-stop-evidence) (unreleased main; v0.0.8 planned) |
 | Run Codex or Claude Code | [Agents](guides/agents.md), [Claude Code](claude-code.md) |
 | Separate product authentication from the host | [Authentication and profiles](guides/authentication.md) |
 | Move from Docker | [Migration](../migration.md) (Japanese) |

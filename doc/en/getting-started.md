@@ -14,7 +14,7 @@
 
 | Purpose | Steps |
 |---|---|
-| Use VMs, files and web apps without AI credentials | Check the host in step 1, then follow the [sandbox guide](guides/sandbox-ui.md). Requires matching unreleased main CLI, node and helpers |
+| Use VMs, files and web apps without AI credentials | Check the host in step 1, then follow the [sandbox guide](guides/sandbox-ui.md). Requires matching unreleased main; v0.0.8 planned CLI, node and helpers |
 | Use Codex or Claude Code | Steps 1–4 prepare credentials, images and proxies; steps 5–6 are optional |
 
 The credential-free sandbox workflow does not need the AI login, init or proxy preparation in steps 2–4 below. Keep existing credentials and running proxies intact.

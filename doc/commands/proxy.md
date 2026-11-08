@@ -85,7 +85,7 @@ oaiso proxy configure
 
 ## 停止・削除する
 
-**未リリース（main）**：`proxy build/run/serve/stop/rm`は余分な位置引数を拒否します。停止・削除するProxy名は`--name`で指定してください。`proxy stop NAME`のような入力で既定のProxyを誤って停止しないための検査です。
+**未リリース（main・v0.0.8予定）**：`proxy build/run/serve/stop/rm`は余分な位置引数を拒否します。停止・削除するProxy名は`--name`で指定してください。`proxy stop NAME`のような入力で既定のProxyを誤って停止しないための検査です。
 
 ```bash
 # 名前を省略すると既定の2つが対象

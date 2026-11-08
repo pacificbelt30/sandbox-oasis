@@ -2,7 +2,7 @@
 
 [日本語](../../guides/managed-workspaces.md) | **English**
 
-Available: **unreleased (main)**. Try current working files on a dedicated disk without sharing the original host directory. Save a stopped VM's filtered rootfs and optional workspace together, then restore them as new resources.
+Available: **unreleased (main; v0.0.8 planned)**. Try current working files on a dedicated disk without sharing the original host directory. Save a stopped VM's filtered rootfs and optional workspace together, then restore them as new resources.
 
 ## Prerequisites and scope
 

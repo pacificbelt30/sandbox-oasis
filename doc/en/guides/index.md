@@ -8,7 +8,7 @@
 
 ## Use a sandbox
 
-Available: **unreleased (main)**. Use Kata VMs for development and tests without preparing AI credentials.
+Available: **unreleased (main; v0.0.8 planned)**. Use Kata VMs for development and tests without preparing AI credentials.
 
 | Task | Guide |
 |---|---|

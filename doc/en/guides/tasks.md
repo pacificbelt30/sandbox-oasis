@@ -2,7 +2,7 @@
 
 [日本語](../../guides/tasks.md) | **English**
 
-Available: **unreleased (main)**.
+Available: **unreleased (main; v0.0.8 planned)**.
 
 Queue instructions, execute them in a dedicated worktree with Kata, then select files or hunks to adopt onto a new branch.
 

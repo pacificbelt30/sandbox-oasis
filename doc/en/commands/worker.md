@@ -32,11 +32,11 @@ codex-calm-beacon  ⏹ exited   2m      main    (interactive)   codex-dock:lates
 - `UPTIME`: elapsed time since the latest start; it continues increasing after exit.
 - No workers: only column headers are displayed.
 
-**Unreleased (main)** nodes report observed start and finish timestamps in listings. Restart changes the start timestamp, allowing snapshot comparisons and the TUI activity log to detect it. Older nodes without timestamp support retain the creation-time fallback. Invalid filters, sort keys, columns and output formats are rejected before connecting to the node or saving a snapshot.
+**Unreleased (main; v0.0.8 planned)** nodes report observed start and finish timestamps in listings. Restart changes the start timestamp, allowing snapshot comparisons and the TUI activity log to detect it. Older nodes without timestamp support retain the creation-time fallback. Invalid filters, sort keys, columns and output formats are rejected before connecting to the node or saving a snapshot.
 
 Filtering supports plain text and `name:`, `status:`, `branch:`, `task:`, `image:`, `id:`, or `policy:` predicates; prefix a predicate with `!` to exclude it. Output can be table, JSON, or CSV. Snapshots are owner-private JSON and comparison reports added, removed, started, stopped, restarted, and metadata-changed workers.
 
-**Unreleased (main)**: snapshot comparison also honors `--format csv`. Run against a previously saved snapshot:
+**Unreleased (main; v0.0.8 planned)**: snapshot comparison also honors `--format csv`. Run against a previously saved snapshot:
 
 ```bash
 oaiso ps --all --compare-snapshot ~/.local/state/oaiso/instances.json --format csv

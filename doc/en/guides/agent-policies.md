@@ -18,7 +18,7 @@ Built-ins are `interactive`, `approve-for-me`, `autonomous`, `review`, `private`
 
 Select a host default:
 
-**Unreleased (main)**: `init/list/path/validate/doctor` reject extra positional arguments. Select an initialization file with `--agent-policy-file`. A mistaken target name must not be ignored while `init --force` overwrites an existing file.
+**Unreleased (main; v0.0.8 planned)**: `init/list/path/validate/doctor` reject extra positional arguments. Select an initialization file with `--agent-policy-file`. A mistaken target name must not be ignored while `init --force` overwrites an existing file.
 
 ```bash
 oaiso agent-policy init

@@ -46,7 +46,7 @@ oaiso completion bash > ~/.local/share/bash-completion/completions/oaiso
 
 ## Sandbox operation completion
 
-Available: **unreleased (main)**.
+Available: **unreleased (main; v0.0.8 planned)**.
 
 | Argument | Candidates |
 |---|---|
@@ -62,7 +62,7 @@ Available: **unreleased (main)**.
 
 ## TUI command input
 
-Available: **unreleased (main)**. Select a running VM and press `X`. Type the first command word to see suggestions; arrows select and Tab or Enter completes. Choose `Run` to execute. Esc cancels the form even while suggestions are visible.
+Available: **unreleased (main; v0.0.8 planned)**. Select a running VM and press `X`. Type the first command word to see suggestions; arrows select and Tab or Enter completes. Choose `Run` to execute. Esc cancels the form even while suggestions are visible.
 
 Basic shell command suggestions are available immediately; executable names from the VM are added with a 10 second deadline without blocking input. Basic suggestions and manual input remain available if discovery fails. Argument and complex shell-expression completion are outside this feature's scope.
 Tab also reevaluates suggestions after pasting a command name.
