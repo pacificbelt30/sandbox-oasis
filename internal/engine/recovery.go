@@ -147,6 +147,7 @@ func (b *Backend) watch(cid string, h *hub, task cd.Task, wait <-chan cd.ExitSta
 	defer cancel()
 	r, _, err := b.load(ctx, cid)
 	if err == nil && waitErr == nil {
+		b.observeResources(r)
 		r.ExitCode = int(code)
 		r.FinishedAt = at.Format(time.RFC3339Nano)
 		err = b.save(r)

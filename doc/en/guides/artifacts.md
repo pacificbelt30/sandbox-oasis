@@ -5,7 +5,7 @@
 - Available: **v0.0.4**.
 - Run on the host against a running worker. Ordinary workspaces require a Git repository with HEAD and accessible Git metadata.
 - Unreleased (main): [managed workspaces](managed-workspaces.md) need no Git. `head` is `workspace:IMPORT_MANIFEST_ID`; `changes.patch` is empty. Selected-content hashes, bounds and stale-plan rejection still apply.
-- Select explicit regular workspace files. Export their contents, their Git diff against HEAD, and a manifest containing worker/image/runtime IDs, HEAD, sizes and SHA-256 hashes. Add `--job JOB_ID` to include selected job IDs, running state and exit codes.
+- Select explicit regular workspace files. Export their contents, their Git diff against current HEAD by default, and a manifest containing worker/image/runtime IDs, HEAD, sizes and SHA-256 hashes. Add `--job JOB_ID` to include selected job IDs, running state and exit codes.
 
 | Limit | Value |
 |---|---|
@@ -18,6 +18,7 @@
 
 - Exclusions do not detect secrets embedded in arbitrary selected files. Review the content yourself.
 - Git external diff and textconv are disabled. Shared-workspace host changes are included.
+- `changes.patch` compares with current HEAD by default, or the captured launch commit with `--since-start`. The manifest includes `base` for launch comparisons alongside the reviewed current `head`.
 
 ## Review the files
 
@@ -68,3 +69,35 @@ files/src/main.go
 Use [SDK file operations](../local-api-sdk.md#files-jobs-and-checkpoints) for individual Python/TypeScript transfers. Bundles use CLI/Go.
 
 - Go writers may contain partial output after an error. Receive into a temporary file and accept it only after success.
+
+## Recover changes since launch
+
+Available: **unreleased (main)**. New Git-backed VMs can compare against the commit captured before user code starts. This includes changes already committed inside the guest. Without this option, comparison remains against current HEAD.
+
+[Prepare matching development CLI, node and helper binaries](sandbox-ui.md#prerequisites-and-startup). On the host, target a running Git-backed worker named `dev-worker`; replace its name and selected path with your own. Use `--since-start` for both planning and export.
+
+```bash
+oaiso artifact plan dev-worker --include src/main.go --since-start
+```
+
+Copy the returned `id` into the following prompt. `base` identifies the launch commit; `head` identifies current HEAD during review.
+
+```bash
+read -r -p 'Artifact plan ID: ' artifact_plan_id
+```
+
+```bash
+oaiso artifact bundle dev-worker --include src/main.go --since-start \
+  --plan-id "$artifact_plan_id" --output ./dev-worker-since-start.tar
+```
+
+- Stop/restart retains the reference. Legacy workers never adopt their current HEAD retroactively. Missing references or Git objects produce an error.
+- Managed workspaces keep their initial-import hash comparison and reject this Git-specific flag.
+- In the TUI, choose [`W` → `Since launch` → `Browse changes…`](sandbox-ui.md#compare-with-launch-and-review-individual-files), select files, then review and save with the same comparison base.
+- The Go API uses `ArtifactOptions.SinceLaunch = true`. Changes to selected content, patch, HEAD or comparison reference require a new review.
+
+| Failure or message | What to check next |
+|---|---|
+| `launch Git baseline unavailable` | Verify that this is a new VM with a captured reference. For legacy VMs, explicitly review against current HEAD or create a new VM with matching components |
+| Git comparison fails or the base object is missing | Check that the reference commit remains accessible inside the guest. Otherwise choose another comparison mode and review again |
+| Export rejects a changed plan | Re-plan with the same file selection, comparison mode and `--job` options; use the new ID and an unused destination |

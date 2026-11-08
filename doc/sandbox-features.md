@@ -25,6 +25,16 @@
 | 通信の追加機能 | TLS MITM・実行中ポリシーの変更 |
 | 実行基盤の追加 | VM snapshot/fork・新しいOS backend・リモート多人数サービス |
 
+## TUIで操作する
+
+利用可能：**未リリース（main）**。[対応するCLI・node・補助ツールを準備](guides/sandbox-ui.md#前提と起動)すると、AI認証なしでも次を操作できます。
+
+| 目的 | 入口 |
+|---|---|
+| バックグラウンド実行・出力確認・選択停止 | 大文字`J`。[ジョブ管理](guides/sandbox-ui.md#バックグラウンドジョブを管理する) |
+| 起動時点からの比較・ファイル別レビュー・成果物回収 | `W`。[差分の確認](guides/sandbox-ui.md#起動時点との比較とファイル別レビュー)・[CLIの`--since-start`](guides/artifacts.md#起動時点からの変更を回収する) |
+| CPU・メモリ・quota・停止記録 | `L`。[資源診断](guides/sandbox-ui.md#cpuメモリと停止理由) |
+
 ## 通信の確認と設定
 
 ```bash

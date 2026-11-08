@@ -13,6 +13,9 @@ Available: **unreleased (main)**. Use Kata VMs for development and tests without
 | Task | Guide |
 |---|---|
 | Create a VM and connect to a shell | [Prepare and create](sandbox-ui.md#prerequisites-and-startup) |
+| Run a background command and inspect its output later | [Background jobs](sandbox-ui.md#manage-background-jobs) |
+| Review and recover changes since launch | [Per-file review](sandbox-ui.md#compare-with-launch-and-review-individual-files), [CLI artifact export](artifacts.md#recover-changes-since-launch) |
+| Inspect CPU, memory, quota and stop evidence | [Resource observations](sandbox-ui.md#cpu-memory-and-stop-evidence) |
 | Inspect and transfer files | [Workspace files](sandbox-ui.md#inspect-and-transfer-files) |
 | Check a web application | [Authenticated localhost preview](sandbox-ui.md#preview-a-web-application) |
 | Choose actions without memorizing keys | [TUI actions menu](../commands/ui.md#choose-actions-without-memorizing-keys) |

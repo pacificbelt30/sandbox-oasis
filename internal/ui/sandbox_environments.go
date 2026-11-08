@@ -22,7 +22,7 @@ func (d *sandboxDesktop) reviewPage(name, title, text string, approve, cancel fu
 	d.app.SetFocus(view)
 }
 
-func (d *sandboxDesktop) pageFormNavigation(view *tview.TextView, form *tview.Form, back func()) func(*tcell.EventKey) *tcell.EventKey {
+func (d *sandboxDesktop) pageFormNavigation(view tview.Primitive, form *tview.Form, back func()) func(*tcell.EventKey) *tcell.EventKey {
 	return func(e *tcell.EventKey) *tcell.EventKey {
 		if e.Key() == tcell.KeyEscape {
 			back()

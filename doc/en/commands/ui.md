@@ -49,10 +49,14 @@ The `C`, `X`, `/`, `O`, and `V` instance actions are available in v0.0.6 and lat
 | `O` | Cycle name, status, age, branch, and policy ordering |
 | `V` | Show lifecycle and metadata changes observed while the TUI is open |
 | `N` | [Create a sandbox](../guides/sandbox-ui.md) (unreleased, main) |
-| `W` | Guest changes and selected artifact export (unreleased, main) |
-| `L` | Lifetime, storage and supervision of the selected VM (unreleased, main) |
+| Uppercase `J` | [Background jobs](../guides/sandbox-ui.md#manage-background-jobs): start, follow output and stop a selected job (unreleased, main) |
+| `W` | [Compare current HEAD or launch and recover artifacts](../guides/sandbox-ui.md#compare-with-launch-and-review-individual-files) (unreleased, main) |
+| `L` | [CPU, memory and stop evidence](../guides/sandbox-ui.md#cpu-memory-and-stop-evidence), lifetime, quota and selected-VM supervision (unreleased, main) |
 | `F` | Browse workspace files and transfer new files (unreleased, main) |
 | `U` | Manage authenticated web previews (unreleased, main) |
+| `M` | [Managed workspace](../guides/managed-workspaces.md) reservations, reuse and removal (unreleased, main) |
+| `Z` | List [recovery points](../guides/managed-workspaces.md#save-and-restore-a-stopped-vm) and restore into a new VM (unreleased, main) |
+| `K` | Review and save a recovery point for the selected stopped VM (unreleased, main) |
 | `T` | Open [tasks and result review](../guides/tasks.md) (unreleased, main) |
 | `S` | Stop selected worker with a 10-second grace period |
 | `D` | Force-remove selected worker |
@@ -65,10 +69,11 @@ The `C`, `X`, `/`, `O`, and `V` instance actions are available in v0.0.6 and lat
 | `?` / `H` | Open dashboard help |
 | `Q` | Quit; from log/denial view, return to the list |
 
-- Letter keys accept either case.
+- Letter keys generally accept either case. Jobs require uppercase `J`; lowercase `j` moves down the list.
 - Remove and stop-all ask for confirmation; save required artifacts first.
 - Connect creates a separate exec session instead of attaching to the primary agent. Exiting the shell leaves the agent and worker running.
-- Logs and denials are fetched on opening, not followed. For live following, use `logs --follow` or `policy events --worker WORKER --follow`.
+- The `Enter` worker logs and `E` denial history are fetched on opening. Follow them with `oaiso logs WORKER --follow` or `oaiso policy events --worker WORKER --follow`. Uppercase `J` job output is fetched continuously; `Space` pauses/resumes automatic scrolling.
+- `Q` leaves VMs and background jobs running, while closing localhost previews opened by the TUI. VM stop/removal and enforced lifetime limits still apply.
 - When AI routes are enabled, authentication uses the same global settings as the CLI; [configure the profile and admin secret](../guides/authentication.md) first.
 
 > **Refresh interval**: Container list updates every 2 seconds.

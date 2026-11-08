@@ -79,6 +79,9 @@ func (m *Manager) Job(ctx context.Context, worker, eid string) (Job, error) {
 	return Job{ID: eid, Worker: w.ID, Running: v.Running, ExitCode: v.ExitCode}, nil
 }
 func (m *Manager) jobRequest(ctx context.Context, method, endpoint string, target any) error {
+	return m.jobRequestLimit(ctx, method, endpoint, target, 2<<20)
+}
+func (m *Manager) jobRequestLimit(ctx context.Context, method, endpoint string, target any, limit int64) error {
 	req, err := http.NewRequestWithContext(ctx, method, "http://docker"+endpoint, nil)
 	if err != nil {
 		return err
@@ -92,7 +95,7 @@ func (m *Manager) jobRequest(ctx context.Context, method, endpoint string, targe
 		return fmt.Errorf("job operation failed (HTTP %d)", resp.StatusCode)
 	}
 	if target != nil {
-		return json.NewDecoder(io.LimitReader(resp.Body, 2<<20)).Decode(target)
+		return json.NewDecoder(io.LimitReader(resp.Body, limit)).Decode(target)
 	}
 	return nil
 }
@@ -116,7 +119,7 @@ func (m *Manager) JobLogs(ctx context.Context, worker, eid string, offset int64)
 		return JobOutput{}, err
 	}
 	var out JobOutput
-	err := m.jobRequest(ctx, "GET", "/exec/"+url.PathEscape(eid)+"/logs?offset="+strconv.FormatInt(offset, 10), &out)
+	err := m.jobRequestLimit(ctx, "GET", "/exec/"+url.PathEscape(eid)+"/logs?offset="+strconv.FormatInt(offset, 10), &out, 8<<20)
 	return out, err
 }
 func (m *Manager) KillJob(ctx context.Context, worker, eid string) error {

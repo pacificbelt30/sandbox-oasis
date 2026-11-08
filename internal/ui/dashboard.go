@@ -164,6 +164,7 @@ K       save selected stopped VM (filtered rootfs, optional workspace)
 F       browse, view and transfer workspace files
 W       guest Git changes and selected artifact export
 L       lifetime, host quota and selected-VM supervision
+J       background jobs: start, logs and stop
 U       manage authenticated localhost Web previews
 I       inspect full instance details, including on a narrow screen
 Enter   view recent logs

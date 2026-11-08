@@ -55,7 +55,7 @@ oaiso runtime-check
 
 | 目的 | 機能・参照先 |
 |---|---|
-| 認証なしで検証する | [TUIでVM作成・独立コピー・成果物回収](doc/guides/sandbox-ui.md)。既定はAI認証なし・一般通信なし（未リリース・main） |
+| 認証なしで検証する | [TUIでVM作成・ジョブ管理・差分確認・成果物回収](doc/guides/sandbox-ui.md)。既定はAI認証なし・一般通信なし（未リリース・main） |
 | エージェントを動かす | Codex CLI・[Claude Code](doc/claude-code.md)。ClaudeはAPIキー／サブスクに対応 |
 | 作業を隔離する | ワーカーごとに独立したカーネル。CPU・メモリ・プロセス数を制限 |
 | 認証情報を分ける | 実資格情報は認証Proxyで保持。ワーカーには短命トークンを渡す |
@@ -82,6 +82,7 @@ oaiso ui
 ```
 
 - `Actions F2`から操作を選択。`N`で作成、`C`で接続、`F`でファイル、`U`でWebプレビュー、`I`で詳細。
+- 長い処理は大文字`J`、起動時点からの差分確認・回収は`W`、CPU・メモリと停止記録は`L`。[操作ガイド](doc/guides/sandbox-ui.md)。
 - TUI終了後もVMは残ります。不要になったVMは停止・削除します。
 - [共有ファイルへの影響・転送制限・プレビューの終了条件](doc/guides/sandbox-ui.md)を確認してください。
 

@@ -29,6 +29,7 @@ func dashboardActions(worker *sandbox.Worker, tasks bool) []dashboardAction {
 			items = append(items, runeAction("Save recovery point…", "K · filtered rootfs and optional managed workspace", 'k', true))
 		}
 		items = append(items, runeAction("Instance details", "I · full name, image, policy and storage", 'i', true), dashboardAction{"View logs", "Enter · recent output", tcell.NewEventKey(tcell.KeyEnter, 0, 0), true})
+		items = append(items, runeAction("Background jobs", "J · start, inspect output or stop a job", 'J', true))
 		items = append(items, runeAction("Lifetime and storage", "L · deadlines, host quota, scoped supervision", 'l', true))
 		if worker.Status == "running" {
 			items = append(items, runeAction("Stop sandbox", "S · preserve it for a later restart", 's', true))
@@ -66,7 +67,7 @@ func dashboardActionMenu(worker *sandbox.Worker, tasks bool, currentID func() st
 			cancel()
 			return nil
 		}
-		if event.Key() == tcell.KeyRune && unicode.IsUpper(event.Rune()) {
+		if event.Key() == tcell.KeyRune && unicode.IsUpper(event.Rune()) && event.Rune() != 'J' {
 			return tcell.NewEventKey(tcell.KeyRune, unicode.ToLower(event.Rune()), event.Modifiers())
 		}
 		return event

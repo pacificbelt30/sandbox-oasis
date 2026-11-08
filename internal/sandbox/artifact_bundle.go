@@ -14,6 +14,7 @@ import (
 )
 
 type ArtifactOptions struct {
+	SinceLaunch  bool     `json:"since_launch,omitempty"`
 	Paths        []string `json:"paths"`
 	JobIDs       []string `json:"job_ids,omitempty"`
 	MaxBytes     int64    `json:"max_bytes,omitempty"`
@@ -25,6 +26,7 @@ type ArtifactFile struct {
 	SHA256 string `json:"sha256"`
 }
 type ArtifactPlan struct {
+	Base       string         `json:"base,omitempty"`
 	Jobs       []Job          `json:"jobs"`
 	ImageID    string         `json:"image_id"`
 	Runtime    string         `json:"runtime"`
@@ -41,7 +43,9 @@ type ArtifactPlan struct {
 const artifactProgram = `
 import os,sys,json,stat,hashlib,subprocess,tempfile,tarfile,io
 op,worker,raw=sys.argv[1:4]
-o=json.loads(raw);paths=o['paths'];limit=o.get('max_bytes') or 33554432
+o=json.loads(raw);base=o.get('_base','HEAD');paths=o['paths'];limit=o.get('max_bytes') or 33554432
+if base!='HEAD' and (len(base) not in (40,64) or any(c not in '0123456789abcdef' for c in base)):raise ValueError('invalid comparison base')
+if o.get('since_launch') and base=='HEAD':raise ValueError('launch comparison base unavailable')
 if not isinstance(paths,list) or not 1<=len(paths)<=256 or not 1<=limit<=33554432:raise ValueError('invalid artifact limits')
 if len(set(paths))!=len(paths):raise ValueError('duplicate artifact path')
 files=[];payload=[];total=0
@@ -69,7 +73,7 @@ if o.get('_managed_seed'):
 else:
     # Git output is spooled to a bounded temporary file, never an unbounded pipe.
     with tempfile.TemporaryFile() as patch:
-        proc=subprocess.Popen(['git','--literal-pathspecs','--no-pager','diff','--binary','--no-ext-diff','--no-textconv','HEAD','--']+sorted(paths),cwd='/workspace',stdout=patch,stderr=subprocess.DEVNULL)
+        proc=subprocess.Popen(['git','--literal-pathspecs','--no-pager','diff','--binary','--no-ext-diff','--no-textconv',base,'--']+sorted(paths),cwd='/workspace',stdout=patch,stderr=subprocess.DEVNULL)
         import time
         while proc.poll() is None:
             if os.fstat(patch.fileno()).st_size>limit-total:proc.kill();proc.wait();raise ValueError('patch size limit')
@@ -80,6 +84,7 @@ else:
     head=subprocess.run(['git','rev-parse','--verify','HEAD'],cwd='/workspace',stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,check=True).stdout.decode().strip()
     if len(head) not in (40,64) or any(c not in '0123456789abcdef' for c in head):raise ValueError('invalid git head')
 m={'jobs':o.get('_jobs',[]),'image_id':o.get('_image_id',''),'runtime':o.get('_runtime',''),'worker':worker,'head':head,'files':files,'patch_bytes':len(diff),'total_bytes':total+len(diff)}
+if o.get('since_launch'):m['base']=base
 canonical=json.dumps(m,sort_keys=True,separators=(',',':')).encode()+diff
 m['id']=hashlib.sha256(canonical).hexdigest()
 if op=='plan':print(json.dumps(m));raise SystemExit(0)
@@ -135,13 +140,24 @@ func (m *Manager) artifact(ctx context.Context, id, op string, options ArtifactO
 		}
 		managedSeed = info.SeedID
 	}
+	base := ""
+	if options.SinceLaunch {
+		if managedSeed != "" {
+			return fmt.Errorf("managed workspace exports use initial import hashes")
+		}
+		base, err = m.WorkspaceBaseline(ctx, worker.ID)
+		if err != nil {
+			return err
+		}
+	}
 	raw, err := json.Marshal(struct {
 		ArtifactOptions
 		ImageID     string `json:"_image_id"`
 		Runtime     string `json:"_runtime"`
 		Jobs        []Job  `json:"_jobs"`
 		ManagedSeed string `json:"_managed_seed,omitempty"`
-	}{options, worker.Image, worker.HostConfig.Runtime, jobs, managedSeed})
+		Base        string `json:"_base,omitempty"`
+	}{options, worker.Image, worker.HostConfig.Runtime, jobs, managedSeed, base})
 	if err != nil {
 		return err
 	}

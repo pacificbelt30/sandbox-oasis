@@ -18,6 +18,7 @@ import (
 	"github.com/pacificbelt30/codex-dock/internal/sandbox"
 	"github.com/pacificbelt30/codex-dock/internal/sandboxux"
 	"github.com/pacificbelt30/codex-dock/internal/storageinfo"
+	"github.com/pacificbelt30/codex-dock/internal/workerstatus"
 	"github.com/rivo/tview"
 )
 
@@ -29,6 +30,10 @@ type desktopPreview struct {
 	Port   int
 }
 type desktopBackend struct {
+	Compare      func(context.Context, string, bool) (sandboxux.Comparison, error)
+	FileDiff     func(context.Context, string, string, string) (string, error)
+	Diagnostics  func(context.Context, string) (workerstatus.Diagnostics, error)
+	Jobs         desktopJobs
 	Launcher     sandboxux.Launcher
 	Files        sandboxux.Files
 	Profiles     func(context.Context) ([]kataguard.ResourceProfile, error)
@@ -45,25 +50,27 @@ type desktopBackend struct {
 	ManagedUsage func(context.Context, string) (string, error)
 }
 type sandboxDesktop struct {
-	uploadMu       sync.Mutex
-	closed         bool
-	previewRefresh func()
-	app            *tview.Application
-	pages          *tview.Pages
-	ctx            context.Context
-	backend        desktopBackend
-	back, changed  func()
-	busy           bool
-	workGeneration uint64
-	previews       []desktopPreview
-	uploads        map[*sandboxux.Upload]bool
-	worker         sandbox.Worker
-	directory      string
-	entries        []sandboxux.FileEntry
-	fileTable      *tview.Table
-	fileStatus     *tview.TextView
-	environments   *sandboxux.EnvironmentStore
-	supervisor     sandboxux.Supervisor
+	jobLogCancel    context.CancelFunc
+	resourceSamples map[string]workerstatus.Resources
+	uploadMu        sync.Mutex
+	closed          bool
+	previewRefresh  func()
+	app             *tview.Application
+	pages           *tview.Pages
+	ctx             context.Context
+	backend         desktopBackend
+	back, changed   func()
+	busy            bool
+	workGeneration  uint64
+	previews        []desktopPreview
+	uploads         map[*sandboxux.Upload]bool
+	worker          sandbox.Worker
+	directory       string
+	entries         []sandboxux.FileEntry
+	fileTable       *tview.Table
+	fileStatus      *tview.TextView
+	environments    *sandboxux.EnvironmentStore
+	supervisor      sandboxux.Supervisor
 }
 
 func managerDesktop(cfg sandbox.ManagerConfig, m *sandbox.Manager, launcher sandboxux.Launcher) desktopBackend {
@@ -71,7 +78,19 @@ func managerDesktop(cfg sandbox.ManagerConfig, m *sandbox.Manager, launcher sand
 	if socket == "" {
 		socket = engine.Socket()
 	}
-	return desktopBackend{Launcher: launcher, Workspaces: engine.WorkspaceClient{Socket: socket}, ManagedInfo: m.ManagedWorkspaceInfo, ManagedUsage: m.ManagedWorkspaceUsage, Files: sandboxux.Files{Guest: m}, Lifecycle: m.InspectLifecycle, Usage: m.RootFSUsage, Reap: m.ReapWorkers, ApplyDue: m.ApplyReapActions, Artifacts: m, Changes: func(ctx context.Context, id string) (string, error) {
+	return desktopBackend{Diagnostics: m.Diagnostics, FileDiff: func(ctx context.Context, id, base, path string) (string, error) {
+		return sandboxux.CompareFile(ctx, m, id, base, path)
+	}, Compare: func(ctx context.Context, id string, launch bool) (sandboxux.Comparison, error) {
+		base := "HEAD"
+		if launch {
+			var err error
+			base, err = m.WorkspaceBaseline(ctx, id)
+			if err != nil {
+				return sandboxux.Comparison{}, err
+			}
+		}
+		return sandboxux.CompareWorkspace(ctx, m, id, base)
+	}, Jobs: m, Launcher: launcher, Workspaces: engine.WorkspaceClient{Socket: socket}, ManagedInfo: m.ManagedWorkspaceInfo, ManagedUsage: m.ManagedWorkspaceUsage, Files: sandboxux.Files{Guest: m}, Lifecycle: m.InspectLifecycle, Usage: m.RootFSUsage, Reap: m.ReapWorkers, ApplyDue: m.ApplyReapActions, Artifacts: m, Changes: func(ctx context.Context, id string) (string, error) {
 		info, err := m.ManagedWorkspaceInfo(ctx, id)
 		if err != nil {
 			return "", err
@@ -102,6 +121,9 @@ func newSandboxDesktop(app *tview.Application, ctx context.Context, backend desk
 	return d
 }
 func (d *sandboxDesktop) close() {
+	if d.jobLogCancel != nil {
+		d.jobLogCancel()
+	}
 	for _, p := range d.previews {
 		_ = p.Close()
 	}

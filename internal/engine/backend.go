@@ -46,6 +46,7 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/pacificbelt30/codex-dock/internal/managedworkspace"
 	"github.com/pacificbelt30/codex-dock/internal/workerpolicy"
+	"github.com/pacificbelt30/codex-dock/internal/workerstatus"
 )
 
 const owned = "codex-dock.engine"
@@ -82,9 +83,13 @@ type Backend struct {
 	closed                 bool
 }
 type record struct {
-	RootFSQuota             *rootFSQuota    `json:",omitempty"`
-	ImageDigest             string          `json:",omitempty"`
-	AgentState              *agentStateDisk `json:",omitempty"`
+	WorkspaceBaselineState  string                 `json:",omitempty"`
+	WorkspaceBaselineHead   string                 `json:",omitempty"`
+	StopReason              string                 `json:",omitempty"`
+	LastResources           workerstatus.Resources `json:",omitempty"`
+	RootFSQuota             *rootFSQuota           `json:",omitempty"`
+	ImageDigest             string                 `json:",omitempty"`
+	AgentState              *agentStateDisk        `json:",omitempty"`
 	ID, Name                string
 	Created                 time.Time
 	Config                  container.Config
@@ -377,7 +382,7 @@ func (b *Backend) create(ctx context.Context, c container.Config, h container.Ho
 	if c.StopSignal == "" {
 		c.StopSignal = ic.Config.StopSignal
 	}
-	r := &record{ID: cid, ImageDigest: img.Target().Digest.String(), Name: name, Created: time.Now().UTC(), Config: c, Host: h, Networks: map[string]*dn.EndpointSettings{}, PrimaryOutputLimit: primaryOutputLimit}
+	r := &record{ID: cid, ImageDigest: img.Target().Digest.String(), Name: name, Created: time.Now().UTC(), Config: c, Host: h, Networks: map[string]*dn.EndpointSettings{}, PrimaryOutputLimit: primaryOutputLimit, WorkspaceBaselineState: "pending"}
 	if r.Host.Runtime == "" {
 		r.Host.Runtime = "runc"
 	}
@@ -614,6 +619,8 @@ func (b *Backend) inspect(ctx context.Context, value string) (container.InspectR
 	}
 	r.Config.Labels["codex-dock.active-executions"] = strconv.Itoa(active)
 	r.Config.Labels["codex-dock.activity-until"] = r.ActivityUntil.Format(time.RFC3339Nano)
+	r.Config.Labels[workerstatus.BaselineHeadLabel] = r.WorkspaceBaselineHead
+	r.Config.Labels[workerstatus.BaselineStateLabel] = r.WorkspaceBaselineState
 	// This status belongs to the node's durable record, not launch labels.
 	r.Config.Labels[workerpolicy.QuarantinedLabel] = strconv.FormatBool(r.Quarantined)
 	// Docker's current API still requires NetworkSettingsBase for published ports.
@@ -726,7 +733,12 @@ func (b *Backend) start(ctx context.Context, r *record, c cd.Container) error {
 			return b.failedStart(ctx, r, c, err)
 		}
 	}
+	if !r.StartedAt.IsZero() && r.WorkspaceBaselineState == "pending" {
+		r.WorkspaceBaselineState = "unavailable"
+	}
 	r.FailedCreate = false
+	r.StopReason = ""
+	r.LastResources = workerstatus.Resources{}
 	r.StartedAt = time.Now().UTC()
 	r.LastActivity = r.StartedAt
 	r.ActivityUntil = time.Time{}
@@ -782,6 +794,10 @@ func (b *Backend) stop(ctx context.Context, r *record, c cd.Container, timeout i
 	if err != nil {
 		return fmt.Errorf("loading task to stop: %w", err)
 	}
+	if r.StopReason == "" {
+		r.StopReason = "stop_requested"
+	}
+	b.observeResources(r)
 	observer := b.observeStopExit(ctx, r, t)
 	if observer != nil {
 		defer observer.cancel()
@@ -1170,11 +1186,11 @@ func (b *Backend) serveHTTP(w http.ResponseWriter, r *http.Request) {
 		failure(w, err)
 		return
 	}
-	if b.checkpointing[rec.ID] && action != "json" && action != "storage" {
+	if b.checkpointing[rec.ID] && action != "json" && action != "storage" && action != "diagnostics" {
 		failure(w, fmt.Errorf("worker checkpoint is active: %w", errdefs.ErrConflict))
 		return
 	}
-	if workspaceID := rec.Config.Labels[managedworkspace.Label]; workspaceID != "" && action != "json" && action != "storage" {
+	if workspaceID := rec.Config.Labels[managedworkspace.Label]; workspaceID != "" && action != "json" && action != "storage" && action != "diagnostics" {
 		b.workspaceMu.Lock()
 		workspace, workspaceErr := b.loadWorkspace(workspaceID)
 		b.workspaceMu.Unlock()
@@ -1188,6 +1204,42 @@ func (b *Backend) serveHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	switch action {
+	case "workspace-baseline":
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		head := r.URL.Query().Get("head")
+		if value != rec.ID || rec.Config.Labels["codex-dock.managed"] != "true" || rec.WorkspaceBaselineState != "pending" || (head != "" && !validBaseline(head)) {
+			failure(w, fmt.Errorf("baseline requires a pending managed worker and valid commit"))
+			return
+		}
+		rec.WorkspaceBaselineHead = head
+		rec.WorkspaceBaselineState = "unavailable"
+		if head != "" {
+			rec.WorkspaceBaselineState = "ready"
+		}
+		err = b.save(rec)
+		if err == nil {
+			reply(w, map[string]string{"state": rec.WorkspaceBaselineState})
+			return
+		}
+	case "diagnostics":
+		if r.Method != http.MethodGet {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		state, e := b.state(ctx, c, rec)
+		if e != nil {
+			failure(w, e)
+			return
+		}
+		resources := rec.LastResources
+		if state.Running {
+			resources = readCgroupResources("/sys/fs/cgroup", rec.Host.CgroupParent)
+		}
+		reply(w, workerstatus.Diagnostics{Running: state.Running, ExitCode: state.ExitCode, StopReason: rec.StopReason, Resources: resources})
+		return
 	case "storage":
 		if r.Method != http.MethodGet {
 			w.WriteHeader(http.StatusMethodNotAllowed)
@@ -1239,6 +1291,7 @@ func (b *Backend) serveHTTP(w http.ResponseWriter, r *http.Request) {
 			reply(w, map[string]bool{"stopped": false})
 			return
 		}
+		rec.StopReason = "idle_timeout"
 		err = b.stop(ctx, rec, c, 10)
 		if err == nil {
 			reply(w, map[string]bool{"stopped": true})
@@ -1271,6 +1324,14 @@ func (b *Backend) serveHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	case "stop":
+		reason := r.URL.Query().Get("reason")
+		if reason != "" && reason != "max_lifetime" {
+			failure(w, fmt.Errorf("invalid stop reason"))
+			return
+		}
+		if reason != "" {
+			rec.StopReason = reason
+		}
 		seconds := 10
 		if v := r.URL.Query().Get("t"); v != "" {
 			seconds, _ = strconv.Atoi(v)

@@ -51,10 +51,14 @@ oaiso ui
 | `O` | 名前、状態、新旧、ブランチ、ポリシーの並び順を切り替え |
 | `V` | TUI起動中に観測した起動・停止・削除・metadata変更を表示 |
 | `N` | [サンドボックスを作成](../guides/sandbox-ui.md)（未リリース・main） |
-| `W` | 差分と選択成果物の回収（未リリース・main） |
-| `L` | 期限・容量・対象VMだけの監視（未リリース・main） |
+| `J`（大文字） | [バックグラウンドジョブ](../guides/sandbox-ui.md#バックグラウンドジョブを管理する)の起動・ログ追従・選択停止（未リリース・main） |
+| `W` | [現在HEAD／起動時点の比較と成果物回収](../guides/sandbox-ui.md#起動時点との比較とファイル別レビュー)（未リリース・main） |
+| `L` | [CPU・メモリ・停止記録](../guides/sandbox-ui.md#cpuメモリと停止理由)、期限・quota・対象VMだけの監視（未リリース・main） |
 | `F` | workspaceファイルの閲覧・新規転送（未リリース・main） |
 | `U` | 認証付きWebプレビューを管理（未リリース・main） |
+| `M` | [管理workspace](../guides/managed-workspaces.md)の予約・再利用・削除（未リリース・main） |
+| `Z` | [復元点](../guides/managed-workspaces.md#停止vmを保存復元する)の一覧・新規VMへの復元（未リリース・main） |
+| `K` | 停止した対象VMの復元点をレビューして保存（未リリース・main） |
 | `T` | [タスクと結果レビュー](../guides/tasks.md)を開く（未リリース・main） |
 | `S` | 選択したワーカーを停止。停止待ち10秒 |
 | `D` | 選択したワーカーを強制削除 |
@@ -67,10 +71,11 @@ oaiso ui
 | `?` / `H` | ヘルプを開く |
 | `Q` | UIを終了。ログ／拒否履歴画面では一覧へ戻る |
 
-- 英字キー：大文字・小文字の両方を利用可。
+- 英字キーは原則として大文字・小文字の両方を利用できます。ジョブ画面は大文字`J`のみで、小文字`j`は一覧の下移動です。
 - 削除・全停止：確認ダイアログを表示。必要な成果は先に保存。
 - `C` の接続：メインAgentへattachせず別execを作成。shell終了後もAgentとワーカーは動作を継続。
-- ログと拒否履歴：開いた時点で取得。継続追跡は `oaiso logs WORKER --follow` / `oaiso policy events --worker WORKER --follow`。
+- `Enter`のワーカーログと`E`の拒否履歴は、開いた時点で取得します。継続追跡は `oaiso logs WORKER --follow` / `oaiso policy events --worker WORKER --follow`。大文字`J`のジョブログ画面は継続取得し、`Space`で自動スクロールを一時停止・再開します。
+- `Q`でTUIを閉じてもVMとバックグラウンドジョブは継続します。TUIが開いたlocalhostプレビューは閉じます。VMの停止・削除や適用中の寿命制限は別です。
 - AI routesを使う場合の認証設定：通常のCLIと同じグローバル設定。独立プロファイルと管理シークレットを[先に設定](../guides/authentication.md)。
 
 > **更新間隔**: コンテナ一覧は 2 秒ごとに自動更新されます。

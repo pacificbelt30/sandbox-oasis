@@ -25,6 +25,16 @@
 | Additional network features | TLS MITM and live policy changes |
 | Additional execution backends | VM snapshots/forks, new OS backends and remote multi-user services |
 
+## Use the TUI
+
+Available: **unreleased (main)**. [Prepare matching CLI, node and helper binaries](guides/sandbox-ui.md#prerequisites-and-startup) to use these controls without AI credentials.
+
+| Task | Entry point |
+|---|---|
+| Background execution, output inspection and selected stop | Uppercase `J`. [Jobs](guides/sandbox-ui.md#manage-background-jobs) |
+| Compare with launch, review files and recover artifacts | `W`. [Review](guides/sandbox-ui.md#compare-with-launch-and-review-individual-files), [CLI `--since-start`](guides/artifacts.md#recover-changes-since-launch) |
+| CPU, memory, quota and stop evidence | `L`. [Resource observations](guides/sandbox-ui.md#cpu-memory-and-stop-evidence) |
+
 ## Inspect and configure network policy
 
 ```bash

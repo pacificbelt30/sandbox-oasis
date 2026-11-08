@@ -8,6 +8,7 @@ import (
 
 	"github.com/pacificbelt30/codex-dock/internal/sandbox"
 	"github.com/pacificbelt30/codex-dock/internal/storageinfo"
+	"github.com/pacificbelt30/codex-dock/internal/workerstatus"
 	"github.com/rivo/tview"
 )
 
@@ -50,7 +51,14 @@ func quotaSummary(s storageinfo.Usage) string {
 	if !s.Available {
 		return "Rootfs usage: unavailable · " + s.Error + "\n"
 	}
-	return fmt.Sprintf("Rootfs: %.1f / %.1f MiB · %d / %d inodes\nObserved by host: %s\nShared host folders are outside this rootfs quota.\n", float64(s.UsedBytes)/(1<<20), float64(s.LimitBytes)/(1<<20), s.UsedInodes, s.LimitInodes, s.ObservedAt.Format(time.RFC3339))
+	warning := ""
+	if s.LimitBytes > 0 && float64(s.UsedBytes)/float64(s.LimitBytes) >= .9 {
+		warning += "WARNING: rootfs bytes at least 90% of quota.\n"
+	}
+	if s.LimitInodes > 0 && float64(s.UsedInodes)/float64(s.LimitInodes) >= .9 {
+		warning += "WARNING: rootfs inodes at least 90% of quota.\n"
+	}
+	return warning + fmt.Sprintf("Rootfs: %.1f / %.1f MiB · %d / %d inodes\nObserved by host: %s\nShared host folders are outside this rootfs quota.\n", float64(s.UsedBytes)/(1<<20), float64(s.LimitBytes)/(1<<20), s.UsedInodes, s.LimitInodes, s.ObservedAt.Format(time.RFC3339))
 }
 
 func (d *sandboxDesktop) limits(worker sandbox.Worker) {
@@ -60,6 +68,10 @@ func (d *sandboxDesktop) limits(worker sandbox.Worker) {
 	}
 	view := tview.NewTextView().SetDynamicColors(false).SetScrollable(true).SetText("No lifecycle or quota result loaded. Use Refresh to read them.")
 	view.SetBorder(true).SetTitle(" Lifetime / storage · " + tview.Escape(worker.Name) + " ")
+	previous := d.resourceSamples[worker.ID]
+	if worker.StartedAt != nil && previous.ObservedAt.Before(*worker.StartedAt) {
+		previous = workerstatus.Resources{}
+	}
 	watching, _ := d.supervisor.State(worker.ID)
 	watchLabel := "Supervise this VM…"
 	if watching {
@@ -111,13 +123,34 @@ func (d *sandboxDesktop) limits(worker sandbox.Worker) {
 		} else {
 			text.WriteString(quotaSummary(usage))
 		}
+		var sample *workerstatus.Resources
+		if d.backend.Diagnostics != nil {
+			observed, e := d.backend.Diagnostics(ctx, worker.ID)
+			if e != nil {
+				fmt.Fprintf(&text, "\nResource diagnostics unavailable: %v\n", e)
+			} else {
+				text.WriteString("\n" + resourceSummaryForStatus(worker.Status, observed))
+				if worker.Status != "created" && worker.Status != "paused" {
+					text.WriteString(cpuUtilization(previous, observed.Resources))
+				}
+				sample = &observed.Resources
+			}
+		}
 		watch, lastErr := d.supervisor.State(worker.ID)
 		fmt.Fprintf(&text, "\nSupervised by this TUI: %t\n", watch)
 		if lastErr != "" {
 			fmt.Fprintf(&text, "Last supervision error: %s\n", lastErr)
 		}
 		text.WriteString("\nIdle is management execution/activity, not guest CPU or network activity. Running servers need protect-main or a suitable timeout.\nAn external oaiso reap --watch may also enforce saved policies independently.\nNo policy is applied to other workers by this page.")
-		return func() { view.SetText(text.String()) }, nil
+		return func() {
+			view.SetText(text.String())
+			if sample != nil {
+				if d.resourceSamples == nil {
+					d.resourceSamples = map[string]workerstatus.Resources{}
+				}
+				d.resourceSamples[worker.ID] = *sample
+			}
+		}, nil
 	})
 }
 func (d *sandboxDesktop) reviewDueAction(worker sandbox.Worker) {

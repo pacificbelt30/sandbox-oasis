@@ -107,6 +107,7 @@ func init() {
 		})
 	}}
 	for _, c := range []*cobra.Command{plan, bundle} {
+		c.Flags().BoolVar(&bundleOptions.SinceLaunch, "since-start", false, "Compare selected files against the captured launch Git commit")
 		c.Flags().StringArrayVar(&bundleOptions.Paths, "include", nil, "Explicit regular workspace file (repeatable; credential paths refused)")
 		c.Flags().StringArrayVar(&bundleOptions.JobIDs, "job", nil, "Include status and exit code of a selected job (repeatable; no logs or argv)")
 		c.Flags().Int64Var(&bundleOptions.MaxBytes, "max-bytes", 32<<20, "Maximum combined file and patch bytes (up to 32 MiB)")

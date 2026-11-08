@@ -46,7 +46,9 @@ func TestDesktopReadTimeoutOffersRetryAndRejectsLateSuccess(t *testing.T) {
 	release := make(chan struct{})
 	var calls, applied atomic.Int32
 	update(func() {
-		d.startWork("Slow read", 20*time.Millisecond, true, func(context.Context) (func(), error) {
+		// Retry includes an event-loop redraw. A tiny deadline can expire a
+		// correct retry while other race-instrumented packages are running.
+		d.startWork("Slow read", time.Second, true, func(context.Context) (func(), error) {
 			if calls.Add(1) == 1 {
 				<-release
 			}

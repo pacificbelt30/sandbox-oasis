@@ -150,6 +150,30 @@ Available: **unreleased (main)**. New VMs can optionally set these fields. Leave
 
 - This page does not write new lifecycle settings into existing VMs. See [lifetime and reproducibility](../../sandbox-features.md#寿命と再現性) (Japanese).
 
+### CPU, memory and stop evidence
+
+Available: **unreleased (main)**. `L` also displays host cgroup CPU time, memory usage/limit, and OOM kill event counts. Two samples obtained with `Refresh` provide average CPU utilization for that interval (100% means one host core). These observations include VMM and other host-side costs, rather than guest-only RSS.
+
+- Memory, rootfs bytes and inodes at 90% or more of their limits produce warnings. Shared host folders remain outside rootfs quota.
+- After stop, the view shows the last retained host observation and timestamp, exit code, and recorded maximum-lifetime, management-idle, or stop request. Restart clears the earlier stop request.
+- Created and paused VMs are not treated as completed and have no displayed exit code. A completed VM with exit code 0 still displays that code.
+- Missing observations remain unknown. Guest OOM and filesystem errors may occur without a host OOM event. Exit code 137 or a quota warning alone does not prove the cause.
+
+## Manage background jobs
+
+Available: **unreleased (main)**. Select a VM and press uppercase `J`, or choose `Background jobs` from `F2`. Lowercase `j` retains list navigation.
+
+1. Choose `New job…`, enter a command, select `Run`, and approve the command review. The working directory is guest `/workspace`. Start a stopped VM with `R` first.
+2. Press `Enter` on a job to follow output. `Space` pauses/resumes automatic scrolling; `Tab` moves to buttons. Use `Refresh` to reload the list.
+3. Returning with `Esc` or exiting the TUI leaves jobs running. Reopen the TUI and select the same VM to inspect them.
+4. Choose `Stop job…`, review the target ID, and confirm to stop only that job. The VM and other jobs remain. The view obtains the final exit code from the management API.
+
+- The view retains the latest 256KiB of input from retained logs and escapes control characters. The node retains up to 16MiB per job and discards output beyond that limit; the view indicates when the limit is reached. Read failures remain visible while retrying.
+- `Space` pauses only automatic scrolling. Fetching and retention limits continue, so older displayed content may leave the retained range during a long pause.
+- Stopping/removing the VM or enforcing its lifetime policy also terminates its jobs.
+- The list contains retained records. Running jobs have no final exit code; unavailable status is never displayed as success. Output is not retained after VM removal.
+- Commands execute inside the guest. Changes to writable shared directories also affect the host.
+
 ## Inspect and transfer files
 
 Select a running VM and press `F`. Operations stay within guest `/workspace`.
@@ -175,7 +199,7 @@ Select a running VM and press `F`. Operations stay within guest `/workspace`.
 
 Available: **unreleased (main)**. Select a running VM and press `W`.
 
-1. Inspect guest Git status and **uncommitted diff against its current HEAD**, up to 256 KiB. This is not a history comparison of commits created by the guest and does not display untracked file contents. Guest Git configuration is never executed on the host for inspection.
+1. By default, inspect guest Git status and **uncommitted diff against its current HEAD**, up to 256 KiB. This view does not compare guest-created commit history or display untracked contents. Choose [launch comparison and per-file review](#compare-with-launch-and-review-individual-files) for those workflows. Guest Git configuration is never executed on the host for inspection.
 2. Tab to `Export selected files…`. Enter relative paths one per line, or use `Choose files…`. Enter opens folders; Space selects regular files. Selection survives directory changes. `Use selected files` updates the form and focuses the new host tar destination. Esc discards picker edits and retains the original input.
 3. Choose Review export to inspect selected files, size, SHA-256, guest HEAD and destination; approve from the scrollable review page. Selecting files alone never exports them.
 4. `Saved reviewed artifacts` confirms completion. The VM and independent copy remain. Inspecting/adopting the saved content and removing the VM are separate actions.
@@ -183,6 +207,15 @@ Available: **unreleased (main)**. Select a running VM and press `W`.
 - Existing host files, symlinks, credential paths and selections over 256 files / 32 MiB are rejected. A change to selected content, diff or HEAD after review rejects export without publishing a partial file.
 - The tar contains selected files, their `changes.patch` and a manifest. The host file is mode 0600. No changes are automatically applied to the original project.
 - Managed workspaces support [initial-import hash comparison and non-Git export](managed-workspaces.md#retrieve-changes). Other non-Git workspaces or oversized diffs display an error. Use `F` for individual file recovery. See [artifact specifications](artifacts.md).
+
+### Compare with launch and review individual files
+
+Available: **unreleased (main)**. For Git workspaces, choose `W` → `Since launch` to compare against the commit captured once before the bootstrap gate releases user code. This includes changes already committed inside the guest. `Current HEAD` restores the previous comparison.
+
+- `Browse changes…` lists modified, added, deleted and untracked paths. `Enter` displays a file diff, or current text for an untracked file. Known credential paths are excluded.
+- Select paths with `Space`, then choose `Export selected…` for the existing hash review. Launch comparisons use the same commit for the exported patch. Deleted/type-changed paths can be reviewed; export requires currently existing regular files.
+- Stop/restart retains the reference. Legacy/non-Git workers and missing Git objects never receive an inferred launch reference. Managed workspaces keep their initial-import hash comparison and hide the Git-specific toggle.
+- Display is limited to 256KiB; the comparison list contains at most 4096 entries. Links cannot be exported. There is no general secret detector or automatic adoption of results.
 
 ## Preview a web application
 

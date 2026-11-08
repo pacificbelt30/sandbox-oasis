@@ -704,6 +704,9 @@ func (m *Manager) RunContext(parent context.Context, opts RunOptions) (container
 				}
 			}
 		}
+		if err = m.captureWorkspaceBaseline(ctx, resp.ID); err != nil {
+			return "", err
+		}
 		if _, err = m.execTrusted(ctx, resp.ID, []string{guestGuard, "release", allocation}); err != nil {
 			return "", err
 		}
@@ -865,6 +868,9 @@ func (m *Manager) StartContext(parent context.Context, containerID string) (star
 				return err
 			}
 		}
+		if err = m.captureWorkspaceBaseline(ctx, v.ID); err != nil {
+			return err
+		}
 		if _, err = m.execTrusted(ctx, v.ID, []string{guestGuard, "release", v.Config.Labels[labelAllocation]}); err != nil {
 			return err
 		}
@@ -923,6 +929,9 @@ func (m *Manager) Stop(containerID string, timeoutSec int) error {
 
 // StopContext stops a managed worker and revokes its proxy token.
 func (m *Manager) StopContext(parent context.Context, containerID string, timeoutSec int) error {
+	return m.stopContext(parent, containerID, timeoutSec, "")
+}
+func (m *Manager) stopContext(parent context.Context, containerID string, timeoutSec int, reason string) error {
 	ctx, cancel := context.WithTimeout(parent, 120*time.Second)
 	defer cancel()
 	v, err := m.cli.ContainerInspect(ctx, containerID)
@@ -935,7 +944,12 @@ func (m *Manager) StopContext(parent context.Context, containerID string, timeou
 	}
 	defer unlock()
 	revokeErr := m.revokeWorkerTokenChecked(v)
-	if err = m.cli.ContainerStop(ctx, v.ID, container.StopOptions{Timeout: &timeoutSec}); err != nil {
+	if reason == "" {
+		err = m.cli.ContainerStop(ctx, v.ID, container.StopOptions{Timeout: &timeoutSec})
+	} else {
+		err = m.stopForReason(ctx, v.ID, timeoutSec, reason)
+	}
+	if err != nil {
 		return err
 	}
 	if v.Config != nil && v.Config.Labels[labelIsolation] == RuntimeKata && v.Config.Labels[labelAllocation] != "" {

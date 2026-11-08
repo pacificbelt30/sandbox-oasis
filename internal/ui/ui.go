@@ -352,6 +352,12 @@ func RunWithSandboxOptions(cfg sandbox.ManagerConfig, configPath, policyPath, po
 				openDesktop(func() { desktop.changes(worker) })
 			}
 			return nil
+		case 'J':
+			if idx >= 0 && idx < len(workers) {
+				worker := workers[idx]
+				openDesktop(func() { desktop.jobs(worker) })
+			}
+			return nil
 		case 'l', 'L':
 			if idx >= 0 && idx < len(workers) {
 				worker := workers[idx]

@@ -163,7 +163,7 @@ func (m *Manager) reap(ctx context.Context, now time.Time, dryRun bool, selected
 				continue // New activity appeared after inspection; no token revoked.
 			}
 		} else if a.Action == "stop" {
-			err = m.StopContext(ctx, w.ID, 10)
+			err = m.stopContext(ctx, w.ID, 10, "max_lifetime")
 		} else {
 			err = m.RemoveContext(ctx, w.ID, false)
 		}
