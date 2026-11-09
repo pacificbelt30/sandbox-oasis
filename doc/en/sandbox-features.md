@@ -27,7 +27,7 @@
 
 ## Use the TUI
 
-Available: **unreleased (main; v0.0.8 planned)**. [Prepare matching CLI, node and helper binaries](guides/sandbox-ui.md#prerequisites-and-startup) to use these controls without AI credentials.
+Available: **v0.0.8**. [Prepare matching CLI, node and helper binaries](guides/sandbox-ui.md#prerequisites-and-startup) to use these controls without AI credentials.
 
 | Task | Entry point |
 |---|---|
@@ -134,9 +134,9 @@ oaiso run --clone-dir /absolute/new-copy -d
 - Directory listings allow at most 10000 entries.
 - VM validation and guest permissions remain enforced.
 
-**Unreleased (main; v0.0.8 planned)**: `files put` preserves ordinary read/write/execute bits when replacing an existing regular file, without inheriting set-ID bits. New files use 0600. Atomic replacement leaves other hardlinks to the previous inode with their original contents.
+**v0.0.8**: `files put` preserves ordinary read/write/execute bits when replacing an existing regular file, without inheriting set-ID bits. New files use 0600. Atomic replacement leaves other hardlinks to the previous inode with their original contents.
 
-**Unreleased (main; v0.0.8 planned)**: `files get/list --local` and `artifact diff/bundle --output` publish a new 0600 file only after a successful transfer. Failed or cancelled transfers leave no partial destination. Existing destinations are rejected before starting the transfer; publication checks again to avoid overwriting a file created concurrently. Parent directories must also be free of symlinks; choose their physical paths. Standard output remains streamed.
+**v0.0.8**: `files get/list --local` and `artifact diff/bundle --output` publish a new 0600 file only after a successful transfer. Failed or cancelled transfers leave no partial destination. Existing destinations are rejected before starting the transfer; publication checks again to avoid overwriting a file created concurrently. Parent directories must also be free of symlinks; choose their physical paths. Standard output remains streamed.
 
 - PTY streams combine stdout/stderr.
 - Streaming executions/sessions end on cancellation or disconnection.

@@ -9,7 +9,7 @@
 | Codexを直接起動 | `oaiso codex` |
 | Claude Codeを直接起動 | `oaiso claude` |
 | イメージ・worktree・mountを指定 | `oaiso run --agent codex` / `--agent claude` |
-| AI認証なしのサンドボックス | `oaiso run --agent shell --no-ai --no-internet`（[未リリース・main（v0.0.8予定）](../guides/sandbox-ui.md)） |
+| AI認証なしのサンドボックス | `oaiso run --agent shell --no-ai --no-internet`（[v0.0.8以降](../guides/sandbox-ui.md)） |
 | 認証済みシェル | `oaiso run`（組み込み既定値） |
 | コマンドを1回実行 | `oaiso run -- COMMAND...` |
 
@@ -27,7 +27,7 @@
 - 独自イメージ：[build](build.md)。
 - 設定の詳細：[プロジェクト設定](../configuration.md#プロジェクト設定)。
 
-未リリース（main・v0.0.8予定）のTUIで作成するサンドボックスの既定はAI認証なしですが、通常の`oaiso run`の既定エージェント設定は維持されます。CLIで認証なしにする場合は`--agent shell --no-ai`を明示します。
+v0.0.8以降のTUIで作成するサンドボックスの既定はAI認証なしですが、通常の`oaiso run`の既定エージェント設定は維持されます。CLIで認証なしにする場合は`--agent shell --no-ai`を明示します。
 
 ## Codex CLI を直接起動する
 
@@ -125,7 +125,7 @@ oaiso run --profile-size small --agent codex
 | `--profile-size` | | `standard` | Kata VM の資源プロファイル（`standard` / `small` / `compact`） |
 | `--no-git-metadata` | | `false` | linked worktree の共通 Git metadata を自動共有しない |
 | `--mount` | | | 追加のホストディレクトリをマウント（繰り返し指定可）`<host-path>:<container-path>[:ro\|rw]`（[詳細](#--mount--任意ディレクトリの追加マウント)） |
-| `--no-ai` | | `false` | AI資格情報・認証Proxyなしで実行。`--agent shell`と併用。未リリース（main・v0.0.8予定） |
+| `--no-ai` | | `false` | AI資格情報・認証Proxyなしで実行。`--agent shell`と併用。v0.0.8以降 |
 | `--no-internet` | | `false` | 一般egressプロキシを接続せず、AI API経路だけを維持 |
 | `--keep` | | `false` | フォアグラウンド実行の終了時にコンテナと専用ネットワークを削除しない（既定では削除し、ネットワークの蓄積を防ぐ） |
 | `--force-recreate-proxy` | | `false` | ホストとAuth Proxyの認証状態が異なる場合、稼働中ワーカーがあってもAuth Proxyを再作成する（既存ワーカーの認証は失効） |
@@ -521,11 +521,11 @@ oaiso run --user 1000:1000
 
 ## 非対話タスク
 
-未リリース（main・v0.0.8予定）：`--headless`と`--task-file`で1回の依頼を実行できます。承認の既定値は維持されます。[タスクと結果レビュー](../guides/tasks.md)を参照してください。
+v0.0.8以降：`--headless`と`--task-file`で1回の依頼を実行できます。承認の既定値は維持されます。[タスクと結果レビュー](../guides/tasks.md)を参照してください。
 
 ## AI認証なしのサンドボックス
 
-未リリース（main・v0.0.8予定）：`--no-ai`は認証ProxyとAI資格情報の準備を省略します。`--agent shell`と組み合わせ、AIタスク・AI利用上限とは併用できません。明示しないAgent stateは無効です。一般通信には既存のホストポリシーが適用されます。
+v0.0.8以降：`--no-ai`は認証ProxyとAI資格情報の準備を省略します。`--agent shell`と組み合わせ、AIタスク・AI利用上限とは併用できません。明示しないAgent stateは無効です。一般通信には既存のホストポリシーが適用されます。
 
 ノード準備済みのホストで、共有するプロジェクトディレクトリから通常ユーザーとして起動します。
 
@@ -535,8 +535,8 @@ oaiso run --agent shell --no-ai --no-internet
 
 シェルを終了するとワーカーは通常の終了処理に進みます。TUIからの作成・転送は[サンドボックスガイド](../guides/sandbox-ui.md)を参照してください。
 
-未リリース（main・v0.0.8予定）：`--headless --task-file -`はstdinから最大32 KiBのUTF-8タスクを読み取ります。コマンドをホストのプロセス引数へ含めたくない場合に使用できます。
+v0.0.8以降：`--headless --task-file -`はstdinから最大32 KiBのUTF-8タスクを読み取ります。コマンドをホストのプロセス引数へ含めたくない場合に使用できます。
 
 ## 管理workspaceを接続する
 
-未リリース（main・v0.0.8予定）：`--managed-workspace ID`で専用ディスクを`/workspace`へ接続します。ホストの元プロジェクトを共有せず、通常のKata検証・通信規則を維持します。CLI専用で設定ファイルには保存しません。非rootの所有UID/GIDを合わせてください。[作成・レビュー・容量・復元の手順](../guides/managed-workspaces.md)を参照してください。
+v0.0.8以降：`--managed-workspace ID`で専用ディスクを`/workspace`へ接続します。ホストの元プロジェクトを共有せず、通常のKata検証・通信規則を維持します。CLI専用で設定ファイルには保存しません。非rootの所有UID/GIDを合わせてください。[作成・レビュー・容量・復元の手順](../guides/managed-workspaces.md)を参照してください。

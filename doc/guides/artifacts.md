@@ -4,7 +4,7 @@
 
 - 利用可能：**v0.0.4**。
 - 対象：起動中のワーカー。通常のworkspaceはHEADのあるGitリポジトリで、Gitメタデータを利用できる必要があります。
-- 未リリース（main・v0.0.8予定）：[管理workspace](managed-workspaces.md)ではGit不要です。`head`は`workspace:取り込みmanifest ID`、`changes.patch`は空です。選択内容のhash・上限・レビュー後の変更拒否は同じです。ホスト側で `oaiso` を操作します。
+- v0.0.8以降：[管理workspace](managed-workspaces.md)ではGit不要です。`head`は`workspace:取り込みmanifest ID`、`changes.patch`は空です。選択内容のhash・上限・レビュー後の変更拒否は同じです。ホスト側で `oaiso` を操作します。
 - 指定したファイル、指定範囲のGit差分、内容一覧をtarに保存します。
 
 ## 保存される内容
@@ -82,7 +82,7 @@ files/src/main.go
 
 ## 起動時点からの変更を回収する
 
-利用可能：**未リリース（main・v0.0.8予定）**。Git workspaceの新規VMでは、ユーザー処理を始める前に記録したcommitを比較基準にできます。ゲスト内でcommit済みの変更もpatchへ含めます。指定しなければ従来どおり現在のHEADと比較します。
+利用可能：**v0.0.8以降**。Git workspaceの新規VMでは、ユーザー処理を始める前に記録したcommitを比較基準にできます。ゲスト内でcommit済みの変更もpatchへ含めます。指定しなければ従来どおり現在のHEADと比較します。
 
 対応する開発版のCLI・node・補助ツールを[準備](sandbox-ui.md#前提と起動)し、Git workspaceを持つ稼働中の`dev-worker`を対象にホストで実行します。VM名とファイル名は自分の対象へ置き換え、確認と出力の両方に`--since-start`を指定します。
 

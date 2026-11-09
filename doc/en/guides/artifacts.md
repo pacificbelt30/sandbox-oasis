@@ -4,7 +4,7 @@
 
 - Available: **v0.0.4**.
 - Run on the host against a running worker. Ordinary workspaces require a Git repository with HEAD and accessible Git metadata.
-- Unreleased (main; v0.0.8 planned): [managed workspaces](managed-workspaces.md) need no Git. `head` is `workspace:IMPORT_MANIFEST_ID`; `changes.patch` is empty. Selected-content hashes, bounds and stale-plan rejection still apply.
+- v0.0.8: [managed workspaces](managed-workspaces.md) need no Git. `head` is `workspace:IMPORT_MANIFEST_ID`; `changes.patch` is empty. Selected-content hashes, bounds and stale-plan rejection still apply.
 - Select explicit regular workspace files. Export their contents, their Git diff against current HEAD by default, and a manifest containing worker/image/runtime IDs, HEAD, sizes and SHA-256 hashes. Add `--job JOB_ID` to include selected job IDs, running state and exit codes.
 
 | Limit | Value |
@@ -72,7 +72,7 @@ Use [SDK file operations](../local-api-sdk.md#files-jobs-and-checkpoints) for in
 
 ## Recover changes since launch
 
-Available: **unreleased (main; v0.0.8 planned)**. New Git-backed VMs can compare against the commit captured before user code starts. This includes changes already committed inside the guest. Without this option, comparison remains against current HEAD.
+Available: **v0.0.8**. New Git-backed VMs can compare against the commit captured before user code starts. This includes changes already committed inside the guest. Without this option, comparison remains against current HEAD.
 
 [Prepare matching development CLI, node and helper binaries](sandbox-ui.md#prerequisites-and-startup). On the host, target a running Git-backed worker named `dev-worker`; replace its name and selected path with your own. Use `--since-start` for both planning and export.
 

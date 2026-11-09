@@ -6,7 +6,7 @@
 
 | Goal | Invocation |
 |---|---|
-| Sandbox without AI credentials | `oaiso run --agent shell --no-ai --no-internet` ([unreleased main; v0.0.8 planned](../guides/sandbox-ui.md)) |
+| Sandbox without AI credentials | `oaiso run --agent shell --no-ai --no-internet` ([v0.0.8](../guides/sandbox-ui.md)) |
 | Start Codex directly | `oaiso codex` |
 | Start Claude Code directly | `oaiso claude` |
 | Select image, worktree or mounts | `oaiso run --agent codex` / `--agent claude` |
@@ -27,7 +27,7 @@
 - Custom images: [build](build.md).
 - Configuration: [project settings](../configuration.md#project-settings).
 
-The unreleased main; v0.0.8 planned TUI defaults to creating sandboxes without AI credentials. Normal `oaiso run` keeps its configured default agent; specify `--agent shell --no-ai` explicitly for a credential-free CLI run.
+The v0.0.8 TUI defaults to creating sandboxes without AI credentials. Normal `oaiso run` keeps its configured default agent; specify `--agent shell --no-ai` explicitly for a credential-free CLI run.
 
 ## Launch Codex CLI directly
 
@@ -124,7 +124,7 @@ oaiso run --profile-size small --agent codex
 | `--profile-size` | | `standard` | Kata VM resource profile (`standard`, `small`, or `compact`) |
 | `--no-git-metadata` | | `false` | Do not automatically share linked worktree Git metadata |
 | `--mount` | | | Additional host directory to mount (repeatable): `<host-path>:<container-path>[:ro\|rw]` ([details](#--mount)) |
-| `--no-ai` | | `false` | Run without AI credentials or auth proxy; use with `--agent shell`. Unreleased (main; v0.0.8 planned) |
+| `--no-ai` | | `false` | Run without AI credentials or auth proxy; use with `--agent shell`. v0.0.8 |
 | `--no-internet` | | `false` | Disconnect general egress; keep fixed AI API routes |
 | `--keep` | | `false` | Keep the container and its per-worker network after a foreground run exits (default: remove them so networks don't accumulate) |
 | `--force-recreate-proxy` | | `false` | Recreate the Auth Proxy when its credential state differs from the host even if workers are running (existing workers lose authentication) |
@@ -418,11 +418,11 @@ oaiso run --template mytool
 
 ## Non-interactive tasks
 
-Unreleased (main; v0.0.8 planned): use `--headless` and `--task-file` for a single batch task, preserving approval defaults. See [tasks and result review](../guides/tasks.md).
+v0.0.8: use `--headless` and `--task-file` for a single batch task, preserving approval defaults. See [tasks and result review](../guides/tasks.md).
 
 ## Sandbox without AI credentials
 
-Unreleased (main; v0.0.8 planned): `--no-ai` skips auth-proxy and AI credential preparation. Requires `--agent shell`; cannot combine with AI tasks or explicit AI usage budgets. Agent state is disabled unless explicitly configured. Existing host policy governs general egress.
+v0.0.8: `--no-ai` skips auth-proxy and AI credential preparation. Requires `--agent shell`; cannot combine with AI tasks or explicit AI usage budgets. Agent state is disabled unless explicitly configured. Existing host policy governs general egress.
 
 On a prepared node, run as your normal user from the project directory to share:
 
@@ -432,8 +432,8 @@ oaiso run --agent shell --no-ai --no-internet
 
 Exiting the shell follows normal worker cleanup. See the [sandbox guide](../guides/sandbox-ui.md) for TUI creation and transfers.
 
-Unreleased (main; v0.0.8 planned): `--headless --task-file -` reads a UTF-8 task of at most 32 KiB from stdin, allowing command text to stay out of host process arguments.
+v0.0.8: `--headless --task-file -` reads a UTF-8 task of at most 32 KiB from stdin, allowing command text to stay out of host process arguments.
 
 ## Attach a managed workspace
 
-Unreleased (main; v0.0.8 planned): `--managed-workspace ID` attaches a dedicated disk at `/workspace` without sharing the original project. Normal Kata verification and networking policy still apply. This flag is CLI-only and is not persisted in configuration. Match the non-root numeric owner. See [creation, review, capacity and recovery](../guides/managed-workspaces.md).
+v0.0.8: `--managed-workspace ID` attaches a dedicated disk at `/workspace` without sharing the original project. Normal Kata verification and networking policy still apply. This flag is CLI-only and is not persisted in configuration. Match the non-root numeric owner. See [creation, review, capacity and recovery](../guides/managed-workspaces.md).

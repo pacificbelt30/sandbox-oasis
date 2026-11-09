@@ -13,7 +13,7 @@
 | モデル指定 | JSONの重複・大小文字違い・余分なJSON | 許可モデルだけを使用。転送本文を書き換えて整合性を崩さない |
 | brokerのURL・path | 別origin、`..`、二重slash、percent encoding、禁止method | 固定origin・許可path・methodから広げない |
 | 通信先 | IPv4/IPv6、metadata、混在DNS回答、不正authority | 拒否した宛先・アドレスへdialしない |
-| 管理workspace manifest（未リリース・main（v0.0.8予定）） | 相対パス、重複、秘密用パス、hash・サイズ不一致 | 取り込み前に拒否。archiveのリンク・追加ファイルも回帰試験で拒否 |
+| 管理workspace manifest（v0.0.8以降） | 相対パス、重複、秘密用パス、hash・サイズ不一致 | 取り込み前に拒否。archiveのリンク・追加ファイルも回帰試験で拒否 |
 | 管理JSON | 重複key、Unicodeによる同一fieldの別表記、末尾JSON、未知field、サイズ・深さ超過 | 認証・Storeの変更前に拒否 |
 | token期限 | 負数・過大値・TLSの上限超過 | 不正な期限で既存の権限を置換しない。HTTPのTTL省略は設定済み既定値を使用 |
 | 保存失敗 | `ENOSPC`を注入、破損した監査head、OAuth保存失敗 | 利用枠や新しい資格情報を発行しない。復旧後に勝手に利用枠を初期化しない |
@@ -35,7 +35,7 @@
 make test
 ```
 
-8系統のfuzz探索（管理workspace manifestの検査は未リリース・main（v0.0.8予定））：
+8系統のfuzz探索（管理workspace manifestの検査はv0.0.8以降）：
 
 ```bash
 make security-fuzz

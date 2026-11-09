@@ -38,10 +38,10 @@
 
 | 目的 | ページ |
 |---|---|
-| AI認証なしでVM作成・ファイル転送・Web確認 | [サンドボックスTUI](guides/sandbox-ui.md)（未リリース・main（v0.0.8予定）） |
-| サンドボックス内でコマンドを裏で実行する | [バックグラウンドジョブ](guides/sandbox-ui.md#バックグラウンドジョブを管理する)（未リリース・main（v0.0.8予定）） |
-| 起動時点からの差分を確認・回収する | [比較とファイル別レビュー](guides/sandbox-ui.md#起動時点との比較とファイル別レビュー)（未リリース・main（v0.0.8予定）） |
-| CPU・メモリ・容量と停止記録を確認する | [資源診断](guides/sandbox-ui.md#cpuメモリと停止理由)（未リリース・main（v0.0.8予定）） |
+| AI認証なしでVM作成・ファイル転送・Web確認 | [サンドボックスTUI](guides/sandbox-ui.md)（v0.0.8以降） |
+| サンドボックス内でコマンドを裏で実行する | [バックグラウンドジョブ](guides/sandbox-ui.md#バックグラウンドジョブを管理する)（v0.0.8以降） |
+| 起動時点からの差分を確認・回収する | [比較とファイル別レビュー](guides/sandbox-ui.md#起動時点との比較とファイル別レビュー)（v0.0.8以降） |
+| CPU・メモリ・容量と停止記録を確認する | [資源診断](guides/sandbox-ui.md#cpuメモリと停止理由)（v0.0.8以降） |
 | Codex／Claude Codeを使う | [エージェント](guides/agents.md)・[Claude Code](claude-code.md) |
 | ホストと製品の認証を分ける | [認証方式とプロファイル](guides/authentication.md) |
 | ファイル共有・所有者・権限を確認する | [workspace](workspace.md) |

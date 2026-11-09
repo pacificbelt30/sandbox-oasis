@@ -79,7 +79,7 @@ oaiso proxy configure
 
 ## Stop and remove
 
-**Unreleased (main; v0.0.8 planned)**: `proxy build/run/serve/stop/rm` reject extra positional arguments. Select a proxy to stop or remove with `--name`; input such as `proxy stop NAME` must not silently stop the default proxy.
+**v0.0.8**: `proxy build/run/serve/stop/rm` reject extra positional arguments. Select a proxy to stop or remove with `--name`; input such as `proxy stop NAME` must not silently stop the default proxy.
 
 ```bash
 # Both default proxies

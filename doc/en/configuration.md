@@ -170,7 +170,7 @@ forward_allow_ports = [80, 443]
 
 ### Sandbox environments saved by the TUI
 
-Available: **unreleased (main; v0.0.8 planned)**. Named environments use a separate `~/.config/codex-dock/sandbox-environments/config.json`, under `XDG_CONFIG_HOME` when set. Loading never launches a VM or rewrites global/project configuration. See [saved fields, permissions and review](guides/sandbox-ui.md#save-reusable-environments).
+Available: **v0.0.8**. Named environments use a separate `~/.config/codex-dock/sandbox-environments/config.json`, under `XDG_CONFIG_HOME` when set. Loading never launches a VM or rewrites global/project configuration. See [saved fields, permissions and review](guides/sandbox-ui.md#save-reusable-environments).
 
 ### `auto_build`
 
@@ -373,4 +373,4 @@ Runtime overrides take precedence over config, below explicit flags.
 
 - `proxy.credential_routes`: v0.0.4. Absolute [broker configuration file](guides/credential-broker.md) path; trusted host configuration only.
 
-Unreleased (main; v0.0.8 planned): named TUI environments may also save [managed workspace](guides/managed-workspaces.md) mode, capacity and inode ceiling. Workspace IDs, numeric owners, recovery points and import plans are excluded. `run --managed-workspace` is CLI-only and is not a persistent setting.
+v0.0.8: named TUI environments may also save [managed workspace](guides/managed-workspaces.md) mode, capacity and inode ceiling. Workspace IDs, numeric owners, recovery points and import plans are excluded. `run --managed-workspace` is CLI-only and is not a persistent setting.

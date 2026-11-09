@@ -54,7 +54,7 @@ Example output (selected fields, illustrative IDs/size):
 oaiso checkpoint list
 ```
 
-**Unreleased (main; v0.0.8 planned)**: checkpoints referenced by recovery points appear pinned in both listings and inspection. References and digests are checked afresh for each request. Listings read the reference ledger once to reduce waits with larger catalogs. See [measurement conditions and results](../performance.md#dashboard-refresh-and-checkpoint-catalogs).
+**v0.0.8**: checkpoints referenced by recovery points appear pinned in both listings and inspection. References and digests are checked afresh for each request. Listings read the reference ledger once to reduce waits with larger catalogs. See [measurement conditions and results](../performance.md#dashboard-refresh-and-checkpoint-catalogs).
 
 In Bash, enter a saved ID when prompted. Replace `/home/alice/new-project` with an existing directory you own:
 

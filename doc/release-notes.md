@@ -1,7 +1,5 @@
 # Oaiso v0.0.8
 
-公開準備中（未公開）。現在の公開版はv0.0.7です。
-
 ## 主な変更
 
 Kata VMを開発・テスト用のサンドボックスとして使う操作を増やし、ファイルの取り出し、長時間ジョブ、復元点と状態の確認をTUIから行えるようにしました。
@@ -50,8 +48,6 @@ Kata VMを開発・テスト用のサンドボックスとして使う操作を�
 ---
 
 ## English
-
-Release preparation, not published. The current public release is v0.0.7.
 
 Oaiso v0.0.8 expands Kata VM development and test workflows through the TUI: credential-free shell sandboxes, reviewed creation, independent Git copies, bounded managed workspaces, reusable environments, files and authenticated web previews, and stopped-VM recovery points.
 
