@@ -93,7 +93,7 @@ func runtimeReport(ctx context.Context) diagnostics.Report {
 		if runtime.GOOS != "linux" || runtime.GOARCH != "amd64" {
 			hostErr = fmt.Errorf("this pinned Dragonball profile requires Linux x86_64; found %s/%s", runtime.GOOS, runtime.GOARCH)
 		}
-		r.Add("host", runtime.GOOS+"/"+runtime.GOARCH, "Use a Linux x86_64 KVM host; automatic setup supports Ubuntu 26.04.", hostErr)
+		r.Add("host", runtime.GOOS+"/"+runtime.GOARCH, "Use a Linux x86_64 KVM host; automatic setup supports Ubuntu 24.04 and 26.04.", hostErr)
 		info, err := os.Stat("/dev/kvm")
 		if err == nil && info.Mode()&os.ModeDevice == 0 {
 			err = fmt.Errorf("/dev/kvm is not a device")

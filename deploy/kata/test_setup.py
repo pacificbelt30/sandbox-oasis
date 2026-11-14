@@ -4,12 +4,50 @@ import tarfile
 import json
 from pathlib import Path
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 import setup
 
 
 class SetupTests(unittest.TestCase):
+    def check_host(self, release, *, system='Linux', machine='x86_64',
+                   systemd=True, kvm=True, controllers='cpu memory pids', uid=1000):
+        files = {'/etc/os-release': release,
+                 '/sys/fs/cgroup/cgroup.controllers': controllers}
+        with patch.object(setup.platform, 'system', return_value=system), \
+                patch.object(setup.platform, 'machine', return_value=machine), \
+                patch.object(Path, 'read_text', autospec=True, side_effect=lambda path: files[str(path)]), \
+                patch.object(Path, 'is_dir', return_value=systemd), \
+                patch.object(Path, 'is_char_device', return_value=kvm), \
+                patch.object(setup.pwd, 'getpwnam', return_value=SimpleNamespace(pw_uid=uid)):
+            return setup.host_check('alice')
+
+    def test_host_accepts_supported_ubuntu_versions(self):
+        for version in ['24.04', '26.04']:
+            for quoted in [version, f'"{version}"']:
+                with self.subTest(version=quoted):
+                    self.assertEqual(self.check_host(f'ID=ubuntu\nVERSION_ID={quoted}\n'), version)
+
+    def test_host_rejects_unsupported_releases_and_derivatives(self):
+        for release in ['ID=ubuntu\nVERSION_ID="22.04"', 'ID=ubuntu\nVERSION_ID="25.10"',
+                        'ID=ubuntu\nVERSION_ID="24.04.1"', 'ID=ubuntu',
+                        'ID=linuxmint\nID_LIKE=ubuntu\nVERSION_ID="24.04"',
+                        'ID=debian\nVERSION_ID="26.04"', '']:
+            with self.subTest(release=release), self.assertRaisesRegex(ValueError, 'Ubuntu 24.04 and 26.04'):
+                self.check_host(release)
+
+    def test_both_ubuntu_versions_require_existing_host_prerequisites(self):
+        for version in ['24.04', '26.04']:
+            for options, error in [({'system': 'Darwin'}, 'Linux x86_64'),
+                                   ({'machine': 'aarch64'}, 'Linux x86_64'),
+                                   ({'systemd': False}, 'running systemd'),
+                                   ({'kvm': False}, 'KVM missing'),
+                                   ({'controllers': 'cpu pids'}, 'cgroup v2'),
+                                   ({'uid': 0}, 'non-root')]:
+                with self.subTest(version=version, options=options), self.assertRaisesRegex(ValueError, error):
+                    self.check_host(f'ID=ubuntu\nVERSION_ID="{version}"', **options)
+
     def test_quota_storage_requires_dedicated_enforcing_xfs(self):
         for mount_id, output, accepted in [
             ('22', '22 1 7:1 / /var/lib/codex-dock-containerd rw - xfs /dev/data rw,prjquota\n', True),
@@ -122,9 +160,10 @@ class SetupTests(unittest.TestCase):
             output = io.StringIO()
             with patch('sys.argv', ['setup.py', '--bundle', str(bundle), '--operator', 'alice']), \
                     patch.object(setup, 'bundle_info', return_value=record), \
-                    patch.object(setup, 'host_check'), \
+                    patch.object(setup, 'host_check', return_value='24.04'), \
                     redirect_stdout(output):
                 setup.main()
+            self.assertIn('Plan: verified Ubuntu 24.04 amd64 node;', output.getvalue())
             self.assertIn(f'Bundle: {bundle.resolve()} (version test-version); operator: alice', output.getvalue())
             self.assertIn('No host changes.', output.getvalue())
 

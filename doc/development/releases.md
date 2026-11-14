@@ -10,7 +10,7 @@
 | `sbom.cdx.json` | v0.0.4：実バイナリのGo依存・固定runtimeの一覧 |
 | `provenance.json` | v0.0.4：GitHub OIDC／Sigstoreの署名付き作成元証跡 |
 
-- 対象ホストはUbuntu 26.04 x86_64です。
+- 対象ホストはUbuntu 24.04／26.04 x86_64です（24.04の自動判定は未リリース（main））。
 - `go.mod` のGo版、uv 0.13.5、uv管理Python 3.12で生成します。
 - ツールの導入と公式手順：[開発用ツールを準備する](toolchain.md)。
 - 作業イメージ・Kata等の固定配布物・認証情報は、このアーカイブには含みません。

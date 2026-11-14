@@ -17,7 +17,7 @@ import (
 func init() {
 	var bundle, operator, cache, python string
 	var apply, offline, rollback, allowDowngrade bool
-	setup := &cobra.Command{Use: "setup", Short: "Plan or apply a verified Ubuntu 26.04 x86_64 node install/update", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, args []string) (runErr error) {
+	setup := &cobra.Command{Use: "setup", Short: "Plan or apply a verified Ubuntu 24.04 and 26.04 x86_64 node install/update", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, args []string) (runErr error) {
 		if apply && os.Geteuid() != 0 {
 			return fmt.Errorf("--apply needs root to install services; run the displayed plan first and use sudo for setup only")
 		}

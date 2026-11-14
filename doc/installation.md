@@ -4,7 +4,7 @@
 
 | 今の状態 | 手順 |
 |---|---|
-| 新しいUbuntu 26.04ホスト | このページの1〜4 |
+| 新しいUbuntu 24.04／26.04ホスト | このページの1〜4 |
 | 実行ホストは準備済み | [認証・初回起動](getting-started.md#2-認証方式を選ぶ) |
 | インストール済み環境を更新 | [更新手順](setup.md#更新する) |
 | その他のLinux | [手動配置](kata.md) |
@@ -16,12 +16,13 @@
 - この手順では署名付きのビルド済み配布版（v0.0.8）を導入します。
 - 一続きの操作例：[インストールから初回起動まで](guides/first-run.md)。
 - このページの`releases/latest`は公開版を導入する手順です。
+- Ubuntu 24.04の自動判定：未リリース（main）。公開版v0.0.8の自動配置は26.04のみ対象です。24.04では対応するソースから[バンドルを作成](setup.md#ビルド済みバンドルとは)して使用します。
 
 ## 1. 前提条件
 
 | 項目 | 必要条件 |
 |---|---|
-| OS・CPU | Ubuntu 26.04・Linux x86_64 |
+| OS・CPU | Ubuntu 24.04／26.04・Linux x86_64 |
 | ホスト機能 | systemd・KVM（`/dev/kvm`）・cgroup v2の `cpu memory pids` |
 | 実行アカウント | `sudo` が使える通常ユーザー |
 | 事前ツール | Bash・curl・CA証明書・GitHub CLI（署名検証用）。Go・Make・Gitは不要 |
@@ -74,7 +75,7 @@ curl -fsSL https://github.com/pacificbelt30/sandbox-oasis/releases/latest/downlo
 **計画の出力例（抜粋）**
 
 ```text
-Plan: verified Ubuntu 26.04 amd64 node; Kata 4.2.0 / Dragonball / containerd 2.4.2 / BuildKit 0.34.0 / runc 1.4.3
+Plan: verified Ubuntu 26.04 amd64 node; Kata 4.3.0 / Dragonball / containerd 2.4.2 / BuildKit 0.34.0 / runc 1.4.3
 Bundle: /tmp/oaiso-release-<id>/bundle (version v0.0.8); operator: user; cache: /var/cache/codex-dock-setup; offline: no
 ```
 

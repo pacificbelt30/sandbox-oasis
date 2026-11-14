@@ -19,7 +19,7 @@ buildctl → 独立BuildKit → OCI archive → 同じcontainerd namespace
 - `DOCKER_HOST`・Docker context・Docker daemonの探索や自動fallbackはしない。
 - 接続先を変える場合は `CODEX_DOCK_KATA_NODE_SOCKET` を指定する。
 
-- Ubuntu 26.04で新しく配置する場合は、[自動セットアップ](setup.md)も使えます。
+- Ubuntu 24.04／26.04（24.04は未リリース（main））で新しく配置する場合は、[自動セットアップ](setup.md)も使えます。
 - 以下は手動配置の手順です。
 
 - v0.0.7では、[専用XFSとproject quota](guides/resource-limits.md)も必要です。

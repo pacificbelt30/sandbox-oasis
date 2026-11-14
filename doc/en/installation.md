@@ -6,7 +6,7 @@
 
 | Current state | Next step |
 |---|---|
-| New Ubuntu 26.04 host | Follow steps 1–4 below |
+| New Ubuntu 24.04/26.04 host | Follow steps 1–4 below |
 | Execution host already prepared | [Choose credentials and start a worker](getting-started.md#2-prepare-credentials) |
 | Updating an installed node | [Update procedure](../setup.md#更新する) (Japanese) |
 | Other Linux distributions | [Manual installation](../kata.md) (Japanese) |
@@ -18,12 +18,13 @@ Before updating, back up data, remove all VMs including stopped ones, then stop 
 - These instructions install the signed prebuilt distribution (v0.0.8).
 - For the complete flow, follow [installation through first startup](guides/first-run.md).
 - The `releases/latest` commands below install the published release.
+- Ubuntu 24.04 detection: unreleased (main). The published v0.0.8 installer supports only 26.04. For 24.04, [build a bundle from the supporting source](../setup.md#ビルド済みバンドルとは) (Japanese).
 
 ## 1. Requirements
 
 | Item | Requirement |
 |---|---|
-| OS and CPU | Ubuntu 26.04, Linux x86_64 |
+| OS and CPU | Ubuntu 24.04/26.04, Linux x86_64 |
 | Host features | systemd, KVM (`/dev/kvm`), cgroup v2 with `cpu memory pids` |
 | Account | A normal user with `sudo` access |
 | Prerequisites | Bash, curl, CA certificates and GitHub CLI for signature verification; no Go, Make or Git required |
@@ -74,7 +75,7 @@ curl -fsSL https://github.com/pacificbelt30/sandbox-oasis/releases/latest/downlo
 **Example plan output (excerpt)**
 
 ```text
-Plan: verified Ubuntu 26.04 amd64 node; Kata 4.2.0 / Dragonball / containerd 2.4.2 / BuildKit 0.34.0 / runc 1.4.3
+Plan: verified Ubuntu 26.04 amd64 node; Kata 4.3.0 / Dragonball / containerd 2.4.2 / BuildKit 0.34.0 / runc 1.4.3
 Bundle: /tmp/oaiso-release-<id>/bundle (version v0.0.8); operator: user; cache: /var/cache/codex-dock-setup; offline: no
 ```
 

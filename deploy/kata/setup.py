@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Transactional installer for a dedicated Ubuntu 26.04 amd64 Kata node.
+"""Transactional installer for a dedicated Ubuntu 24.04/26.04 amd64 Kata node.
 
 Plan by default. Never edits the host Docker/default-containerd services.
 An explicitly applied bundle is trusted operator code; its manifest checks
@@ -148,8 +148,9 @@ def host_check(operator):
     if platform.system() != 'Linux' or platform.machine() != 'x86_64':
         raise ValueError('automatic setup supports Linux x86_64 only')
     release = dict(line.split('=', 1) for line in Path('/etc/os-release').read_text().splitlines() if '=' in line)
-    if release.get('ID', '').strip('"') != 'ubuntu' or release.get('VERSION_ID', '').strip('"') != '26.04':
-        raise ValueError('automatic setup supports Ubuntu 26.04; use doc/kata.md for manual installation elsewhere')
+    version = release.get('VERSION_ID', '').strip('"')
+    if release.get('ID', '').strip('"') != 'ubuntu' or version not in {'24.04', '26.04'}:
+        raise ValueError('automatic setup supports Ubuntu 24.04 and 26.04; use doc/kata.md for manual installation elsewhere')
     if not Path('/run/systemd/system').is_dir():
         raise ValueError('a running systemd host is required')
     if not Path('/dev/kvm').is_char_device():
@@ -160,7 +161,7 @@ def host_check(operator):
     account = pwd.getpwnam(operator)
     if account.pw_uid == 0:
         raise ValueError('operator must be an existing non-root account')
-    return account
+    return version
 
 
 def active(service):
@@ -496,8 +497,8 @@ def main():
     args = parser.parse_args()
     record = None if args.rollback else bundle_info(args.bundle.resolve())
     if not args.rollback:
-        host_check(args.operator)
-    print('Plan: rollback previous setup' if args.rollback else 'Plan: verified Ubuntu 26.04 amd64 node; Kata 4.3.0 / Dragonball / containerd 2.4.2 / BuildKit 0.34.0 / runc 1.4.3', flush=True)
+        host_version = host_check(args.operator)
+    print('Plan: rollback previous setup' if args.rollback else f'Plan: verified Ubuntu {host_version} amd64 node; Kata 4.3.0 / Dragonball / containerd 2.4.2 / BuildKit 0.34.0 / runc 1.4.3', flush=True)
     if not args.rollback:
         print(f'Bundle: {args.bundle.resolve()} (version {record.get("version", "unknown")}); operator: {args.operator}; cache: {args.cache.resolve()}; offline: {"yes" if args.offline else "no"}', flush=True)
     print(f'Python: {sys.executable} (version {platform.python_version()})', flush=True)

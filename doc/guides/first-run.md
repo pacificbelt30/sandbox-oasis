@@ -3,7 +3,7 @@
 **日本語** | [English](../en/guides/first-run.md)
 
 - このページはv0.0.4以降の手順です。`oaiso --version`で導入した版を確認してください。
-- 以下はUbuntu 26.04・x86_64・systemd・KVM・cgroup v2があるホスト向けです。[前提条件](../installation.md#1-前提条件)。
+- 24.04の自動判定は未リリース（main）。以下はUbuntu 24.04／26.04・x86_64・systemd・KVM・cgroup v2があるホスト向けです。[前提条件](../installation.md#1-前提条件)。
 
 このページはAIエージェント向けの導入・認証手順です。AI認証なしで使う場合は[サンドボックスガイド](sandbox-ui.md)（v0.0.8以降）へ進んでください。
 

@@ -17,7 +17,7 @@
 
 ## Installation — インストール
 
-- 対象：**Ubuntu 26.04・x86_64・systemd・KVM・cgroup v2**。
+- 対象：**Ubuntu 24.04／26.04・x86_64・systemd・KVM・cgroup v2**（24.04の自動判定は未リリース（main））。
 - 実行者：`sudo` が使える通常ユーザー。管理操作はスクリプトが昇格。
 - 配布：GitHub Releasesのビルド済み版。Go・Make・ソース取得は不要。
 - 事前準備：[curl・CA証明書・GitHub CLIを導入](doc/installation.md#2-ツールを準備する)。GitHub CLIは配布物の署名検証に使用。GitHubへのログインは不要。
@@ -69,7 +69,7 @@ oaiso runtime-check
 
 | 順序 | 担当 | 実施内容 |
 |---|---|---|
-| 1 | 管理者 | [インストール](doc/installation.md)。Ubuntu 26.04対応ホストでは配布インストーラーで計画、`--apply` で適用 |
+| 1 | 管理者 | [インストール](doc/installation.md)。対応ホスト・版を確認し、インストーラーで計画、`--apply` で適用 |
 | 2 | 利用者 | [クイックスタート](doc/getting-started.md)で利用目的を選び、イメージを用意。AIを使う場合は認証も準備 |
 | 3 | 利用者 | プロジェクトでワーカーを起動 |
 

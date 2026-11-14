@@ -1,5 +1,6 @@
 # Disposable setup verification only. Docker is not installed inside this node.
-FROM ubuntu:26.04
+ARG UBUNTU_VERSION=26.04
+FROM ubuntu:${UBUNTU_VERSION}
 ENV container=docker
 RUN --mount=type=secret,id=proxy_ca \
     if [ -r /run/secrets/proxy_ca ]; then export APT_CONFIG=/tmp/apt-ca.conf; printf 'Acquire::https::CaInfo "/run/secrets/proxy_ca";\n' > "$APT_CONFIG"; fi; \

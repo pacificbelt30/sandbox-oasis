@@ -5,10 +5,12 @@
 
 | 対象 | 方法 |
 |---|---|
-| Ubuntu 26.04・Linux x86_64・systemd・KVM・cgroup v2 | このページの自動配置 |
+| Ubuntu 24.04／26.04・Linux x86_64・systemd・KVM・cgroup v2 | このページの自動配置 |
 | その他のLinux | [手動配置](kata.md) |
 | Windows・macOS | 実行ノードの配置対象外 |
 | ホスト自体がVM | nested virtualizationも必要 |
+
+- Ubuntu 24.04の自動判定：未リリース（main）。公開版v0.0.8は26.04のみ対象です。24.04では対応するソースからバンドルを作成します。
 
 ## 初めて配置する
 

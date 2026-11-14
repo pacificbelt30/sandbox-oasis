@@ -24,7 +24,7 @@ main() {
     esac
     shift
   done
-  [[ $(uname -s) == Linux && $(uname -m) == x86_64 ]] || { echo 'install: the node requires Ubuntu 26.04 x86_64' >&2; return 1; }
+  [[ $(uname -s) == Linux && $(uname -m) == x86_64 ]] || { echo 'install: the node requires Ubuntu 24.04 or 26.04 x86_64' >&2; return 1; }
   [[ $(id -u) != 0 || -n $operator ]] || { echo 'install: pass --operator USER when running as root' >&2; return 1; }
   if "$offline" && [[ -z $bundle ]]; then
     echo 'install: --offline requires --bundle PATH; prepare the release and uv/Python first' >&2
