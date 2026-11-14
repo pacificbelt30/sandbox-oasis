@@ -6,22 +6,93 @@ from pathlib import Path
 import tempfile
 from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import call, patch
 import setup
 
 
 class SetupTests(unittest.TestCase):
     def check_host(self, release, *, system='Linux', machine='x86_64',
-                   systemd=True, kvm=True, controllers='cpu memory pids', uid=1000):
+                   systemd=True, kvm=True, controllers='cpu memory pids', uid=1000,
+                   kernel='6.8.0-generic'):
         files = {'/etc/os-release': release,
                  '/sys/fs/cgroup/cgroup.controllers': controllers}
+        def read_file(path):
+            value = files[str(path)]
+            if isinstance(value, Exception):
+                raise value
+            return value
         with patch.object(setup.platform, 'system', return_value=system), \
                 patch.object(setup.platform, 'machine', return_value=machine), \
-                patch.object(Path, 'read_text', autospec=True, side_effect=lambda path: files[str(path)]), \
+                patch.object(setup.platform, 'release', return_value=kernel), \
+                patch.object(Path, 'read_text', autospec=True, side_effect=read_file), \
                 patch.object(Path, 'is_dir', return_value=systemd), \
                 patch.object(Path, 'is_char_device', return_value=kvm), \
                 patch.object(setup.pwd, 'getpwnam', return_value=SimpleNamespace(pw_uid=uid)):
             return setup.host_check('alice')
+
+    def test_wsl_preflight_checks_storage_and_root_vm_creation(self):
+        for kernel in ['6.6.87.2-microsoft-standard-WSL2', '6.18.52.3-microsoft-standard-WSL2']:
+            with self.subTest(kernel=kernel), patch.object(setup, 'require_quota_storage') as quota, \
+                    patch.object(setup, 'probe_kvm') as probe, patch.object(setup.os, 'geteuid', return_value=0):
+                self.assertEqual(self.check_host('ID=ubuntu\nVERSION_ID="24.04"', kernel=kernel), '24.04')
+                quota.assert_called_once_with()
+                probe.assert_called_once_with()
+
+    def test_wsl_plan_rejects_default_storage_without_probing_vm(self):
+        with patch.object(setup, 'require_quota_storage', side_effect=ValueError('dedicated XFS required')), \
+                patch.object(setup, 'probe_kvm') as probe:
+            with self.assertRaisesRegex(ValueError, 'dedicated XFS.*doc/guides/wsl.md'):
+                self.check_host('ID=ubuntu\nVERSION_ID=24.04', kernel='microsoft-standard-WSL2')
+            probe.assert_not_called()
+
+    def test_wsl_unprivileged_plan_defers_vm_probe_to_root(self):
+        output = io.StringIO()
+        with patch.object(setup, 'require_quota_storage'), patch.object(setup, 'probe_kvm') as probe, \
+                patch.object(setup.os, 'geteuid', return_value=1000), redirect_stdout(output):
+            self.check_host('ID=ubuntu\nVERSION_ID=24.04', kernel='microsoft-standard-WSL2')
+        probe.assert_not_called()
+        self.assertIn('KVM VM-creation probe runs as root during --apply', output.getvalue())
+
+    def test_wsl_failed_vm_creation_and_host_prerequisites_have_recovery_guide(self):
+        with patch.object(setup, 'require_quota_storage'), \
+                patch.object(setup, 'probe_kvm', side_effect=ValueError('KVM cannot create a VM')), \
+                patch.object(setup.os, 'geteuid', return_value=0):
+            with self.assertRaisesRegex(ValueError, 'KVM cannot create a VM.*doc/guides/wsl.md'):
+                self.check_host('ID=ubuntu\nVERSION_ID=24.04', kernel='microsoft-standard-WSL2')
+        for options in [{'systemd': False}, {'kvm': False}, {'controllers': 'cpu'},
+                        {'controllers': FileNotFoundError('cgroup v2 not mounted')}]:
+            with self.subTest(options=options), self.assertRaisesRegex(ValueError, 'doc/guides/wsl.md'):
+                self.check_host('ID=ubuntu\nVERSION_ID=24.04', kernel='microsoft-standard-WSL2', **options)
+
+    def test_non_wsl_host_keeps_existing_plan_behavior(self):
+        with patch.object(setup, 'require_quota_storage') as quota, patch.object(setup, 'probe_kvm') as probe:
+            self.check_host('ID=ubuntu\nVERSION_ID=24.04')
+        quota.assert_not_called()
+        probe.assert_not_called()
+
+    def test_kvm_probe_releases_all_descriptors_on_success_and_failure(self):
+        for results, expected_closes, error in [([12, 41], [call(41), call(23)], None),
+                                                ([13], [call(23)], 'unsupported KVM API'),
+                                                ([12, OSError('nested virtualization unavailable')], [call(23)], 'KVM cannot create a VM')]:
+            with self.subTest(results=results), patch.object(setup.os, 'open', return_value=23), \
+                    patch.object(setup.os, 'close') as close, patch.object(setup.fcntl, 'ioctl', side_effect=results):
+                if error:
+                    with self.assertRaisesRegex(ValueError, error):
+                        setup.probe_kvm()
+                else:
+                    setup.probe_kvm()
+                self.assertEqual(close.call_args_list, expected_closes)
+        with patch.object(setup.os, 'open', side_effect=PermissionError('denied')), \
+                patch.object(setup.os, 'close') as close:
+            with self.assertRaisesRegex(ValueError, 'KVM cannot create a VM'):
+                setup.probe_kvm()
+            close.assert_not_called()
+
+    def test_missing_wsl_module_points_to_matching_kernel(self):
+        with patch.object(Path, 'is_char_device', return_value=False), patch.object(setup, 'is_wsl', return_value=True), \
+                patch.object(setup, 'run', side_effect=setup.subprocess.CalledProcessError(1, ['modprobe'])):
+            with self.assertRaisesRegex(ValueError, 'modules matching uname -r.*doc/guides/wsl.md'):
+                setup.ensure_module_device('vhost_vsock', '/dev/vhost-vsock')
 
     def test_host_accepts_supported_ubuntu_versions(self):
         for version in ['24.04', '26.04']:
@@ -246,6 +317,15 @@ class SetupTests(unittest.TestCase):
         with patch.object(Path, 'is_char_device', return_value=True), patch.object(setup, 'run') as command:
             setup.ensure_module_device('vhost_vsock', '/dev/vhost-vsock')
             command.assert_not_called()
+
+    def test_missing_tun_is_loaded_and_verified(self):
+        with patch.object(Path, 'is_char_device', side_effect=[False, True]), patch.object(setup, 'run') as command:
+            setup.ensure_module_device('tun', '/dev/net/tun')
+            command.assert_called_once_with(['modprobe', 'tun'])
+        with patch.object(Path, 'is_char_device', return_value=False), patch.object(setup, 'run'), \
+                patch.object(setup, 'is_wsl', return_value=True):
+            with self.assertRaisesRegex(ValueError, 'tun did not provide /dev/net/tun.*WSL'):
+                setup.ensure_module_device('tun', '/dev/net/tun')
 
 
 

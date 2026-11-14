@@ -31,7 +31,7 @@ Before updating, back up data, remove all VMs including stopped ones, then stop 
 | Host Python | uv-managed Python 3.12; missing uv/Python is prepared in user-owned directories |
 | Memory guidance | At least 8 GiB for the default two-worker configuration; allow extra capacity for builds |
 | Network | Access to GitHub Releases, uv/Python, pinned runtime archives, OS packages and container images |
-| WSL or a VM host | All requirements above, plus nested virtualization |
+| WSL or a VM host | All requirements above, plus nested virtualization; see [WSL2 preflight and dedicated XFS](guides/wsl.md) |
 
 - Operator group membership grants root-equivalent host management access. Choose trusted users only.
 

@@ -30,7 +30,7 @@
 | 専用ストレージ | v0.0.7以降：OSと別のXFSでproject quotaを有効化。2ワーカーは32 GiB以上が目安。[移行手順](guides/storage-migration.md) |
 | メモリ目安 | 既定の2ワーカー構成は8 GiB以上。ビルド用の余裕も確保 |
 | 通信 | GitHub Releases・uv/Python・固定ランタイム配布物・OSパッケージ・コンテナイメージの取得先に到達可能 |
-| WSL／VM | 上記要件に加え、nested virtualizationが必要 |
+| WSL／VM | 上記要件に加え、nested virtualizationが必要。[WSL2の事前確認と専用XFS](guides/wsl.md) |
 
 - operator groupにはホストのroot相当の管理権限を付与。信頼する利用者だけを指定。
 

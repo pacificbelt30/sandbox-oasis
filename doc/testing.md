@@ -1,5 +1,21 @@
 # テストと動作確認
 
+## WSL向け事前確認と導入手順（2026-11-14）
+
+対象：**未リリース（main）**。WSLでは計画時にも専用XFSを検査し、root実行時にKVM API 12で空のVMを作成・解放します。モジュール不足にはWSLの確認先を表示し、setupの自動読込・次回起動用設定に`tun`を追加しました。固定Dragonballの[TAP実装](https://github.com/kata-containers/kata-containers/blob/4.3.0/src/dragonball/crates/dbs_utils/src/net/tap.rs)は`/dev/net/tun`を使用します。
+
+| 範囲 | 確認結果 |
+|---|---|
+| 配置・スクリプト | Python 36＋69件成功。KVMの成功・失敗・fd回収、WSLのXFS不足・必須機能不足、一般ユーザーの検査保留、非WSLの計画維持、tunの読込を確認 |
+| 手順 | 日英9ブロックのコマンド・設定例が一致。新規32 GiB XFSを手順のコードで作成し、fstab経由でmount。再実行の拒否と既存ファイルのinode・size・mtime・modeの維持も確認 |
+| 事前確認 | Linux上の実KVM API・VM作成・解放が成功。分離ノード内でWSL識別を模擬し、実XFSとKVMを使った事前確認も成功 |
+| 実Kata・配置 | 新しい配置処理を埋め込んだ同版のバンドル・受入バイナリで、`PrimaryTerminal`（15.13秒）、新規導入、稼働中更新の拒否、正常更新、自動復旧、明示rollbackが成功。次回起動用ファイルの`tun`を確認 |
+| 回収 | VM・task・コンテナ・ネットワーク・専用firewallの残留なし。試験ノードと専用ボリュームを回収 |
+
+- **実WSLでの受入ではありません。** Ubuntu 26.04の外側ホスト・カーネルを使う分離ノードで、固定資産cacheありのoffline配置、uv管理Python、架空の資格情報を使用しました。Windows側のnested virtualization、WSLカーネル、Windows/WSL再起動、VPN/DNS・firewallは実機未確認です。[WSL2手順](guides/wsl.md)に条件と対処をまとめています。
+- 最初の手順試験は、既存mountを保護するガードがDockerの空の試験用mountを拒否しました。その証跡は`6fb3f348c0b7`へ保持。試験環境側だけを修正した先行成功は`5ecdc52e1728`、tun追加後の最終成功は`ec189ab7e2ce`です。
+- 証跡：`.kata-verification/wsl-readiness-20261114/`、`.kata-verification/setup-e2e/ec189ab7e2ce/`。既存ホストのサービスは更新していません。Goコードの変更はなく、バンドルのLinux amd64ビルドと日英文書strictビルドを確認しました。
+
 ## Ubuntu 24.04の自動判定（2026-11-14）
 
 対象：**未リリース（main）**。自動セットアップにUbuntu 24.04を追加し、24.04／26.04の検出結果を計画に表示します。systemd・KVM・cgroup v2・非rootのoperator・専用XFSの条件は維持します。

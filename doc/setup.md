@@ -10,6 +10,7 @@
 | Windows・macOS | 実行ノードの配置対象外 |
 | ホスト自体がVM | nested virtualizationも必要 |
 
+- WSL2：[必須機能・専用XFS・再起動後の確認](guides/wsl.md)。Ubuntuの版だけではKataの実行可否は判定できません。
 - Ubuntu 24.04の自動判定：未リリース（main）。公開版v0.0.8は26.04のみ対象です。24.04では対応するソースからバンドルを作成します。
 
 ## 初めて配置する
@@ -142,7 +143,7 @@ oaiso init --agent claude
 | 固定配布物 | Kata 4.2.0・containerd 2.4.2・BuildKit 0.34.0・runc 1.4.3 |
 | guest・固定資産 | PID hook・共有cache無効のDragonball設定・manifest |
 | サービス・権限 | 専用containerd・node・BuildKit・`codex-dock` グループ |
-| ホスト設定 | IPv4 forwarding・次回起動用vsock/netモジュール |
+| ホスト設定 | IPv4 forwarding・次回起動用vsock/net/tunモジュール（tunは未リリース（main）） |
 
 ### 配布物と権限の確認
 

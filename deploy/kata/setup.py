@@ -144,6 +144,26 @@ def bundle_info(bundle):
     return record
 
 
+def is_wsl():
+    return any(marker in platform.release().lower() for marker in ['microsoft', 'wsl'])
+
+
+def probe_kvm():
+    """Create and close an empty VM; no guest memory or vCPU is allocated."""
+    # Linux KVM system ioctls; the stable API version is 12.
+    try:
+        fd = os.open('/dev/kvm', os.O_RDWR | os.O_CLOEXEC)
+        try:
+            if fcntl.ioctl(fd, 0xAE00, 0) != 12:  # KVM_GET_API_VERSION
+                raise ValueError('unsupported KVM API version')
+            vm = fcntl.ioctl(fd, 0xAE01, 0)  # KVM_CREATE_VM
+            os.close(vm)
+        finally:
+            os.close(fd)
+    except OSError as error:
+        raise ValueError(f'KVM cannot create a VM: {error}') from error
+
+
 def host_check(operator):
     if platform.system() != 'Linux' or platform.machine() != 'x86_64':
         raise ValueError('automatic setup supports Linux x86_64 only')
@@ -151,16 +171,32 @@ def host_check(operator):
     version = release.get('VERSION_ID', '').strip('"')
     if release.get('ID', '').strip('"') != 'ubuntu' or version not in {'24.04', '26.04'}:
         raise ValueError('automatic setup supports Ubuntu 24.04 and 26.04; use doc/kata.md for manual installation elsewhere')
+    wsl = is_wsl()
+    hint = '; on WSL use WSL2, check Windows nested virtualization and the WSL kernel/modules; see doc/guides/wsl.md' if wsl else ''
     if not Path('/run/systemd/system').is_dir():
-        raise ValueError('a running systemd host is required')
+        raise ValueError('a running systemd host is required' + ('; enable systemd in /etc/wsl.conf and restart the distro; see doc/guides/wsl.md' if wsl else ''))
     if not Path('/dev/kvm').is_char_device():
-        raise ValueError('KVM missing; enable CPU virtualization/nested virtualization and load the kvm module')
-    controllers = Path('/sys/fs/cgroup/cgroup.controllers').read_text().split()
+        raise ValueError('KVM missing; enable CPU virtualization/nested virtualization and load the kvm module' + hint)
+    try:
+        controllers = Path('/sys/fs/cgroup/cgroup.controllers').read_text().split()
+    except OSError as error:
+        raise ValueError('cgroup v2 with cpu, memory and pids is required' + hint) from error
     if not {'cpu', 'memory', 'pids'}.issubset(controllers):
-        raise ValueError('cgroup v2 with cpu, memory and pids is required')
+        raise ValueError('cgroup v2 with cpu, memory and pids is required' + hint)
     account = pwd.getpwnam(operator)
     if account.pw_uid == 0:
         raise ValueError('operator must be an existing non-root account')
+    if wsl:
+        # WSL's default ext4/DrvFs storage cannot enforce our XFS quotas.
+        # Reject before runtime downloads or service changes, even in plan mode.
+        try:
+            require_quota_storage()
+            if os.geteuid() == 0:
+                probe_kvm()
+            else:
+                print('WSL: KVM VM-creation probe runs as root during --apply; device presence alone does not verify nested virtualization.', flush=True)
+        except ValueError as error:
+            raise ValueError(str(error) + '; see doc/guides/wsl.md') from error
     return version
 
 
@@ -171,9 +207,14 @@ def active(service):
 def ensure_module_device(module, device):
     if Path(device).is_char_device():
         return
-    run(['modprobe', module])
+    try:
+        run(['modprobe', module])
+    except (OSError, subprocess.CalledProcessError) as error:
+        if is_wsl():
+            raise ValueError(f'WSL kernel/module cannot provide {device}; update WSL and use modules matching uname -r (not Ubuntu generic modules); see doc/guides/wsl.md') from error
+        raise
     if not Path(device).is_char_device():
-        raise ValueError(f'{module} did not provide {device}')
+        raise ValueError(f'{module} did not provide {device}' + ('; check the WSL kernel/modules; see doc/guides/wsl.md' if is_wsl() else ''))
 
 
 def empty_node(current):
@@ -612,7 +653,7 @@ def apply(args, record):
             run(['apt-get', 'update'])
             run(['apt-get', 'install', '-y', '--no-install-recommends', *missing])
         # CPU-specific modules are normally loaded by the host; vsock is shared transport.
-        for module, device in [('vhost_vsock', '/dev/vhost-vsock'), ('vhost_net', '/dev/vhost-net')]:
+        for module, device in [('vhost_vsock', '/dev/vhost-vsock'), ('vhost_net', '/dev/vhost-net'), ('tun', '/dev/net/tun')]:
             ensure_module_device(module, device)
         if subprocess.run(['getent', 'group', 'codex-dock'], stdout=subprocess.DEVNULL).returncode:
             run(['groupadd', '--system', 'codex-dock'])
@@ -637,7 +678,7 @@ def apply(args, record):
         for path in legacy_files:
             path.unlink()
         atomic(Path('/etc/sysctl.d/80-codex-dock.conf'), b'net.ipv4.ip_forward = 1\n')
-        atomic(Path('/etc/modules-load.d/codex-dock.conf'), b'vhost_vsock\nvhost_net\n')
+        atomic(Path('/etc/modules-load.d/codex-dock.conf'), b'vhost_vsock\nvhost_net\ntun\n')
         run(['sysctl', '-q', '-w', 'net.ipv4.ip_forward=1'])
         start_and_check(release['release'])
         run(['systemctl', 'enable', *SERVICES])
